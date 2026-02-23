@@ -1,0 +1,545 @@
+door_gfxs:
+  - gfxid: 88
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 89
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 92
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 1
+  - gfxid: 93
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 339
+    direction: 0
+    left_edge_offset: -1
+    right_edge_offset: 0
+  - gfxid: 442
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 443
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 1
+  - gfxid: 444
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 446
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 447
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 448
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 766
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 767
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 768
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 845
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1010
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1327
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1329
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1330
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1331
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1332
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1333
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1334
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1336
+    direction: 0
+    left_edge_offset: -1
+    right_edge_offset: 0
+  - gfxid: 1338
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 1
+  - gfxid: 1341
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1342
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 1
+  - gfxid: 1347
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1348
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1349
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1350
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1351
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1352
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1371
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1373
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1487
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1664
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1665
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1688
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1689
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1690
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1691
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1692
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1700
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1734
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1735
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1736
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1737
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1738
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1739
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1740
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1741
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1743
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1744
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1745
+    direction: 0
+    left_edge_offset: -2
+    right_edge_offset: 0
+  - gfxid: 1750
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1751
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 1826
+    direction: 1
+    left_edge_offset: -2
+    right_edge_offset: 1
+  - gfxid: 1827
+    direction: 0
+    left_edge_offset: -1
+    right_edge_offset: 2
+  - gfxid: 2083
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2089
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2114
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2128
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2160
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2161
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2162
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2163
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2164
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2190
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2191
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2301
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2303
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2304
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2305
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2306
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2344
+    direction: 1
+    left_edge_offset: -364
+    right_edge_offset: -364
+  - gfxid: 2345
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2346
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2510
+    direction: 1
+    left_edge_offset: -3
+    right_edge_offset: 4
+  - gfxid: 2556
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2558
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2574
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2575
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2578
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2579
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2580
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2581
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2582
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2583
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2585
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2588
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2589
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2590
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2591
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2596
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2597
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2598
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2599
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2600
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2603
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2605
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2606
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2608
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2610
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2628
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2629
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2630
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2631
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2634
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2635
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 2732
+    direction: 0
+    left_edge_offset: -1
+    right_edge_offset: 2
+  - gfxid: 2736
+    direction: 1
+    left_edge_offset: -2
+    right_edge_offset: 1
+  - gfxid: 2744
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 3
+  - gfxid: 2745
+    direction: 0
+    left_edge_offset: -1
+    right_edge_offset: 2
+  - gfxid: 2746
+    direction: 1
+    left_edge_offset: -2
+    right_edge_offset: 1
+  - gfxid: 3234
+    direction: 0
+    left_edge_offset: -2
+    right_edge_offset: 1
+  - gfxid: 6026
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 6027
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 6028
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 6029
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 1
+  - gfxid: 6030
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 1
+  - gfxid: 6031
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 6032
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 6033
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 6336
+    direction: 0
+    left_edge_offset: -1
+    right_edge_offset: 1
+  - gfxid: 6351
+    direction: 1
+    left_edge_offset: -3
+    right_edge_offset: 3
+  - gfxid: 6379
+    direction: 1
+    left_edge_offset: 0
+    right_edge_offset: 2
+  - gfxid: 6640
+    direction: 1
+    left_edge_offset: -1
+    right_edge_offset: 3
+  - gfxid: 6642
+    direction: 0
+    left_edge_offset: -2
+    right_edge_offset: 2
+  - gfxid: 6677
+    direction: 1
+    left_edge_offset: -3
+    right_edge_offset: 4
+  - gfxid: 6692
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 1
+  - gfxid: 6694
+    direction: 1
+    left_edge_offset: -1
+    right_edge_offset: 0
+  - gfxid: 7536
+    direction: 0
+    left_edge_offset: 0
+    right_edge_offset: 0
+  - gfxid: 7556
+    direction: 1
+    left_edge_offset: -2
+    right_edge_offset: 2
+  - gfxid: 7858
+    direction: 0
+    left_edge_offset: -2
+    right_edge_offset: 2
+  - gfxid: 7859
+    direction: 1
+    left_edge_offset: -2
+    right_edge_offset: 2

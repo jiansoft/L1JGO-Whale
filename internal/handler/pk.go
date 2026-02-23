@@ -62,6 +62,15 @@ func triggerPinkName(attacker, victim *world.PlayerInfo, deps *Deps) {
 	for _, other := range nearby {
 		sendPinkName(other.Session, attacker.CharID, 180)
 	}
+
+	// Alert nearby guards — Java: L1PcInstance.receiveDamage checks isPinkName
+	// and sets all visible L1GuardInstance to target the attacker.
+	nearbyNpcs := deps.World.GetNearbyNpcs(attacker.X, attacker.Y, attacker.MapID)
+	for _, guard := range nearbyNpcs {
+		if guard.Impl == "L1Guard" && !guard.Dead && guard.AggroTarget == 0 {
+			guard.AggroTarget = attacker.SessionID
+		}
+	}
 }
 
 // ---------- Lawful from Monster Kill ----------
@@ -112,6 +121,10 @@ func processPKKill(killer, victim *world.PlayerInfo, deps *Deps) {
 
 	// Only count as PK if victim was blue-named (lawful >= 0) and not pink
 	if victim.Lawful >= 0 && !victim.PinkName {
+		// Set wanted status — guards will hunt this player for 24 hours
+		// Java: addPkTime() sets _lastPk = current timestamp, isWanted() checks 24h window
+		killer.WantedTicks = 432000 // 24 hours at 200ms/tick
+
 		// PKCount incremented if killer's lawful < 30000 (Java condition)
 		if killer.Lawful < 30000 {
 			killer.PKCount++

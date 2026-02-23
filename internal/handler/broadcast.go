@@ -12,6 +12,51 @@ import (
 // arrowSeqNum is a global sequential number for arrow projectile packets (matches Java AtomicInteger).
 var arrowSeqNum atomic.Int32
 
+// sendOwnCharPackPlayer sends S_PUT_OBJECT (opcode 87) for the player's OWN character.
+// Uses S_OwnCharPack format (different trailing bytes from S_OtherCharPacks).
+// Must be used when sending the character pack to the player themselves (teleport, map change).
+// Using S_OtherCharPacks format for own char ID causes the client to misparse → invisible/grey model.
+func sendOwnCharPackPlayer(sess *net.Session, p *world.PlayerInfo) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_PUT_OBJECT)
+	w.WriteH(uint16(p.X))
+	w.WriteH(uint16(p.Y))
+	w.WriteD(p.CharID)
+	w.WriteH(uint16(PlayerGfx(p)))
+	w.WriteC(p.CurrentWeapon)
+	w.WriteC(byte(p.Heading))
+	w.WriteC(0)           // light size
+	w.WriteC(p.MoveSpeed) // move speed
+	w.WriteD(1)           // unknown (always 1)
+	w.WriteH(uint16(p.Lawful))
+	w.WriteS(p.Name)
+	w.WriteS(p.Title)
+	status := byte(0x04) // PC flag
+	status |= p.BraveSpeed * 16
+	w.WriteC(status)
+	w.WriteD(0) // clan emblem ID
+	w.WriteS(p.ClanName)
+	w.WriteS("") // null
+	// Clan rank (OwnCharPack specific — OtherCharPacks always writes 0)
+	if p.ClanRank > 0 {
+		w.WriteC(byte(p.ClanRank << 4))
+	} else {
+		w.WriteC(0xb0)
+	}
+	partyHP := byte(0xff)
+	if p.PartyID > 0 {
+		partyHP = world.CalcPartyHP(p.HP, p.MaxHP)
+	}
+	w.WriteC(partyHP)
+	w.WriteC(0x00) // third speed
+	w.WriteC(0x00) // PC = 0
+	w.WriteC(0x00) // unknown
+	w.WriteC(0xff) // unknown
+	w.WriteC(0xff) // unknown
+	w.WriteS("")   // null
+	w.WriteC(0x00) // end
+	sess.Send(w.Bytes())
+}
+
 // sendPutObject sends S_PUT_OBJECT (opcode 87) to show another player to the viewer.
 // Matches Java S_OtherCharPacks format exactly.
 func sendPutObject(viewer *net.Session, p *world.PlayerInfo) {
@@ -354,6 +399,24 @@ func sendIconGfx(sess *net.Session, iconID byte, durationSec uint16) {
 	w.WriteC(iconID)
 	w.WriteH(durationSec)
 	sess.Send(w.Bytes())
+}
+
+// sendWisdomPotionIcon sends S_SkillIconWisdomPotion (opcode 250) — wisdom potion buff icon.
+// Java: S_SkillIconWisdomPotion: [C opcode=250][C 0x39][C 0x2c][C time/4]
+// Send time=0 to cancel icon.
+func sendWisdomPotionIcon(sess *net.Session, timeSec uint16) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_EVENT)
+	w.WriteC(0x39)
+	w.WriteC(0x2c)
+	w.WriteC(byte(timeSec / 4))
+	sess.Send(w.Bytes())
+}
+
+// sendBluePotionIcon sends S_SkillIconGFX (opcode 250, icon 34) — blue potion buff icon.
+// Java: S_SkillIconGFX(34, time): [C opcode=250][C 34][H time]
+// Send time=0 to cancel icon.
+func sendBluePotionIcon(sess *net.Session, timeSec uint16) {
+	sendIconGfx(sess, 34, timeSec)
 }
 
 // sendWeightUpdate sends S_PacketBox(WEIGHT) (opcode 250, subcode 10) — lightweight weight bar update.

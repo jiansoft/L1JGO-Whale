@@ -17,14 +17,14 @@ func HandleChangeChar(sess *net.Session, _ *packet.Reader, deps *Deps) {
 	// This tells the client to transition to the character select UI.
 	sendPacketBoxLogout(sess)
 
+	// Clear player tile before removal (for NPC pathfinding)
+	if pre := deps.World.GetBySession(sess.ID); pre != nil && deps.MapData != nil {
+		deps.MapData.SetImpassable(pre.MapID, pre.X, pre.Y, false)
+	}
+
 	// Remove from world if in-world
 	player := deps.World.RemovePlayer(sess.ID)
 	if player != nil {
-		// Clear tile collision
-		if deps.MapData != nil {
-			deps.MapData.SetImpassable(player.MapID, player.X, player.Y, false)
-		}
-
 		// Clean up trade if in progress
 		if player.TradePartnerID != 0 {
 			partner := deps.World.GetByCharID(player.TradePartnerID)
@@ -46,10 +46,11 @@ func HandleChangeChar(sess *net.Session, _ *packet.Reader, deps *Deps) {
 			partyLeaveMember(player, deps)
 		}
 
-		// Broadcast removal to nearby players
+		// Broadcast removal + entity collision unblock to nearby players
 		nearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
 		for _, other := range nearby {
 			sendRemoveObject(other.Session, player.CharID)
+			SendEntityUnblock(other.Session, player.X, player.Y)
 		}
 
 		// Save full character state
@@ -114,6 +115,19 @@ func HandleChangeChar(sess *net.Session, _ *packet.Reader, deps *Deps) {
 				zap.String("name", player.Name), zap.Error(err))
 		}
 		cancel4()
+
+		// Save active buffs (including polymorph state)
+		if deps.BuffRepo != nil && len(player.ActiveBuffs) > 0 {
+			buffRows := BuffRowsFromPlayer(player)
+			if len(buffRows) > 0 {
+				ctx5, cancel5 := context.WithTimeout(context.Background(), 3*time.Second)
+				if err := deps.BuffRepo.SaveBuffs(ctx5, player.CharID, buffRows); err != nil {
+					deps.Log.Error("切換角色時存檔buff失敗",
+						zap.String("name", player.Name), zap.Error(err))
+				}
+				cancel5()
+			}
+		}
 	}
 
 	sess.CharName = ""

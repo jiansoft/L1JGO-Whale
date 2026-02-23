@@ -166,6 +166,8 @@ func sendRetrieveList(sess *net.Session, npcObjID int32, whType int16, items []*
 		viewName := it.Name
 		if it.EnchantLvl > 0 {
 			viewName = fmt.Sprintf("+%d %s", it.EnchantLvl, viewName)
+		} else if it.EnchantLvl < 0 {
+			viewName = fmt.Sprintf("%d %s", it.EnchantLvl, viewName)
 		}
 
 		w.WriteD(it.TempObjID) // item object ID
@@ -467,8 +469,10 @@ func handleWarehouseWithdraw(sess *net.Session, r *packet.Reader, count int, pla
 			wc.InvGfx,
 			wc.Weight,
 			wc.Stackable,
-			byte(wc.EnchantLvl),
+			byte(wc.Bless),
 		)
+		item.EnchantLvl = int8(wc.EnchantLvl)
+		item.Identified = wc.Identified
 		item.UseType = wc.UseType
 
 		if wasExisting {

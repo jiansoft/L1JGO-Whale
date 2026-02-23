@@ -247,6 +247,8 @@ func HandleAddTrade(sess *net.Session, r *packet.Reader, deps *Deps) {
 	viewName := tradeCopy.Name
 	if tradeCopy.EnchantLvl > 0 {
 		viewName = fmt.Sprintf("+%d %s", tradeCopy.EnchantLvl, viewName)
+	} else if tradeCopy.EnchantLvl < 0 {
+		viewName = fmt.Sprintf("%d %s", tradeCopy.EnchantLvl, viewName)
 	}
 	if count > 1 {
 		viewName = fmt.Sprintf("%s (%d)", viewName, count)
@@ -401,7 +403,8 @@ func addTradeItemToPlayer(receiver *world.PlayerInfo, item *world.InvItem, deps 
 	existing := receiver.Inv.FindByItemID(item.ItemID)
 	wasExisting := existing != nil && stackable
 
-	newItem := receiver.Inv.AddItem(item.ItemID, item.Count, name, invGfx, weight, stackable, item.EnchantLvl)
+	newItem := receiver.Inv.AddItem(item.ItemID, item.Count, name, invGfx, weight, stackable, item.Bless)
+	newItem.EnchantLvl = item.EnchantLvl
 	if itemInfo != nil {
 		newItem.UseType = itemInfo.UseTypeID
 	}
@@ -468,7 +471,8 @@ func restoreTradeItems(p *world.PlayerInfo, deps *Deps) {
 		existing := p.Inv.FindByItemID(item.ItemID)
 		wasExisting := existing != nil && stackable
 
-		newItem := p.Inv.AddItem(item.ItemID, item.Count, name, invGfx, weight, stackable, item.EnchantLvl)
+		newItem := p.Inv.AddItem(item.ItemID, item.Count, name, invGfx, weight, stackable, item.Bless)
+		newItem.EnchantLvl = item.EnchantLvl
 		if itemInfo != nil {
 			newItem.UseType = itemInfo.UseTypeID
 		}

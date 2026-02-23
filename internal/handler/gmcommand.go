@@ -37,11 +37,11 @@ func HandleGMCommand(sess *net.Session, player *world.PlayerInfo, text string, d
 	case "level":
 		gmLevel(sess, player, args, deps)
 	case "hp":
-		gmHP(sess, player, args)
+		gmHP(sess, player, args, deps)
 	case "mp":
 		gmMP(sess, player, args)
 	case "heal":
-		gmHeal(sess, player)
+		gmHeal(sess, player, deps)
 	case "stat":
 		gmStat(sess, player, args, deps)
 	case "move", "warp", "teleport":
@@ -82,6 +82,10 @@ func HandleGMCommand(sess *net.Session, player *world.PlayerInfo, text string, d
 		gmPoly(sess, player, args, deps)
 	case "undopoly":
 		gmUndoPoly(sess, player, args, deps)
+	case "wall":
+		gmWall(sess, player, args, deps)
+	case "clearwall":
+		gmClearWall(sess, player, deps)
 	default:
 		gmMsg(sess, "\\f3未知的GM指令: ."+cmd+"  輸入 .help 查看指令列表")
 	}
@@ -127,6 +131,8 @@ func gmHelp(sess *net.Session) {
 	gmMsg(sess, ".undopoly [玩家名]  — 解除變身")
 	gmMsg(sess, ".save  — 手動存檔")
 	gmMsg(sess, ".ac  — 顯示角色詳細資訊")
+	gmMsg(sess, ".wall [1|2|3]  — 測試牆壁: 1=隱形門 2=僅封包 3=可見門")
+	gmMsg(sess, ".clearwall  — 清除測試牆壁")
 }
 
 func gmLevel(sess *net.Session, player *world.PlayerInfo, args []string, deps *Deps) {
@@ -160,7 +166,7 @@ func gmLevel(sess *net.Session, player *world.PlayerInfo, args []string, deps *D
 	gmMsgf(sess, "等級已設為 %d (HP:%d MP:%d)", lv, player.MaxHP, player.MaxMP)
 }
 
-func gmHP(sess *net.Session, player *world.PlayerInfo, args []string) {
+func gmHP(sess *net.Session, player *world.PlayerInfo, args []string, deps *Deps) {
 	if len(args) < 1 {
 		gmMsg(sess, "\\f3用法: .hp <數值>")
 		return
@@ -175,8 +181,10 @@ func gmHP(sess *net.Session, player *world.PlayerInfo, args []string) {
 	if player.HP > player.MaxHP {
 		player.MaxHP = player.HP
 	}
-	if player.HP > 0 {
+	if player.HP > 0 && player.Dead {
 		player.Dead = false
+		player.LastMoveTime = 0
+		deps.World.OccupyEntity(player.MapID, player.X, player.Y, player.CharID)
 	}
 	sendHpUpdate(sess, player)
 	sendPlayerStatus(sess, player)
@@ -203,11 +211,13 @@ func gmMP(sess *net.Session, player *world.PlayerInfo, args []string) {
 	gmMsgf(sess, "MP 已設為 %d/%d", player.MP, player.MaxMP)
 }
 
-func gmHeal(sess *net.Session, player *world.PlayerInfo) {
+func gmHeal(sess *net.Session, player *world.PlayerInfo, deps *Deps) {
 	player.HP = player.MaxHP
 	player.MP = player.MaxMP
 	if player.Dead {
 		player.Dead = false
+		player.LastMoveTime = 0
+		deps.World.OccupyEntity(player.MapID, player.X, player.Y, player.CharID)
 	}
 	sendHpUpdate(sess, player)
 	sendMpUpdate(sess, player)
@@ -294,11 +304,11 @@ func gmItem(sess *net.Session, player *world.PlayerInfo, args []string, deps *De
 			count = int32(c)
 		}
 	}
-	enchant := byte(0)
+	enchant := int8(0)
 	if len(args) >= 3 {
 		e, err := strconv.Atoi(args[2])
-		if err == nil && e >= 0 && e <= 15 {
-			enchant = byte(e)
+		if err == nil && e >= -7 && e <= 15 {
+			enchant = int8(e)
 		}
 	}
 
@@ -605,6 +615,7 @@ func gmKill(sess *net.Session, player *world.PlayerInfo, args []string, deps *De
 		if dist <= 3 {
 			npc.HP = 0
 			npc.Dead = true
+			deps.World.NpcDied(npc)
 			viewers := deps.World.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 			for _, v := range viewers {
 				sendActionGfx(v.Session, npc.ID, 8)
@@ -628,6 +639,7 @@ func gmKillAll(sess *net.Session, player *world.PlayerInfo, deps *Deps) {
 		}
 		npc.HP = 0
 		npc.Dead = true
+		deps.World.NpcDied(npc)
 		viewers := deps.World.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 		for _, v := range viewers {
 			sendActionGfx(v.Session, npc.ID, 8)
@@ -995,4 +1007,134 @@ func gmUndoPoly(sess *net.Session, player *world.PlayerInfo, args []string, deps
 	} else {
 		gmMsgf(sess, "已解除 %s 的變身", target.Name)
 	}
+}
+
+// gmWall creates a collision wall (door) at the facing tile for testing.
+// Usage: .wall [mode]
+//   mode 1 (default): S_DoorPack(GfxId=0) + S_CHANGE_ATTR + S_REMOVE_OBJECT (invisible test)
+//   mode 2: S_CHANGE_ATTR only (no door object)
+//   mode 3: S_DoorPack(GfxId=0) + S_CHANGE_ATTR, keep visible (no remove)
+func gmWall(sess *net.Session, player *world.PlayerInfo, args []string, deps *Deps) {
+	mode := 1
+	if len(args) > 0 {
+		if m, err := strconv.Atoi(args[0]); err == nil && m >= 1 && m <= 6 {
+			mode = m
+		}
+	}
+
+	h := player.Heading
+	if h < 0 || h > 7 {
+		h = 0
+	}
+	tx := player.X + headingDX[h]
+	ty := player.Y + headingDY[h]
+
+	switch mode {
+	case 1:
+		// Door + S_CHANGE_ATTR + immediate S_REMOVE_OBJECT (try to keep passability but hide visual)
+		door := &world.DoorInfo{
+			ID: world.NextDoorID(), GfxID: 0, X: tx, Y: ty, MapID: player.MapID,
+			MaxHP: 0, HP: 1, Direction: 0, LeftEdge: tx, RightEdge: tx, OpenStatus: world.DoorActionClose,
+		}
+		door2 := &world.DoorInfo{
+			ID: world.NextDoorID(), GfxID: 0, X: tx, Y: ty, MapID: player.MapID,
+			MaxHP: 0, HP: 1, Direction: 1, LeftEdge: ty, RightEdge: ty, OpenStatus: world.DoorActionClose,
+		}
+		deps.World.AddDoor(door)
+		deps.World.AddDoor(door2)
+		SendDoorPerceive(sess, door)
+		SendDoorPerceive(sess, door2)
+		// Immediately remove the visual objects — passability might persist
+		sendRemoveObject(sess, door.ID)
+		sendRemoveObject(sess, door2.ID)
+		gmMsgf(sess, "模式1: 門+封包+移除視覺 (%d,%d)", tx, ty)
+
+	case 2:
+		// S_CHANGE_ATTR only (no door object)
+		sendDoorAttr(sess, tx, ty, 0, false)
+		sendDoorAttr(sess, tx, ty, 1, false)
+		sendDoorAttr(sess, tx, ty+1, 0, false)
+		sendDoorAttr(sess, tx-1, ty, 1, false)
+		gmMsgf(sess, "模式2: 僅S_CHANGE_ATTR (%d,%d) 無門物件", tx, ty)
+
+	case 3:
+		// Door + S_CHANGE_ATTR, keep visible (no S_REMOVE_OBJECT) — same as old mode 1
+		door := &world.DoorInfo{
+			ID: world.NextDoorID(), GfxID: 0, X: tx, Y: ty, MapID: player.MapID,
+			MaxHP: 0, HP: 1, Direction: 0, LeftEdge: tx, RightEdge: tx, OpenStatus: world.DoorActionClose,
+		}
+		door2 := &world.DoorInfo{
+			ID: world.NextDoorID(), GfxID: 0, X: tx, Y: ty, MapID: player.MapID,
+			MaxHP: 0, HP: 1, Direction: 1, LeftEdge: ty, RightEdge: ty, OpenStatus: world.DoorActionClose,
+		}
+		deps.World.AddDoor(door)
+		deps.World.AddDoor(door2)
+		SendDoorPerceive(sess, door)
+		SendDoorPerceive(sess, door2)
+		gmMsgf(sess, "模式3: 門+封包 保留視覺 (%d,%d) ID=%d,%d", tx, ty, door.ID, door2.ID)
+
+	case 4:
+		// Only S_DoorPack (no S_CHANGE_ATTR) + S_REMOVE_OBJECT — test if DoorPack alone blocks
+		door := &world.DoorInfo{
+			ID: world.NextDoorID(), GfxID: 0, X: tx, Y: ty, MapID: player.MapID,
+			MaxHP: 0, HP: 1, Direction: 0, LeftEdge: tx, RightEdge: tx, OpenStatus: world.DoorActionClose,
+		}
+		deps.World.AddDoor(door)
+		sendDoorPack(sess, door)
+		sendRemoveObject(sess, door.ID)
+		gmMsgf(sess, "模式4: 僅S_DoorPack+移除 無S_CHANGE_ATTR (%d,%d)", tx, ty)
+
+	case 5:
+		// S_CHANGE_ATTR comprehensive — block ALL surrounding edges
+		// Block tile itself (both directions)
+		sendDoorAttr(sess, tx, ty, 0, false)
+		sendDoorAttr(sess, tx, ty, 1, false)
+		// Block all 4 adjacent tiles' edges pointing toward (tx, ty)
+		sendDoorAttr(sess, tx, ty+1, 0, false)  // south tile "/" edge
+		sendDoorAttr(sess, tx, ty+1, 1, false)  // south tile "\" edge
+		sendDoorAttr(sess, tx-1, ty, 0, false)  // west tile "/" edge
+		sendDoorAttr(sess, tx-1, ty, 1, false)   // west tile "\" edge
+		sendDoorAttr(sess, tx, ty-1, 0, false)  // north tile "/" edge
+		sendDoorAttr(sess, tx, ty-1, 1, false)  // north tile "\" edge
+		sendDoorAttr(sess, tx+1, ty, 0, false)  // east tile "/" edge
+		sendDoorAttr(sess, tx+1, ty, 1, false)   // east tile "\" edge
+		gmMsgf(sess, "模式5: 全方位S_CHANGE_ATTR (%d,%d) + 4鄰居", tx, ty)
+
+	case 6:
+		// Try S_DoorPack with dead status (37) + S_REMOVE_OBJECT — dead door might be invisible
+		door := &world.DoorInfo{
+			ID: world.NextDoorID(), GfxID: 0, X: tx, Y: ty, MapID: player.MapID,
+			MaxHP: 0, HP: 1, Direction: 0, LeftEdge: tx, RightEdge: tx, OpenStatus: world.DoorActionClose,
+		}
+		door2 := &world.DoorInfo{
+			ID: world.NextDoorID(), GfxID: 0, X: tx, Y: ty, MapID: player.MapID,
+			MaxHP: 0, HP: 1, Direction: 1, LeftEdge: ty, RightEdge: ty, OpenStatus: world.DoorActionClose,
+		}
+		deps.World.AddDoor(door)
+		deps.World.AddDoor(door2)
+		// Send door pack + S_CHANGE_ATTR
+		SendDoorPerceive(sess, door)
+		SendDoorPerceive(sess, door2)
+		// Then send "die" action to make them disappear visually
+		sendDoorAction(sess, door.ID, world.DoorActionDie)
+		sendDoorAction(sess, door2.ID, world.DoorActionDie)
+		gmMsgf(sess, "模式6: 門+死亡動畫 (%d,%d) ID=%d,%d", tx, ty, door.ID, door2.ID)
+	}
+}
+
+// gmClearWall removes all test walls/doors near the player.
+func gmClearWall(sess *net.Session, player *world.PlayerInfo, deps *Deps) {
+	removed := 0
+	nearbyDoors := deps.World.GetNearbyDoors(player.X, player.Y, player.MapID)
+	for _, d := range nearbyDoors {
+		// Only remove GM-spawned doors (GfxId=0 or test doors at exact position)
+		if d.GfxID == 0 || d.GfxID == 2618 {
+			sendRemoveObject(sess, d.ID)
+			// Make passable again
+			sendDoorAttr(sess, d.EntranceX(), d.EntranceY(), d.Direction, true)
+			deps.World.RemoveDoor(d.ID)
+			removed++
+		}
+	}
+	gmMsgf(sess, "已清除 %d 個測試牆壁", removed)
 }

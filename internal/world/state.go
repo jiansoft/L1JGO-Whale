@@ -59,9 +59,10 @@ type PlayerInfo struct {
 	EarthRes   int16 // earth resistance
 	Dodge      int16 // dodge bonus
 	Food       int16 // satiety 0-225 (225=full); sent in S_STATUS
-	PKCount    int32 // PK kill count
-	PinkName      bool // temporary red name (180 seconds after attacking blue player)
-	PinkNameTicks int  // remaining ticks for pink name timer
+	PKCount       int32 // PK kill count
+	PinkName      bool  // temporary red name (180 seconds after attacking blue player)
+	PinkNameTicks int   // remaining ticks for pink name timer
+	WantedTicks   int   // >0 = wanted by guards (24h = 432000 ticks at 200ms/tick)
 	RegenHPAcc int   // HP regen accumulator: counts 1-second ticks since last HP regen
 
 	Dead       bool  // true when HP <= 0, waiting for restart
@@ -69,6 +70,8 @@ type PlayerInfo struct {
 	Paralyzed  bool  // true when frozen/stunned/bound
 	Sleeped    bool  // true when under sleep effect
 	PKMode     bool  // true when PK button is toggled on (client sends C_DUEL to toggle)
+
+	LastMoveTime int64 // time.Now().UnixNano() of last accepted move (0 = no throttle)
 
 	TempCharGfx int32 // 0=use ClassID; >0=current polymorph GFX sprite
 	PolyID      int32 // current polymorph poly_id (for equip/skill checks; 0=not polymorphed)
@@ -216,6 +219,79 @@ type Bookmark struct {
 	MapID int16
 }
 
+// tileKey uniquely identifies a tile in the world (map + coordinates).
+type tileKey struct {
+	MapID int16
+	X, Y  int32
+}
+
+// EntityGrid is a tile occupancy map for O(1) collision checks.
+// Supports multiple occupants per tile (for monster stuck-crossing scenarios).
+// Player CharIDs < 100,000; NPC IDs start at 200,000,000 — no overlap.
+type EntityGrid struct {
+	tiles map[tileKey]map[int32]struct{}
+}
+
+func newEntityGrid() *EntityGrid {
+	return &EntityGrid{tiles: make(map[tileKey]map[int32]struct{})}
+}
+
+// Occupy marks an entity as occupying a tile.
+func (g *EntityGrid) Occupy(mapID int16, x, y int32, entityID int32) {
+	k := tileKey{MapID: mapID, X: x, Y: y}
+	cell := g.tiles[k]
+	if cell == nil {
+		cell = make(map[int32]struct{}, 1)
+		g.tiles[k] = cell
+	}
+	cell[entityID] = struct{}{}
+}
+
+// Vacate removes an entity from a tile.
+func (g *EntityGrid) Vacate(mapID int16, x, y int32, entityID int32) {
+	k := tileKey{MapID: mapID, X: x, Y: y}
+	cell := g.tiles[k]
+	if cell != nil {
+		delete(cell, entityID)
+		if len(cell) == 0 {
+			delete(g.tiles, k)
+		}
+	}
+}
+
+// Move atomically vacates old tile and occupies new tile.
+func (g *EntityGrid) Move(mapID int16, oldX, oldY, newX, newY int32, entityID int32) {
+	if oldX == newX && oldY == newY {
+		return
+	}
+	g.Vacate(mapID, oldX, oldY, entityID)
+	g.Occupy(mapID, newX, newY, entityID)
+}
+
+// IsOccupied returns true if any entity other than excludeID occupies the tile.
+func (g *EntityGrid) IsOccupied(mapID int16, x, y int32, excludeID int32) bool {
+	k := tileKey{MapID: mapID, X: x, Y: y}
+	cell := g.tiles[k]
+	if len(cell) == 0 {
+		return false
+	}
+	for id := range cell {
+		if id != excludeID {
+			return true
+		}
+	}
+	return false
+}
+
+// OccupantAt returns the first occupant ID at the tile, or 0 if empty.
+func (g *EntityGrid) OccupantAt(mapID int16, x, y int32) int32 {
+	k := tileKey{MapID: mapID, X: x, Y: y}
+	for id := range g.tiles[k] {
+		return id
+	}
+	return 0
+}
+
 // State tracks all players and NPCs currently in-world.
 // Single-goroutine access only (game loop).
 type State struct {
@@ -223,9 +299,14 @@ type State struct {
 	byCharID  map[int32]*PlayerInfo  // CharID → PlayerInfo
 	byName    map[string]*PlayerInfo // CharName → PlayerInfo
 	aoi       *AOIGrid
+	npcAoi    *NpcAOIGrid
+	entity    *EntityGrid
 
 	npcs    map[int32]*NpcInfo // NPC object ID → NpcInfo
 	npcList []*NpcInfo         // all NPCs (for tick iteration)
+
+	doors    map[int32]*DoorInfo // door object ID → DoorInfo
+	doorList []*DoorInfo         // all doors (for tick iteration)
 
 	groundItems map[int32]*GroundItem // ground item object ID → GroundItem
 
@@ -240,20 +321,24 @@ func NewState() *State {
 		byCharID:    make(map[int32]*PlayerInfo),
 		byName:      make(map[string]*PlayerInfo),
 		aoi:         NewAOIGrid(),
+		npcAoi:      NewNpcAOIGrid(),
+		entity:      newEntityGrid(),
 		Parties:     NewPartyManager(),
 		ChatParties: NewChatPartyManager(),
 		Clans:       NewClanManager(),
 		npcs:        make(map[int32]*NpcInfo),
+		doors:       make(map[int32]*DoorInfo),
 		groundItems: make(map[int32]*GroundItem),
 	}
 }
 
-// AddPlayer registers a player in the world. Returns the PlayerInfo.
+// AddPlayer registers a player in the world.
 func (s *State) AddPlayer(p *PlayerInfo) {
 	s.bySession[p.SessionID] = p
 	s.byCharID[p.CharID] = p
 	s.byName[p.Name] = p
 	s.aoi.Add(p.SessionID, p.X, p.Y, p.MapID)
+	s.entity.Occupy(p.MapID, p.X, p.Y, p.CharID)
 }
 
 // RemovePlayer removes a player from the world.
@@ -263,6 +348,7 @@ func (s *State) RemovePlayer(sessionID uint64) *PlayerInfo {
 		return nil
 	}
 	s.aoi.Remove(sessionID, p.X, p.Y, p.MapID)
+	s.entity.Vacate(p.MapID, p.X, p.Y, p.CharID)
 	delete(s.bySession, sessionID)
 	delete(s.byCharID, p.CharID)
 	delete(s.byName, p.Name)
@@ -284,7 +370,7 @@ func (s *State) GetByName(name string) *PlayerInfo {
 	return s.byName[name]
 }
 
-// UpdatePosition moves a player and updates AOI grid.
+// UpdatePosition moves a player and updates AOI grid + entity grid.
 func (s *State) UpdatePosition(sessionID uint64, newX, newY int32, newMapID int16, heading int16) {
 	p := s.bySession[sessionID]
 	if p == nil {
@@ -296,6 +382,7 @@ func (s *State) UpdatePosition(sessionID uint64, newX, newY int32, newMapID int1
 	p.MapID = newMapID
 	p.Heading = heading
 	s.aoi.Move(sessionID, oldX, oldY, oldMap, newX, newY, newMapID)
+	s.entity.Move(oldMap, oldX, oldY, newX, newY, p.CharID)
 }
 
 // GetNearbyPlayers returns all players visible to the given position.
@@ -349,6 +436,8 @@ func (s *State) AllPlayers(fn func(*PlayerInfo)) {
 func (s *State) AddNpc(npc *NpcInfo) {
 	s.npcs[npc.ID] = npc
 	s.npcList = append(s.npcList, npc)
+	s.npcAoi.Add(npc.ID, npc.X, npc.Y, npc.MapID)
+	s.entity.Occupy(npc.MapID, npc.X, npc.Y, npc.ID)
 }
 
 // GetNpc returns an NPC by its object ID.
@@ -357,10 +446,13 @@ func (s *State) GetNpc(id int32) *NpcInfo {
 }
 
 // GetNearbyNpcs returns all alive NPCs visible from the given position (Chebyshev <= 20).
+// Uses NPC AOI grid for O(cells) lookup instead of O(N) full scan.
 func (s *State) GetNearbyNpcs(x, y int32, mapID int16) []*NpcInfo {
-	var result []*NpcInfo
-	for _, npc := range s.npcs {
-		if npc.Dead || npc.MapID != mapID {
+	nearbyIDs := s.npcAoi.GetNearby(x, y, mapID)
+	result := make([]*NpcInfo, 0, len(nearbyIDs))
+	for _, nid := range nearbyIDs {
+		npc := s.npcs[nid]
+		if npc == nil || npc.Dead {
 			continue
 		}
 		dx := npc.X - x
@@ -382,6 +474,35 @@ func (s *State) GetNearbyNpcs(x, y int32, mapID int16) []*NpcInfo {
 	return result
 }
 
+// UpdateNpcPosition moves an NPC and updates NPC AOI grid + entity grid.
+// All NPC position changes MUST go through this method to keep indices consistent.
+func (s *State) UpdateNpcPosition(npcID int32, newX, newY int32, heading int16) {
+	npc := s.npcs[npcID]
+	if npc == nil {
+		return
+	}
+	oldX, oldY := npc.X, npc.Y
+	npc.X = newX
+	npc.Y = newY
+	npc.Heading = heading
+	s.npcAoi.Move(npcID, oldX, oldY, npc.MapID, newX, newY, npc.MapID)
+	s.entity.Move(npc.MapID, oldX, oldY, newX, newY, npcID)
+}
+
+// NpcDied removes a dead NPC from the NPC AOI grid and entity grid.
+// Call this when an NPC's Dead flag is set to true.
+func (s *State) NpcDied(npc *NpcInfo) {
+	s.npcAoi.Remove(npc.ID, npc.X, npc.Y, npc.MapID)
+	s.entity.Vacate(npc.MapID, npc.X, npc.Y, npc.ID)
+}
+
+// NpcRespawn re-adds a respawned NPC to the NPC AOI grid and entity grid.
+// Call this after resetting the NPC's position and clearing Dead flag.
+func (s *State) NpcRespawn(npc *NpcInfo) {
+	s.npcAoi.Add(npc.ID, npc.X, npc.Y, npc.MapID)
+	s.entity.Occupy(npc.MapID, npc.X, npc.Y, npc.ID)
+}
+
 // NpcList returns the full NPC list for tick iteration (spawn/respawn system).
 func (s *State) NpcList() []*NpcInfo {
 	return s.npcList
@@ -395,6 +516,113 @@ func (s *State) NpcCount() int {
 // GetNearbyPlayersAt returns all players near a position (for NPC broadcasting).
 func (s *State) GetNearbyPlayersAt(x, y int32, mapID int16) []*PlayerInfo {
 	return s.GetNearbyPlayers(x, y, mapID, 0) // 0 = no exclude
+}
+
+// IsPlayerAt returns true if any alive player occupies the exact tile (excluding excludeSession).
+func (s *State) IsPlayerAt(x, y int32, mapID int16, excludeSession uint64) bool {
+	nearbyIDs := s.aoi.GetNearby(x, y, mapID)
+	for _, sid := range nearbyIDs {
+		if sid == excludeSession {
+			continue
+		}
+		p := s.bySession[sid]
+		if p != nil && p.X == x && p.Y == y && p.MapID == mapID && !p.Dead {
+			return true
+		}
+	}
+	return false
+}
+
+// IsNpcAt returns true if any alive NPC occupies the exact tile.
+// Uses NPC AOI grid for O(cells) lookup instead of O(N) full scan.
+func (s *State) IsNpcAt(x, y int32, mapID int16) bool {
+	nearbyIDs := s.npcAoi.GetNearby(x, y, mapID)
+	for _, nid := range nearbyIDs {
+		npc := s.npcs[nid]
+		if npc != nil && npc.X == x && npc.Y == y && !npc.Dead {
+			return true
+		}
+	}
+	return false
+}
+
+// IsOccupied returns true if any alive entity (player or NPC) occupies the tile,
+// excluding the given entity ID. O(1) lookup via EntityGrid.
+func (s *State) IsOccupied(x, y int32, mapID int16, excludeID int32) bool {
+	return s.entity.IsOccupied(mapID, x, y, excludeID)
+}
+
+// OccupantAt returns the first occupant entity ID at the tile, or 0 if empty.
+func (s *State) OccupantAt(x, y int32, mapID int16) int32 {
+	return s.entity.OccupantAt(mapID, x, y)
+}
+
+// VacateEntity removes an entity from the entity grid (for death, disconnect, etc.)
+func (s *State) VacateEntity(mapID int16, x, y int32, entityID int32) {
+	s.entity.Vacate(mapID, x, y, entityID)
+}
+
+// OccupyEntity adds an entity to the entity grid (for respawn, login, etc.)
+func (s *State) OccupyEntity(mapID int16, x, y int32, entityID int32) {
+	s.entity.Occupy(mapID, x, y, entityID)
+}
+
+// --- Door methods ---
+
+// AddDoor registers a door in the world.
+func (s *State) AddDoor(door *DoorInfo) {
+	s.doors[door.ID] = door
+	s.doorList = append(s.doorList, door)
+}
+
+// GetDoor returns a door by its object ID.
+func (s *State) GetDoor(id int32) *DoorInfo {
+	return s.doors[id]
+}
+
+// GetNearbyDoors returns all doors visible from the given position (Chebyshev <= 20).
+func (s *State) GetNearbyDoors(x, y int32, mapID int16) []*DoorInfo {
+	var result []*DoorInfo
+	for _, door := range s.doors {
+		if door.MapID != mapID {
+			continue
+		}
+		dx := door.X - x
+		dy := door.Y - y
+		if dx < 0 {
+			dx = -dx
+		}
+		if dy < 0 {
+			dy = -dy
+		}
+		dist := dx
+		if dy > dist {
+			dist = dy
+		}
+		if dist <= 20 {
+			result = append(result, door)
+		}
+	}
+	return result
+}
+
+// RemoveDoor removes a door by its object ID.
+func (s *State) RemoveDoor(id int32) {
+	if _, ok := s.doors[id]; !ok {
+		return
+	}
+	delete(s.doors, id)
+	for i, d := range s.doorList {
+		if d.ID == id {
+			s.doorList = append(s.doorList[:i], s.doorList[i+1:]...)
+			break
+		}
+	}
+}
+
+// DoorCount returns total door count.
+func (s *State) DoorCount() int {
+	return len(s.doors)
 }
 
 // --- Ground item methods ---

@@ -21,7 +21,7 @@ conn_max_lifetime = "30m"     # 連線最大存活時間
 bind_address = "0.0.0.0:7001" # 監聽位址與埠號
 tick_rate = "200ms"            # 遊戲迴圈間隔（每秒 5 tick）
 in_queue_size = 128            # 每個連線的輸入佇列大小
-out_queue_size = 256           # 每個連線的輸出佇列大小
+out_queue_size = 2048          # 每個連線的輸出佇列大小（傳送時需大量封包）
 max_packets_per_tick = 32      # 每 tick 每連線最大處理封包數
 write_timeout = "10s"          # 寫入逾時
 read_timeout = "60s"           # 讀取逾時
@@ -35,8 +35,8 @@ lawful_rate = 1.0              # 正義值倍率
 
 # ── 衝裝設定 ────────────────────────────────────────────────
 [enchant]
-weapon_chance = 0.5            # 武器安定值以上衝裝成功率（50%）
-armor_chance = 0.333           # 防具安定值以上衝裝成功率（33%）
+weapon_chance = 0.68           # 武器衝裝係數（Java預設68, 公式隨等級遞減）
+armor_chance = 0.52            # 防具衝裝係數（Java預設52, 公式隨等級遞減）
 
 # ── 角色設定 ────────────────────────────────────────────────
 [character]

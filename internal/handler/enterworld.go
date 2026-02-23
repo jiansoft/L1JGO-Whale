@@ -78,11 +78,6 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 	}
 	deps.World.AddPlayer(player)
 
-	// Set tile collision at player's position
-	if deps.MapData != nil {
-		deps.MapData.SetImpassable(player.MapID, player.X, player.Y, true)
-	}
-
 	// Load inventory from DB (or give starting gold if empty)
 	loadInventoryFromDB(player, deps)
 
@@ -96,6 +91,9 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 	// EquipBonuses starts at zero, so this correctly adds all equipment contributions.
 	player.AC = 10 // base AC before equipment
 	applyEquipStats(player, deps.Items)
+
+	// Restore persisted buffs (including polymorph state)
+	loadAndRestoreBuffs(player, deps)
 
 	// --- Send initialization packets (order matches Java) ---
 
@@ -114,8 +112,8 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 	// 4. S_WORLD (opcode 206) — MapID
 	sendMapID(sess, uint16(ch.MapID), false)
 
-	// 5. S_PUT_OBJECT (opcode 87) — OwnCharPack
-	sendOwnCharPack(sess, ch, player.CurrentWeapon)
+	// 5. S_PUT_OBJECT (opcode 87) — OwnCharPack (use PlayerGfx for polymorph-aware GFX)
+	sendOwnCharPack(sess, ch, player.CurrentWeapon, PlayerGfx(player))
 
 	// 6. S_MAGIC_STATUS (opcode 37) — SPMR (real values from equipment + buffs)
 	sendMagicStatus(sess, byte(player.SP), uint16(player.MR))
@@ -167,12 +165,21 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 	for _, other := range nearby {
 		sendPutObject(sess, other)
 		sendPutObject(other.Session, player)
+		// Entity collision: only block if within proximity range
+		if ChebyshevDist(player.X, player.Y, other.X, other.Y) <= entityBlockRange {
+			SendEntityBlock(sess, other.X, other.Y, ch.MapID, deps.World)
+			SendEntityBlock(other.Session, player.X, player.Y, ch.MapID, deps.World)
+		}
 	}
 
 	// --- Send nearby NPCs ---
 	nearbyNpcs := deps.World.GetNearbyNpcs(ch.X, ch.Y, ch.MapID)
 	for _, npc := range nearbyNpcs {
 		sendNpcPack(sess, npc)
+		// Entity collision: only block NPCs within proximity range
+		if !npc.Dead && ChebyshevDist(player.X, player.Y, npc.X, npc.Y) <= entityBlockRange {
+			SendEntityBlock(sess, npc.X, npc.Y, ch.MapID, deps.World)
+		}
 	}
 
 	// --- Send nearby ground items ---
@@ -180,6 +187,20 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 	for _, g := range nearbyGnd {
 		sendDropItem(sess, g)
 	}
+
+	// --- Send nearby doors ---
+	nearbyDoors := deps.World.GetNearbyDoors(ch.X, ch.Y, ch.MapID)
+	for _, d := range nearbyDoors {
+		SendDoorPerceive(sess, d)
+	}
+
+	// Mark player tile as impassable (for NPC pathfinding, matching Java)
+	if deps.MapData != nil {
+		deps.MapData.SetImpassable(player.MapID, player.X, player.Y, true)
+	}
+
+	// --- Send restored buff icons (AFTER all init packets) ---
+	sendRestoredBuffIcons(player)
 }
 
 func sendLoginGame(sess *net.Session, clanID int32, clanMemberID int32) {
@@ -219,7 +240,7 @@ func loadInventoryFromDB(player *world.PlayerInfo, deps *Deps) {
 					row.ItemID, row.Count, itemInfo.Name, itemInfo.InvGfx,
 					itemInfo.Weight, stackable, byte(row.Bless),
 				)
-				invItem.EnchantLvl = byte(row.EnchantLvl)
+				invItem.EnchantLvl = int8(row.EnchantLvl)
 				invItem.Identified = row.Identified
 				invItem.UseType = itemInfo.UseTypeID
 				if row.Equipped && row.EquipSlot > 0 {
@@ -294,12 +315,13 @@ func sendMapID(sess *net.Session, mapID uint16, underwater bool) {
 
 // sendOwnCharPack sends S_PUT_OBJECT (opcode 87) for the player's own character.
 // Status byte uses 0x04 (bit 2 = PC flag) matching Java S_OwnCharPack.
-func sendOwnCharPack(sess *net.Session, ch *persist.CharacterRow, currentWeapon byte) {
+// gfxID: use PlayerGfx(player) to support polymorph appearance on login.
+func sendOwnCharPack(sess *net.Session, ch *persist.CharacterRow, currentWeapon byte, gfxID int32) {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_PUT_OBJECT)
 	w.WriteH(uint16(ch.X))
 	w.WriteH(uint16(ch.Y))
 	w.WriteD(ch.ID)
-	w.WriteH(uint16(ch.ClassID))
+	w.WriteH(uint16(gfxID))
 	w.WriteC(currentWeapon)    // current weapon
 	w.WriteC(byte(ch.Heading))
 	w.WriteC(0)                // light size
@@ -327,6 +349,163 @@ func sendOwnCharPack(sess *net.Session, ch *persist.CharacterRow, currentWeapon 
 	w.WriteS("")               // null
 	w.WriteC(0x00)             // unknown
 	sess.Send(w.Bytes())
+}
+
+// loadAndRestoreBuffs loads persisted buffs from DB and restores stats/flags silently.
+// NO PACKETS are sent here — call sendRestoredBuffIcons after init packets are done.
+// Called after applyEquipStats so stat deltas stack correctly on top of equipment.
+func loadAndRestoreBuffs(player *world.PlayerInfo, deps *Deps) {
+	if deps.BuffRepo == nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := deps.BuffRepo.LoadByCharID(ctx, player.CharID)
+	if err != nil {
+		deps.Log.Error("載入buff失敗", zap.String("name", player.Name), zap.Error(err))
+		return
+	}
+	if len(rows) == 0 {
+		return
+	}
+
+	for i := range rows {
+		row := &rows[i]
+		if row.RemainingTime <= 0 {
+			continue // expired
+		}
+
+		buff := &world.ActiveBuff{
+			SkillID:       row.SkillID,
+			TicksLeft:     row.RemainingTime * 5, // seconds → ticks (200ms each)
+			DeltaAC:       row.DeltaAC,
+			DeltaStr:      row.DeltaStr,
+			DeltaDex:      row.DeltaDex,
+			DeltaCon:      row.DeltaCon,
+			DeltaWis:      row.DeltaWis,
+			DeltaIntel:    row.DeltaIntel,
+			DeltaCha:      row.DeltaCha,
+			DeltaMaxHP:    row.DeltaMaxHP,
+			DeltaMaxMP:    row.DeltaMaxMP,
+			DeltaHitMod:   row.DeltaHitMod,
+			DeltaDmgMod:   row.DeltaDmgMod,
+			DeltaSP:       row.DeltaSP,
+			DeltaMR:       row.DeltaMR,
+			DeltaHPR:      row.DeltaHPR,
+			DeltaMPR:      row.DeltaMPR,
+			DeltaBowHit:   row.DeltaBowHit,
+			DeltaBowDmg:   row.DeltaBowDmg,
+			DeltaFireRes:  row.DeltaFireRes,
+			DeltaWaterRes: row.DeltaWaterRes,
+			DeltaWindRes:  row.DeltaWindRes,
+			DeltaEarthRes: row.DeltaEarthRes,
+			DeltaDodge:    row.DeltaDodge,
+			SetMoveSpeed:  row.SetMoveSpeed,
+			SetBraveSpeed: row.SetBraveSpeed,
+		}
+
+		player.AddBuff(buff)
+
+		// Apply stat deltas to player (silently — no packets)
+		player.AC += buff.DeltaAC
+		player.Str += buff.DeltaStr
+		player.Dex += buff.DeltaDex
+		player.Con += buff.DeltaCon
+		player.Wis += buff.DeltaWis
+		player.Intel += buff.DeltaIntel
+		player.Cha += buff.DeltaCha
+		player.MaxHP += buff.DeltaMaxHP
+		player.MaxMP += buff.DeltaMaxMP
+		player.HitMod += buff.DeltaHitMod
+		player.DmgMod += buff.DeltaDmgMod
+		player.SP += buff.DeltaSP
+		player.MR += buff.DeltaMR
+		player.HPR += buff.DeltaHPR
+		player.MPR += buff.DeltaMPR
+		player.BowHitMod += buff.DeltaBowHit
+		player.BowDmgMod += buff.DeltaBowDmg
+		player.Dodge += buff.DeltaDodge
+		player.FireRes += buff.DeltaFireRes
+		player.WaterRes += buff.DeltaWaterRes
+		player.WindRes += buff.DeltaWindRes
+		player.EarthRes += buff.DeltaEarthRes
+
+		// Restore speed flags (state only, no packets)
+		if buff.SetMoveSpeed > 0 {
+			player.MoveSpeed = buff.SetMoveSpeed
+			player.HasteTicks = buff.TicksLeft
+		}
+		if buff.SetBraveSpeed > 0 {
+			player.BraveSpeed = buff.SetBraveSpeed
+			player.BraveTicks = buff.TicksLeft
+		}
+
+		// Restore wisdom potion tracking fields (SP delta already applied above)
+		if row.SkillID == SkillStatusWisdomPotion && buff.DeltaSP > 0 {
+			player.WisdomSP = buff.DeltaSP
+			player.WisdomTicks = buff.TicksLeft
+		}
+
+		// Restore polymorph state (state only, no packets)
+		if row.SkillID == SkillShapeChange && row.PolyID > 0 {
+			player.TempCharGfx = row.PolyID
+			player.PolyID = row.PolyID
+			if deps.Polys != nil {
+				poly := deps.Polys.GetByID(row.PolyID)
+				if poly != nil && player.CurrentWeapon != 0 {
+					wpn := player.Equip.Weapon()
+					if wpn != nil {
+						wpnInfo := deps.Items.Get(wpn.ItemID)
+						if wpnInfo != nil && !poly.IsWeaponEquipable(wpnInfo.Type) {
+							player.CurrentWeapon = 0
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Delete persisted buffs after loading (they live in memory now)
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel2()
+	if err := deps.BuffRepo.DeleteByCharID(ctx2, player.CharID); err != nil {
+		deps.Log.Error("清除已載入buff失敗", zap.String("name", player.Name), zap.Error(err))
+	}
+
+	deps.Log.Info(fmt.Sprintf("恢復buff  角色=%s  數量=%d", player.Name, len(rows)))
+}
+
+// sendRestoredBuffIcons sends buff icon/speed/poly packets for all active buffs.
+// Must be called AFTER the init packet sequence (OwnCharPack etc.) is complete.
+func sendRestoredBuffIcons(player *world.PlayerInfo) {
+	if len(player.ActiveBuffs) == 0 {
+		return
+	}
+	sess := player.Session
+	for _, buff := range player.ActiveBuffs {
+		remainSec := uint16(buff.TicksLeft / 5)
+		if remainSec == 0 {
+			continue
+		}
+
+		// Speed packets
+		if buff.SetMoveSpeed > 0 {
+			sendSpeedPacket(sess, player.CharID, buff.SetMoveSpeed, remainSec)
+		}
+		if buff.SetBraveSpeed > 0 {
+			sendSpeedPacket(sess, player.CharID, buff.SetBraveSpeed, remainSec)
+		}
+
+		// Polymorph icon
+		if buff.SkillID == SkillShapeChange && player.PolyID > 0 {
+			sendPolyIcon(sess, remainSec)
+		} else {
+			// Other buff icons
+			sendBuffIcon(player, buff.SkillID, remainSec)
+		}
+	}
 }
 
 // loadAndSendCharConfig loads the saved character config from DB and sends it to the client.

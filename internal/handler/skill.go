@@ -90,6 +90,14 @@ func HandleUseSpell(sess *net.Session, r *packet.Reader, deps *Deps) {
 		return
 	}
 
+	// --- Teleport spells: special routing BEFORE consuming MP ---
+	// Java: teleport spells do NOT consume MP on failure (map restriction).
+	// executeTeleportSpell handles MP consumption internally after validation.
+	if skillID == 5 || skillID == 69 {
+		executeTeleportSpell(sess, player, skill, targetID, deps)
+		return
+	}
+
 	// --- Consume resources ---
 	if skill.MpConsume > 0 {
 		player.MP -= int16(skill.MpConsume)
@@ -595,6 +603,14 @@ func sendBuffIcon(target *world.PlayerInfo, skillID int32, durationSec uint16) {
 	// Invisibility (S_Invis opcode 171)
 	case 60, 97:
 		sendInvisible(sess, target.CharID, durationSec > 0)
+
+	// Potion buff icons (virtual SkillIDs 1000+)
+	// Haste (1001) and Brave (1000/1016) use S_SPEED packets, NOT icons here.
+	// Their icons are handled by sendSpeedPacket in sendRestoredBuffIcons / applyHaste / applyBrave.
+	case SkillStatusWisdomPotion: // 1004 — wisdom potion icon
+		sendWisdomPotionIcon(sess, durationSec)
+	case SkillStatusBluePotion: // 1002 — blue potion icon
+		sendBluePotionIcon(sess, durationSec)
 	}
 }
 
@@ -823,9 +839,28 @@ func executeSelfSkill(sess *net.Session, player *world.PlayerInfo, skill *data.S
 			sendMpUpdate(sess, player)
 		}
 
-	case 172: // 暴風疾走 Storm Walk — instant speed buff (like Wind Walk)
+	case 172: // 暴風疾走 Storm Walk — speed buff (like Wind Walk, BraveSpeed=4)
+		// Remove conflicting brave/speed buffs (same conflicts as applyBrave)
+		for _, conflictID := range []int32{
+			SkillStatusBrave, SkillStatusElfBrave,
+			42,  // HOLY_WALK
+			101, // MOVING_ACCELERATION
+			150, // WIND_WALK
+			52,  // BLOODLUST
+		} {
+			removeBuffAndRevert(player, conflictID, deps)
+		}
+		stormBuff := &world.ActiveBuff{
+			SkillID:       172,
+			TicksLeft:     300 * 5, // 5 minutes
+			SetBraveSpeed: 4,
+		}
+		old172 := player.AddBuff(stormBuff)
+		if old172 != nil {
+			revertBuffStats(player, old172)
+		}
 		player.BraveSpeed = 4
-		player.BraveTicks = 300 * 5 // ~5 minutes
+		player.BraveTicks = stormBuff.TicksLeft
 		sendSpeedToAll(player, deps, 4, 300)
 	}
 
@@ -944,6 +979,132 @@ func executeSelfSkill(sess *net.Session, player *world.PlayerInfo, skill *data.S
 	}
 }
 
+// executeTeleportSpell handles skill 5 (Teleport) and 69 (Mass Teleport).
+// Java: L1SkillUse TELEPORT case → L1Teleport.teleport() → Teleportation.actionTeleportation().
+// The targetID parameter carries the bookmark ID (or 0 for random teleport).
+// Unlike normal spells, teleport is executed immediately server-side (Java default path).
+// The client unfreezes when it receives S_MapID + S_OwnCharPack from teleportPlayer.
+//
+// Map restrictions (Java):
+//   - Bookmark teleport: map must be Escapable → fail msg 79
+//   - Random teleport:   map must be Teleportable → fail msg 276
+//   - MP is NOT consumed on failure.
+func executeTeleportSpell(sess *net.Session, player *world.PlayerInfo, skill *data.SkillInfo, bookmarkID int32, deps *Deps) {
+	var destX, destY int32
+	var destMapID int16
+	var destHeading int16 = 5 // Java default heading for teleport
+
+	if bookmarkID != 0 {
+		// --- Bookmark teleport ---
+
+		// Map restriction: must be Escapable (Java: pc.getMap().isEscapable())
+		if deps.MapData != nil {
+			if mi := deps.MapData.GetInfo(player.MapID); mi != nil && !mi.Escapable {
+				sendServerMessage(sess, 79) // "這附近的能量影響到瞬間移動。在此地無法使用瞬間移動。"
+				sendTeleportUnlock(sess)
+				return
+			}
+		}
+
+		// Look up bookmark by ID
+		var found *world.Bookmark
+		for i := range player.Bookmarks {
+			if player.Bookmarks[i].ID == bookmarkID {
+				found = &player.Bookmarks[i]
+				break
+			}
+		}
+		if found == nil {
+			sendTeleportUnlock(sess)
+			return
+		}
+		destX = found.X
+		destY = found.Y
+		destMapID = found.MapID
+	} else {
+		// --- Random teleport ---
+
+		// Map restriction: must be Teleportable (Java: pc.getMap().isTeleportable())
+		if deps.MapData != nil {
+			if mi := deps.MapData.GetInfo(player.MapID); mi != nil && !mi.Teleportable {
+				sendServerMessage(sess, 276) // "在此無法使用傳送。"
+				sendTeleportUnlock(sess)
+				return
+			}
+		}
+
+		// Random location within 200 tiles, clamped to map bounds.
+		// Java: L1Location.randomLocation(200, true) — tries 40 times,
+		// checks isInMap + isPassable, falls back to current position.
+		destMapID = player.MapID
+		destX = player.X
+		destY = player.Y
+
+		minRX := player.X - 200
+		maxRX := player.X + 200
+		minRY := player.Y - 200
+		maxRY := player.Y + 200
+		if deps.MapData != nil {
+			if mi := deps.MapData.GetInfo(destMapID); mi != nil {
+				if minRX < mi.StartX {
+					minRX = mi.StartX
+				}
+				if maxRX > mi.EndX {
+					maxRX = mi.EndX
+				}
+				if minRY < mi.StartY {
+					minRY = mi.StartY
+				}
+				if maxRY > mi.EndY {
+					maxRY = mi.EndY
+				}
+			}
+		}
+
+		diffX := maxRX - minRX
+		diffY := maxRY - minRY
+		if diffX > 0 && diffY > 0 {
+			for attempt := 0; attempt < 40; attempt++ {
+				rx := minRX + int32(world.RandInt(int(diffX)+1))
+				ry := minRY + int32(world.RandInt(int(diffY)+1))
+				if deps.MapData != nil && deps.MapData.IsInMap(destMapID, rx, ry) &&
+					deps.MapData.IsPassablePoint(destMapID, rx, ry) {
+					destX = rx
+					destY = ry
+					break
+				}
+			}
+		}
+		// If all 40 attempts fail, destX/destY stay at current position (same as Java).
+	}
+
+	// --- Validation passed — consume MP now ---
+	if skill.MpConsume > 0 {
+		player.MP -= int16(skill.MpConsume)
+		sendMpUpdate(sess, player)
+	}
+
+	// Broadcast cast animation to nearby players
+	nearby := deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
+	for _, viewer := range nearby {
+		sendActionGfx(viewer.Session, player.CharID, byte(skill.ActionID))
+	}
+
+	// Send departure effect (GFX 169) BEFORE teleport — Java: S_SkillSound + Thread.sleep(196ms)
+	sendSkillEffect(sess, player.CharID, int32(skill.CastGfx))
+	for _, viewer := range nearby {
+		if viewer.SessionID != sess.ID {
+			sendSkillEffect(viewer.Session, player.CharID, int32(skill.CastGfx))
+		}
+	}
+
+	// Auto-cancel trade when teleporting
+	cancelTradeIfActive(player, deps)
+
+	// Execute teleport — client unfreezes on receiving S_MapID + S_OwnCharPack
+	teleportPlayer(sess, player, destX, destY, destMapID, destHeading, deps)
+}
+
 // cancelAllBuffs removes all cancellable buffs from a player (Java: Cancellation).
 // Non-cancellable list is defined in Lua (scripts/combat/buffs.lua).
 func cancelAllBuffs(target *world.PlayerInfo, deps *Deps) {
@@ -1007,7 +1168,15 @@ func TickPlayerBuffs(p *world.PlayerInfo, deps *Deps) {
 			}
 			if buff.SetBraveSpeed > 0 {
 				p.BraveSpeed = 0
+				p.BraveTicks = 0
 				sendSpeedToAll(p, deps, 0, 0) // cancel brave/holy walk
+			}
+
+			// Handle wisdom potion expiry — clear tracking fields
+			// (DeltaSP already reverted by revertBuffStats above)
+			if skillID == SkillStatusWisdomPotion {
+				p.WisdomSP = 0
+				p.WisdomTicks = 0
 			}
 
 			if deps.Skills != nil {
@@ -1020,33 +1189,17 @@ func TickPlayerBuffs(p *world.PlayerInfo, deps *Deps) {
 		}
 	}
 
-	// Brave expiration (from potions, not spell buffs — tracked separately)
-	if p.BraveTicks > 0 {
-		p.BraveTicks--
-		if p.BraveTicks <= 0 {
-			oldBrave := p.BraveSpeed
-			p.BraveSpeed = 0
-			sendSpeedToAll(p, deps, oldBrave, 0)
-		}
-	}
-
-	// Haste expiration (from potions — tracked separately)
+	// Sync potion countdown fields with their ActiveBuff entries.
+	// These fields are kept for backward compat (game logic checks MoveSpeed/BraveSpeed).
+	// The actual timer lives in ActiveBuff; the separate fields mirror it.
 	if p.HasteTicks > 0 {
 		p.HasteTicks--
-		if p.HasteTicks <= 0 {
-			p.MoveSpeed = 0
-			sendSpeedToAll(p, deps, 0, 0)
-		}
 	}
-
-	// Wisdom potion expiration
+	if p.BraveTicks > 0 {
+		p.BraveTicks--
+	}
 	if p.WisdomTicks > 0 {
 		p.WisdomTicks--
-		if p.WisdomTicks <= 0 {
-			p.SP -= p.WisdomSP
-			p.WisdomSP = 0
-			sendPlayerStatus(p.Session, p)
-		}
 	}
 
 	// Pink name expiration (PK system)
@@ -1055,6 +1208,11 @@ func TickPlayerBuffs(p *world.PlayerInfo, deps *Deps) {
 		if p.PinkNameTicks <= 0 {
 			p.PinkName = false
 		}
+	}
+
+	// Wanted status expiration (guard targeting)
+	if p.WantedTicks > 0 {
+		p.WantedTicks--
 	}
 }
 

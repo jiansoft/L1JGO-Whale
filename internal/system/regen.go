@@ -157,8 +157,8 @@ func tickMPRegen(p *world.PlayerInfo) {
 	}
 
 	// Blue Potion bonus: WIS min 11, +WIS-10
-	// Check for STATUS_BLUE_POTION (skillID 75 in Java enum)
-	if p.HasBuff(75) {
+	// STATUS_BLUE_POTION = 1002 in Java (virtual SkillID)
+	if p.HasBuff(1002) {
 		effWis := wis
 		if effWis < 11 {
 			effWis = 11

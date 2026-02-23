@@ -304,52 +304,76 @@ func handleTeleport(sess *net.Session, player *world.PlayerInfo, npcID int32, ac
 
 // teleportPlayer moves a player to a new location with full AOI updates.
 // Used by NPC teleport, death restart, GM commands, etc.
+//
+// Packet sequence matches Java Teleportation.actionTeleportation() exactly:
+//  1. Remove from old location (broadcast S_REMOVE_OBJECT to old nearby)
+//  2. Update world position
+//  3. S_MapID — client loads new map
+//  4. Broadcast S_OtherCharPacks to new nearby (they see us arrive)
+//  5. S_OwnCharPack — self character at new position (live player data)
+//  6. updateObject equivalent — send nearby players, NPCs, ground items to self
+//  7. S_CharVisualUpdate — weapon/poly visual fix (LAST per Java)
 func teleportPlayer(sess *net.Session, player *world.PlayerInfo, x, y int32, mapID, heading int16, deps *Deps) {
-	// Update tile collision (clear old, set new)
+	// Reset move speed timer (teleport resets speed validation)
+	player.LastMoveTime = 0
+
+	// Clear old tile (for NPC pathfinding)
 	if deps.MapData != nil {
 		deps.MapData.SetImpassable(player.MapID, player.X, player.Y, false)
-		deps.MapData.SetImpassable(mapID, x, y, true)
 	}
 
-	// Remove from old location for nearby players
+	// 1. Remove from old location for nearby players + unblock entity collision
 	oldNearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
 	for _, other := range oldNearby {
 		sendRemoveObject(other.Session, player.CharID)
+		SendEntityUnblock(other.Session, player.X, player.Y)
 	}
 
-	// Update position in world state
+	// 2. Update position in world state (Java: moveVisibleObject + setLocation)
 	deps.World.UpdatePosition(sess.ID, x, y, mapID, heading)
 
-	// Send map ID (always — even if same map, client needs it for teleport)
+	// Mark new tile as impassable (for NPC pathfinding)
+	if deps.MapData != nil {
+		deps.MapData.SetImpassable(mapID, x, y, true)
+	}
+
+	// 3. S_MapID (always — even if same map, client needs it for teleport)
 	sendMapID(sess, uint16(mapID), false)
 
-	// Send own char at new position
-	sendPutObject(sess, player)
-
-	// Send status update
-	sendPlayerStatus(sess, player)
-
-	// Show nearby players at new location
+	// 4. Broadcast appearance to players at destination + entity collision
 	newNearby := deps.World.GetNearbyPlayers(x, y, mapID, sess.ID)
 	for _, other := range newNearby {
 		sendPutObject(other.Session, player) // they see us
-		sendPutObject(sess, other)           // we see them
+		SendEntityBlock(other.Session, x, y, mapID, deps.World) // block our tile for them
 	}
 
-	// Show nearby NPCs at new location
+	// 5. S_OwnCharPack — Java uses live player data (new S_OwnCharPack(pc))
+	sendOwnCharPackPlayer(sess, player)
+
+	// 6. updateObject equivalent — send nearby entities to self + entity collision
+	for _, other := range newNearby {
+		sendPutObject(sess, other) // we see them
+		SendEntityBlock(sess, other.X, other.Y, mapID, deps.World) // block their tile for us
+	}
+
 	nearbyNpcs := deps.World.GetNearbyNpcs(x, y, mapID)
 	for _, npc := range nearbyNpcs {
 		sendNpcPack(sess, npc)
+		if !npc.Dead {
+			SendEntityBlock(sess, npc.X, npc.Y, mapID, deps.World) // block NPC tile for us
+		}
 	}
 
-	// Show nearby ground items at new location
 	nearbyGnd := deps.World.GetNearbyGroundItems(x, y, mapID)
 	for _, g := range nearbyGnd {
 		sendDropItem(sess, g)
 	}
 
-	// Send weather
-	sendWeather(sess, 0)
+	// Send nearby doors at destination
+	nearbyDoors := deps.World.GetNearbyDoors(x, y, mapID)
+	for _, d := range nearbyDoors {
+		SendDoorPerceive(sess, d)
+	}
 }
 
 // handleYesNoResponse processes S_Message_YN dialog responses.

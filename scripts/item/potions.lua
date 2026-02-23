@@ -20,9 +20,14 @@ POTIONS = {
     -- ========== Mana potions ==========
     [40013] = { type = "mana", amount = 10 },   -- 瑪那藥水
     [40014] = { type = "mana", amount = 25 },   -- 強力瑪那藥水
-    [40015] = { type = "mana", amount = 50 },   -- 終極瑪那藥水
     [40023] = { type = "mana", amount = 100 },  -- 濃縮瑪那藥水
     [40016] = { type = "mana", amount = 30 },   -- 清澈藥水
+
+    -- ========== Blue potions (MP regen buff) — gfx 190 ==========
+    [40015]  = { type = "blue_potion", duration = 600,  gfx = 190 },  -- 藍色藥水 (10 min)
+    [140015] = { type = "blue_potion", duration = 700,  gfx = 190 },  -- 受祝福的藍色藥水
+    [40736]  = { type = "blue_potion", duration = 600,  gfx = 190 },  -- 智慧貨幣
+    [49306]  = { type = "blue_potion", duration = 2400, gfx = 190 },  -- 福利藍色藥水 (40 min)
 
     -- ========== Haste (green) potions — gfx 191 ==========
     [40005]  = { type = "haste", duration = 300,  gfx = 191 },  -- 自我加速藥水 (5 min)

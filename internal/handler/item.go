@@ -18,6 +18,18 @@ const (
 	msgLevelTooLow    uint16 = 318 // "等級 %0以上才可使用此道具。"
 )
 
+// Virtual SkillIDs for potion-based buffs (matching Java L1SkillId.java STATUS_* constants).
+// These are NOT real spell IDs — they are virtual IDs used by setSkillEffect to track
+// potion durations in the same system as spell buffs.
+const (
+	SkillStatusBrave        int32 = 1000 // 勇敢藥水 (brave type 1, atk speed 1.33x)
+	SkillStatusHaste        int32 = 1001 // 自我加速藥水 (move speed 1.33x)
+	SkillStatusBluePotion   int32 = 1002 // 藍色藥水 (MP regen boost)
+	SkillStatusWisdomPotion int32 = 1004 // 慎重藥水 (SP +2)
+	SkillStatusElfBrave     int32 = 1016 // 精靈餅乾 (brave type 3, atk speed 1.15x)
+	SkillStatusThirdSpeed   int32 = 1027 // 三段加速 (char speed 1.15x)
+)
+
 // canClassUse checks if a player's class can use the given item.
 // ClassType: 0=Prince, 1=Knight, 2=Elf, 3=Wizard, 4=DarkElf, 5=DragonKnight, 6=Illusionist
 func canClassUse(classType int16, info *data.ItemInfo) bool {
@@ -154,6 +166,8 @@ func HandleDropItem(sess *net.Session, r *packet.Reader, deps *Deps) {
 	displayName := itemName
 	if enchantLvl > 0 {
 		displayName = fmt.Sprintf("+%d %s", enchantLvl, displayName)
+	} else if enchantLvl < 0 {
+		displayName = fmt.Sprintf("%d %s", enchantLvl, displayName)
 	}
 	if count > 1 {
 		displayName = fmt.Sprintf("%s (%d)", displayName, count)
@@ -271,6 +285,10 @@ func HandlePickupItem(sess *net.Session, r *packet.Reader, deps *Deps) {
 	existing := player.Inv.FindByItemID(gndItem.ItemID)
 	wasExisting := existing != nil && stackable
 
+	bless := byte(0)
+	if itemInfo != nil {
+		bless = byte(itemInfo.Bless)
+	}
 	invItem := player.Inv.AddItem(
 		gndItem.ItemID,
 		gndItem.Count,
@@ -278,8 +296,9 @@ func HandlePickupItem(sess *net.Session, r *packet.Reader, deps *Deps) {
 		invGfx,
 		weight,
 		stackable,
-		gndItem.EnchantLvl,
+		bless,
 	)
+	invItem.EnchantLvl = gndItem.EnchantLvl
 	if itemInfo != nil {
 		invItem.UseType = itemInfo.UseTypeID
 	}
@@ -330,6 +349,18 @@ func HandleUseItem(sess *net.Session, r *packet.Reader, deps *Deps) {
 	// Teleport scrolls have additional data in the packet: [H mapID][D bookmarkID]
 	if isTeleportScroll(invItem.ItemID) {
 		handleUseTeleportScroll(sess, r, player, invItem, deps)
+		return
+	}
+
+	// Home scrolls (回家卷軸): no extra packet data, teleport to respawn location
+	if isHomeScroll(invItem.ItemID) {
+		handleUseHomeScroll(sess, player, invItem, deps)
+		return
+	}
+
+	// Fixed-destination teleport scrolls (指定傳送卷軸): loc_x/loc_y/map_id set in etcitem YAML
+	if itemInfo.LocX != 0 && itemInfo.Category == data.CategoryEtcItem {
+		handleUseFixedTeleportScroll(sess, player, invItem, itemInfo, deps)
 		return
 	}
 
@@ -669,6 +700,11 @@ func CalcEquipStats(player *world.PlayerInfo, items *data.ItemTable) world.Equip
 		}
 		stats.HitMod += info.HitMod
 		stats.DmgMod += info.DmgMod
+		// Weapon enchant bonus: Java L1Attack.java — enchant adds to hit/dmg
+		if i == world.SlotWeapon && invItem.EnchantLvl > 0 {
+			stats.HitMod += int(invItem.EnchantLvl) / 2
+			stats.DmgMod += int(invItem.EnchantLvl)
+		}
 		stats.BowHitMod += info.BowHitMod
 		stats.BowDmgMod += info.BowDmgMod
 		stats.AddStr += info.AddStr
@@ -704,6 +740,8 @@ func buildViewName(item *world.InvItem, itemInfo *data.ItemInfo) string {
 	name := item.Name
 	if item.EnchantLvl > 0 {
 		name = fmt.Sprintf("+%d %s", item.EnchantLvl, name)
+	} else if item.EnchantLvl < 0 {
+		name = fmt.Sprintf("%d %s", item.EnchantLvl, name)
 	}
 	// Stack count suffix (Java: getNumberedName — applies to ALL stackable items)
 	if item.Count > 1 {
@@ -866,6 +904,12 @@ func handleUseEtcItem(sess *net.Session, r *packet.Reader, player *world.PlayerI
 				applyWisdom(sess, player, pot.Duration, int16(pot.SP), int32(pot.GfxID), deps)
 				consumed = true
 			}
+
+		case "blue_potion":
+			if pot.Duration > 0 {
+				applyBluePotion(sess, player, pot.Duration, int32(pot.GfxID), deps)
+				consumed = true
+			}
 		}
 	} else if itemInfo.FoodVolume > 0 {
 		// Java: foodvolume1 = item.getFoodVolume() / 10; if <= 0 then 5
@@ -904,6 +948,7 @@ func handleUseEtcItem(sess *net.Session, r *packet.Reader, player *world.PlayerI
 
 // handleEnchantScroll processes weapon/armor enchant scroll usage.
 // C_USE_ITEM continuation: [D targetObjectID]
+// Java ref: Enchant.java — scrollOfEnchantWeapon / scrollOfEnchantArmor
 func handleEnchantScroll(sess *net.Session, r *packet.Reader, player *world.PlayerInfo, scroll *world.InvItem, scrollInfo *data.ItemInfo, deps *Deps) {
 	targetObjID := r.ReadD()
 
@@ -917,16 +962,17 @@ func handleEnchantScroll(sess *net.Session, r *packet.Reader, player *world.Play
 		return
 	}
 
+	// Sealed items cannot be enchanted (Java: getBless() >= 128)
+	if target.Bless >= 128 {
+		sendServerMessage(sess, 79) // "沒有任何事情發生。"
+		return
+	}
+
 	// Validate scroll targets correct category
 	if scrollInfo.UseType == "dai" && targetInfo.Category != data.CategoryWeapon {
 		return
 	}
 	if scrollInfo.UseType == "zel" && targetInfo.Category != data.CategoryArmor {
-		return
-	}
-
-	// Must be equipped
-	if !target.Equipped {
 		return
 	}
 
@@ -955,53 +1001,72 @@ func handleEnchantScroll(sess *net.Session, r *packet.Reader, player *world.Play
 	}
 	sendWeightUpdate(sess, player)
 
+	// Light color for S_ServerMessage: $245=blue(weapon), $252=silver(armor), $246=black(cursed)
+	lightColor := "$245"
+	if targetInfo.Category == data.CategoryArmor {
+		lightColor = "$252"
+	}
+	// Item display name for message (Java: getLogName includes enchant prefix)
+	itemLogName := buildViewName(target, targetInfo)
+
 	switch result.Result {
 	case "success":
-		target.EnchantLvl += byte(result.Amount)
+		target.EnchantLvl += int8(result.Amount)
+		sendItemStatusUpdate(sess, target, targetInfo) // refresh item detail display (AC/enchant)
 		sendItemNameUpdate(sess, target, targetInfo)
 		sendEffectOnPlayer(sess, player.CharID, 2583) // enchant success GFX
 
-		msg := fmt.Sprintf("\\fY+%d %s 閃耀著光芒。", target.EnchantLvl, targetInfo.Name)
-		sendGlobalChat(sess, 9, msg)
+		// S_ServerMessage 161: "%0%s radiates %1 light and becomes %2"
+		resultDesc := "$247" // brighter (+1)
+		if result.Amount >= 2 {
+			resultDesc = "$248" // even more shining (+2, +3)
+		}
+		sendServerMessageArgs(sess, 161, itemLogName, lightColor, resultDesc)
 
-		// Recalculate AC if armor
-		if targetInfo.Category == data.CategoryArmor {
+		// Recalculate stats only if item is currently equipped
+		if target.Equipped {
 			recalcEquipStats(sess, player, deps)
 		}
 
 		deps.Log.Info(fmt.Sprintf("衝裝成功  角色=%s  道具=%s  衝裝等級=%d", player.Name, targetInfo.Name, target.EnchantLvl))
 
-	case "fail":
-		// Blessed scroll: nothing happens
-		sendGlobalChat(sess, 9, "沒有任何事情發生。")
-		deps.Log.Info(fmt.Sprintf("衝裝失敗 (祝福保護)  角色=%s  道具=%s", player.Name, targetInfo.Name))
+	case "nochange":
+		// Failed: intense light but nothing happens
+		// S_ServerMessage 160: "%0%s radiates intense %1 light but %2"
+		sendServerMessageArgs(sess, 160, itemLogName, lightColor, "$248")
+		deps.Log.Info(fmt.Sprintf("衝裝無變化  角色=%s  道具=%s", player.Name, targetInfo.Name))
 
 	case "break":
-		// Equipment destroyed
-		slot := findEquippedSlot(player, target)
-		if slot != world.SlotNone {
-			unequipSlot(sess, player, slot, deps)
+		// Equipment destroyed (normal scroll +9+ fail / cursed scroll <= -7)
+		// S_ServerMessage 164: "%0%s radiates %1 light and disappears"
+		breakColor := lightColor
+		if target.EnchantLvl < 0 {
+			breakColor = "$246" // black for cursed items
 		}
-		player.Inv.RemoveItem(target.ObjectID, 1)
+		sendServerMessageArgs(sess, 164, itemLogName, breakColor)
+
+		if target.Equipped {
+			slot := findEquippedSlot(player, target)
+			if slot != world.SlotNone {
+				unequipSlot(sess, player, slot, deps)
+			}
+		}
+		player.Inv.RemoveItem(target.ObjectID, target.Count)
 		sendRemoveInventoryItem(sess, target.ObjectID)
 		sendWeightUpdate(sess, player)
-
-		msg := fmt.Sprintf("\\fY%s 蒸發消失了。", targetInfo.Name)
-		sendGlobalChat(sess, 9, msg)
 
 		deps.Log.Info(fmt.Sprintf("衝裝碎裂  角色=%s  道具=%s", player.Name, targetInfo.Name))
 
 	case "minus":
-		// Cursed scroll: -1
-		if target.EnchantLvl > 0 {
-			target.EnchantLvl -= byte(result.Amount)
-		}
+		// Cursed scroll: -N (black light $246, brighter $247)
+		target.EnchantLvl -= int8(result.Amount)
+		sendItemStatusUpdate(sess, target, targetInfo) // refresh item detail display
 		sendItemNameUpdate(sess, target, targetInfo)
 
-		msg := fmt.Sprintf("\\fY%s 的強化值降低了。", targetInfo.Name)
-		sendGlobalChat(sess, 9, msg)
+		// S_ServerMessage 161 with black light
+		sendServerMessageArgs(sess, 161, itemLogName, "$246", "$247")
 
-		if targetInfo.Category == data.CategoryArmor {
+		if target.Equipped {
 			recalcEquipStats(sess, player, deps)
 		}
 
@@ -1067,8 +1132,8 @@ func sendIdentifyDesc(sess *net.Session, item *world.InvItem, info *data.ItemInf
 		w.WriteH(134)
 		w.WriteC(3) // param count
 		w.WriteS(name)
-		w.WriteS(fmt.Sprintf("%d+%d", info.DmgSmall, item.EnchantLvl))
-		w.WriteS(fmt.Sprintf("%d+%d", info.DmgLarge, item.EnchantLvl))
+		w.WriteS(fmt.Sprintf("%d%+d", info.DmgSmall, item.EnchantLvl))
+		w.WriteS(fmt.Sprintf("%d%+d", info.DmgLarge, item.EnchantLvl))
 
 	case data.CategoryArmor:
 		// Format 135: armor — name, abs(ac)+enchant
@@ -1079,7 +1144,7 @@ func sendIdentifyDesc(sess *net.Session, item *world.InvItem, info *data.ItemInf
 		if ac < 0 {
 			ac = -ac
 		}
-		w.WriteS(fmt.Sprintf("%d+%d", ac, item.EnchantLvl))
+		w.WriteS(fmt.Sprintf("%d%+d", ac, item.EnchantLvl))
 
 	default:
 		// Etcitem — format 138: name + weight
@@ -1234,7 +1299,7 @@ func buildStatusBytes(item *world.InvItem, info *data.ItemInfo) []byte {
 // appendEquipSuffix appends the shared weapon/armor TLV suffix (enchant, hit, dmg, class, stats).
 func appendEquipSuffix(buf []byte, item *world.InvItem, info *data.ItemInfo) []byte {
 	if item.EnchantLvl != 0 {
-		buf = append(buf, 2, item.EnchantLvl)
+		buf = append(buf, 2, byte(item.EnchantLvl))
 	}
 	if info.Category == data.CategoryWeapon && world.IsTwoHanded(info.Type) {
 		buf = append(buf, 4) // two-handed flag (no value byte)
@@ -1576,47 +1641,124 @@ func handleUseSpellBook(sess *net.Session, player *world.PlayerInfo, invItem *wo
 }
 
 // applyHaste applies haste speed buff to a player (movement + attack speed).
+// Creates an ActiveBuff so the buff persists across logout/login.
+// Java ref: Potion.useGreenPotion → setSkillEffect(STATUS_HASTE, time*1000) + setMoveSpeed(1)
 func applyHaste(sess *net.Session, player *world.PlayerInfo, durationSec int, gfxID int32, deps *Deps) {
+	// Remove conflicting haste/slow buffs (Java: Potion.useGreenPotion lines 217-257)
+	for _, conflictID := range []int32{43, 54, SkillStatusHaste} { // HASTE, GREATER_HASTE, STATUS_HASTE
+		removeBuffAndRevert(player, conflictID, deps)
+	}
+
+	buff := &world.ActiveBuff{
+		SkillID:      SkillStatusHaste,
+		TicksLeft:    durationSec * 5, // 200ms per tick
+		SetMoveSpeed: 1,
+	}
+	old := player.AddBuff(buff)
+	if old != nil {
+		revertBuffStats(player, old)
+	}
+
 	player.MoveSpeed = 1
-	player.HasteTicks = durationSec * 5 // 200ms per tick
+	player.HasteTicks = buff.TicksLeft
 
 	sendSpeedPacket(sess, player.CharID, 1, uint16(durationSec))
-
 	nearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
 	for _, other := range nearby {
 		sendSpeedPacket(other.Session, player.CharID, 1, 0)
 	}
-
 	broadcastEffect(sess, player, gfxID, deps)
 }
 
 // applyBrave applies brave speed buff to a player (attack speed + movement speed).
+// Creates an ActiveBuff so the buff persists across logout/login.
+// Java ref: Potion.buff_brave → setSkillEffect(skillId, time*1000) + setBraveSpeed(type)
 func applyBrave(sess *net.Session, player *world.PlayerInfo, durationSec int, braveType byte, gfxID int32, deps *Deps) {
+	// Remove conflicting brave buffs (Java: Potion.buff_brave lines 92-112)
+	for _, conflictID := range []int32{
+		SkillStatusBrave, SkillStatusElfBrave,
+		42,  // HOLY_WALK
+		150, // MOVING_ACCELERATION
+		101, // WIND_WALK
+		52,  // BLOODLUST
+	} {
+		removeBuffAndRevert(player, conflictID, deps)
+	}
+
+	// Determine SkillID based on brave type (Java: 1=STATUS_BRAVE, 3=STATUS_ELFBRAVE)
+	skillID := SkillStatusBrave
+	if braveType == 3 {
+		skillID = SkillStatusElfBrave
+	}
+
+	buff := &world.ActiveBuff{
+		SkillID:       skillID,
+		TicksLeft:     durationSec * 5, // 200ms per tick
+		SetBraveSpeed: braveType,
+	}
+	old := player.AddBuff(buff)
+	if old != nil {
+		revertBuffStats(player, old)
+	}
+
 	player.BraveSpeed = braveType
-	player.BraveTicks = durationSec * 5 // 200ms per tick
+	player.BraveTicks = buff.TicksLeft
 
 	sendSpeedPacket(sess, player.CharID, braveType, uint16(durationSec))
-
 	nearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
 	for _, other := range nearby {
 		sendSpeedPacket(other.Session, player.CharID, braveType, 0)
 	}
-
 	broadcastVisualUpdate(sess, player, deps)
 	broadcastEffect(sess, player, gfxID, deps)
 }
 
 // applyWisdom applies wisdom potion buff (SP bonus for duration).
+// Creates an ActiveBuff so the buff persists across logout/login.
+// Java ref: Potion.useWisdomPotion → addSp(2) + setSkillEffect(STATUS_WISDOM_POTION, time*1000)
 func applyWisdom(sess *net.Session, player *world.PlayerInfo, durationSec int, sp int16, gfxID int32, deps *Deps) {
-	// Remove existing wisdom SP bonus before re-applying
-	if player.WisdomTicks > 0 {
-		player.SP -= player.WisdomSP
+	// Java: if already has wisdom, don't add SP again — just extend timer
+	alreadyHas := player.HasBuff(SkillStatusWisdomPotion)
+	if alreadyHas {
+		removeBuffAndRevert(player, SkillStatusWisdomPotion, deps)
 	}
+
+	buff := &world.ActiveBuff{
+		SkillID:   SkillStatusWisdomPotion,
+		TicksLeft: durationSec * 5, // 200ms per tick
+		DeltaSP:   sp,
+	}
+	old := player.AddBuff(buff)
+	if old != nil {
+		revertBuffStats(player, old)
+	}
+
+	// Apply SP bonus
 	player.SP += sp
 	player.WisdomSP = sp
-	player.WisdomTicks = durationSec * 5 // 200ms per tick
+	player.WisdomTicks = buff.TicksLeft
 
+	// Send wisdom potion icon (Java: S_SkillIconWisdomPotion(time/4))
+	sendWisdomPotionIcon(sess, uint16(durationSec))
 	sendPlayerStatus(sess, player)
+	broadcastEffect(sess, player, gfxID, deps)
+}
+
+// applyBluePotion applies blue potion buff (enhanced MP regen for duration).
+// Creates an ActiveBuff so the buff persists across logout/login.
+// Java ref: Potion.useBluePotion → setSkillEffect(STATUS_BLUE_POTION, time*1000)
+// The actual MP regen boost is checked in regen system via HasBuff(1002).
+func applyBluePotion(sess *net.Session, player *world.PlayerInfo, durationSec int, gfxID int32, deps *Deps) {
+	removeBuffAndRevert(player, SkillStatusBluePotion, deps)
+
+	buff := &world.ActiveBuff{
+		SkillID:   SkillStatusBluePotion,
+		TicksLeft: durationSec * 5, // 200ms per tick
+	}
+	player.AddBuff(buff)
+
+	sendBluePotionIcon(sess, uint16(durationSec))
+	sendServerMessage(sess, 1007) // "你感覺到魔力恢復速度加快"
 	broadcastEffect(sess, player, gfxID, deps)
 }
 
@@ -1669,42 +1811,58 @@ func sendEffectOnPlayer(sess *net.Session, charID int32, gfxID int32) {
 
 // Teleport scroll item IDs (Java L1ItemId constants)
 const (
-	teleportScrollNormal  int32 = 40100 // Scroll of Teleportation
-	teleportScrollBlessed int32 = 40099 // Blessed Scroll of Teleportation
-	teleportScrollAncient int32 = 40086 // Ancient Scroll of Teleportation
-	teleportScrollSpecial int32 = 40863 // Special Scroll of Teleportation
+	teleportScrollNormal     int32 = 40100  // Scroll of Teleportation
+	teleportScrollBlessedAlt int32 = 140100 // Blessed Scroll of Teleportation (prefix variant)
+	teleportScrollBlessed    int32 = 40099  // Blessed Scroll of Teleportation
+	teleportScrollAncient    int32 = 40086  // Ancient Scroll of Teleportation
+	teleportScrollSpecial    int32 = 40863  // Special Scroll of Teleportation
 )
 
 func isTeleportScroll(itemID int32) bool {
 	switch itemID {
-	case teleportScrollNormal, teleportScrollBlessed, teleportScrollAncient, teleportScrollSpecial:
+	case teleportScrollNormal, teleportScrollBlessedAlt, teleportScrollBlessed, teleportScrollAncient, teleportScrollSpecial:
 		return true
 	}
 	return false
 }
 
-// handleUseTeleportScroll processes teleport scroll usage.
-// Packet continuation after objectID: [H mapID][D bookmarkID]
-func handleUseTeleportScroll(sess *net.Session, r *packet.Reader, player *world.PlayerInfo, invItem *world.InvItem, deps *Deps) {
-	_ = r.ReadH()         // mapID from client (we verify against stored bookmark)
-	bookmarkID := r.ReadD() // bookmark ID
+// Home scroll item IDs (Java: 回家卷軸)
+const (
+	homeScrollNormal int32 = 40079 // Scroll of Return (傳送回家的卷軸)
+	homeScrollIvory  int32 = 40095 // Ivory Tower Return Scroll (象牙塔傳送回家的卷軸)
+	homeScrollElf    int32 = 40521 // Elf Wings (精靈羽翼)
+)
 
+func isHomeScroll(itemID int32) bool {
+	switch itemID {
+	case homeScrollNormal, homeScrollIvory, homeScrollElf:
+		return true
+	}
+	return false
+}
+
+// handleUseHomeScroll processes home scroll (回家卷軸) usage.
+// Java ref: C_ItemUSe.java lines 1503-1511, L1Teleport.teleport()
+// Items: 40079 (Scroll of Return), 40095 (Ivory Tower Return), 40521 (Elf Wings)
+// No extra packet data beyond the standard objectID.
+// Java sends departure GFX BEFORE teleport, NO arrival GFX, S_Paralysis is commented out.
+func handleUseHomeScroll(sess *net.Session, player *world.PlayerInfo, invItem *world.InvItem, deps *Deps) {
 	if player.Dead {
 		return
 	}
 
-	// Find the bookmark by ID
-	var target *world.Bookmark
-	for i := range player.Bookmarks {
-		if player.Bookmarks[i].ID == bookmarkID {
-			target = &player.Bookmarks[i]
-			break
-		}
+	// Java: pc.getMap().isEscapable() check
+	// TODO: implement map escapable flag; for now allow all maps (GM always allowed)
+
+	// Get respawn/getback location for current map
+	loc := deps.Scripting.GetRespawnLocation(int(player.MapID))
+	if loc == nil {
+		// Fallback: SKT default (Java: 33089, 33397, map 4)
+		loc = &scripting.RespawnLocation{X: 33089, Y: 33397, Map: 4}
 	}
-	if target == nil {
-		sendServerMessage(sess, 79) // "Nothing happens"
-		return
-	}
+
+	// Cancel active trade
+	cancelTradeIfActive(player, deps)
 
 	// Consume the scroll
 	removed := player.Inv.RemoveItem(invItem.ObjectID, 1)
@@ -1715,16 +1873,176 @@ func handleUseTeleportScroll(sess *net.Session, r *packet.Reader, player *world.
 	}
 	sendWeightUpdate(sess, player)
 
-	// Broadcast teleport effect (GFX 169 = teleport visual)
-	nearby := deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
-	for _, viewer := range nearby {
+	// Departure effect BEFORE teleport (Java: S_SkillSound(169) + Thread.sleep(196ms))
+	// We can't block the game loop, so send effect and teleport immediately.
+	sendEffectOnPlayer(sess, player.CharID, 169)
+	oldNearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
+	for _, viewer := range oldNearby {
 		sendEffectOnPlayer(viewer.Session, player.CharID, 169)
 	}
 
-	// Teleport immediately
-	teleportPlayer(sess, player, target.X, target.Y, target.MapID, 5, deps)
+	// Teleport to respawn location (Java heading = 5)
+	teleportPlayer(sess, player, int32(loc.X), int32(loc.Y), int16(loc.Map), 5, deps)
 
-	deps.Log.Info(fmt.Sprintf("書籤傳送  角色=%s  書籤=%s  x=%d  y=%d  地圖=%d", player.Name, target.Name, target.X, target.Y, target.MapID))
+	// NO arrival effect — sending S_EFFECT with own charID after S_OwnCharPack
+	// causes the 3.80C client to hide the character sprite.
+	// Java also has no arrival effect; departure effect only.
+
+	deps.Log.Info(fmt.Sprintf("回家卷軸  角色=%s  目標=(%d,%d) 地圖=%d", player.Name, loc.X, loc.Y, loc.Map))
+}
+
+// handleUseFixedTeleportScroll processes fixed-destination teleport scrolls (指定傳送卷軸).
+// These items have loc_x/loc_y/map_id set in etcitem YAML. No extra packet data.
+// Java ref: C_ItemUSe.java — dozens of itemId checks like 40080-40125, 40801-40857, 49292-49301 etc.
+// All follow the same pattern: L1Teleport.teleport(pc, locX, locY, mapId, 5, true) + removeItem.
+func handleUseFixedTeleportScroll(sess *net.Session, player *world.PlayerInfo, invItem *world.InvItem, itemInfo *data.ItemInfo, deps *Deps) {
+	if player.Dead {
+		return
+	}
+
+	// Cancel active trade
+	cancelTradeIfActive(player, deps)
+
+	// Consume the scroll
+	removed := player.Inv.RemoveItem(invItem.ObjectID, 1)
+	if removed {
+		sendRemoveInventoryItem(sess, invItem.ObjectID)
+	} else {
+		sendItemCountUpdate(sess, invItem)
+	}
+	sendWeightUpdate(sess, player)
+
+	// Departure effect BEFORE teleport (Java: S_SkillSound(169) + Thread.sleep(196ms))
+	sendEffectOnPlayer(sess, player.CharID, 169)
+	oldNearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
+	for _, viewer := range oldNearby {
+		sendEffectOnPlayer(viewer.Session, player.CharID, 169)
+	}
+
+	// Teleport to fixed destination (Java heading = 5)
+	teleportPlayer(sess, player, itemInfo.LocX, itemInfo.LocY, itemInfo.LocMapID, 5, deps)
+
+	deps.Log.Info(fmt.Sprintf("指定傳送  角色=%s  道具=%s  目標=(%d,%d) 地圖=%d",
+		player.Name, itemInfo.Name, itemInfo.LocX, itemInfo.LocY, itemInfo.LocMapID))
+}
+
+// handleUseTeleportScroll processes teleport scroll usage.
+// Packet continuation after objectID: [H mapID][D bookmarkID]
+// Java ref: C_ItemUSe.java lines 1572-1625, L1Teleport.teleport()
+// Java sends departure GFX BEFORE teleport, NO arrival GFX, and S_Paralysis is commented out.
+func handleUseTeleportScroll(sess *net.Session, r *packet.Reader, player *world.PlayerInfo, invItem *world.InvItem, deps *Deps) {
+	_ = r.ReadH()           // mapID from client
+	bookmarkID := r.ReadD() // bookmark ID (0 = no bookmark → random teleport)
+
+	if player.Dead {
+		return
+	}
+
+	// Cancel active trade (Java: L1Teleport.teleport checks this)
+	cancelTradeIfActive(player, deps)
+
+	// Find the bookmark by ID
+	var target *world.Bookmark
+	if bookmarkID != 0 {
+		for i := range player.Bookmarks {
+			if player.Bookmarks[i].ID == bookmarkID {
+				target = &player.Bookmarks[i]
+				break
+			}
+		}
+	}
+
+	if target != nil {
+		// Bookmark teleport
+		// Consume the scroll
+		removed := player.Inv.RemoveItem(invItem.ObjectID, 1)
+		if removed {
+			sendRemoveInventoryItem(sess, invItem.ObjectID)
+		} else {
+			sendItemCountUpdate(sess, invItem)
+		}
+		sendWeightUpdate(sess, player)
+
+		// Departure effect BEFORE teleport (Java: S_SkillSound(169) then Thread.sleep(196ms))
+		sendEffectOnPlayer(sess, player.CharID, 169)
+		bkNearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
+		for _, viewer := range bkNearby {
+			sendEffectOnPlayer(viewer.Session, player.CharID, 169)
+		}
+
+		teleportPlayer(sess, player, target.X, target.Y, target.MapID, 5, deps)
+
+		deps.Log.Info(fmt.Sprintf("書籤傳送  角色=%s  書籤=%s  x=%d  y=%d  地圖=%d", player.Name, target.Name, target.X, target.Y, target.MapID))
+	} else {
+		// No bookmark → random teleport within 200 tiles (Java: randomLocation(200, true))
+		// Consume the scroll
+		removed := player.Inv.RemoveItem(invItem.ObjectID, 1)
+		if removed {
+			sendRemoveInventoryItem(sess, invItem.ObjectID)
+		} else {
+			sendItemCountUpdate(sess, invItem)
+		}
+		sendWeightUpdate(sess, player)
+
+		// Random location within 200 tiles, clamped to map bounds (Java: randomLocation(200, true))
+		curMap := player.MapID
+		newX := player.X
+		newY := player.Y
+		minRX := player.X - 200
+		maxRX := player.X + 200
+		minRY := player.Y - 200
+		maxRY := player.Y + 200
+		if deps.MapData != nil {
+			if mi := deps.MapData.GetInfo(curMap); mi != nil {
+				if minRX < mi.StartX {
+					minRX = mi.StartX
+				}
+				if maxRX > mi.EndX {
+					maxRX = mi.EndX
+				}
+				if minRY < mi.StartY {
+					minRY = mi.StartY
+				}
+				if maxRY > mi.EndY {
+					maxRY = mi.EndY
+				}
+			}
+		}
+		diffX := maxRX - minRX
+		diffY := maxRY - minRY
+		if diffX > 0 && diffY > 0 {
+			for attempt := 0; attempt < 40; attempt++ {
+				rx := minRX + int32(world.RandInt(int(diffX)+1))
+				ry := minRY + int32(world.RandInt(int(diffY)+1))
+				if deps.MapData != nil && deps.MapData.IsInMap(curMap, rx, ry) &&
+					deps.MapData.IsPassablePoint(curMap, rx, ry) {
+					newX = rx
+					newY = ry
+					break
+				}
+			}
+		}
+
+		// Departure effect BEFORE teleport (Java: S_SkillSound(169) then Thread.sleep(196ms))
+		sendEffectOnPlayer(sess, player.CharID, 169)
+		rdNearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
+		for _, viewer := range rdNearby {
+			sendEffectOnPlayer(viewer.Session, player.CharID, 169)
+		}
+
+		teleportPlayer(sess, player, newX, newY, curMap, 5, deps)
+
+		deps.Log.Info(fmt.Sprintf("隨機傳送  角色=%s  x=%d  y=%d", player.Name, newX, newY))
+	}
+}
+
+// sendTeleportUnlock sends S_Paralysis(TYPE_TELEPORT_UNLOCK) to unfreeze the client.
+// Java: S_Paralysis.java — TYPE_TELEPORT_UNLOCK = 7, writeC(7)
+// MUST be sent after every teleport scroll use, even on error.
+func sendTeleportUnlock(sess *net.Session) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_PARALYSIS)
+	w.WriteC(7) // TYPE_TELEPORT_UNLOCK
+	sess.Send(w.Bytes())
 }
 
 // --- Drop system ---

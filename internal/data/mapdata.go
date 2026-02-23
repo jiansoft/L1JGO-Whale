@@ -274,6 +274,51 @@ func (t *MapDataTable) IsNormalZone(mapID int16, x, y int32) bool {
 	return tile&tileZoneMask == tileZoneNormal
 }
 
+// IsPassableIgnoreOccupant is like IsPassable but ignores the dynamic tileImpassable flag
+// set by NPC occupancy. Used as a last-resort fallback so NPCs never get permanently stuck.
+func (t *MapDataTable) IsPassableIgnoreOccupant(mapID int16, x, y int32, heading int) bool {
+	if heading < 0 || heading > 7 {
+		return false
+	}
+
+	tile1 := t.accessTile(mapID, x, y)
+
+	dx := headingDX[heading]
+	dy := headingDY[heading]
+	nx := x + dx
+	ny := y + dy
+	tile2 := t.accessTile(mapID, nx, ny)
+
+	// Skip tileImpassable check — only check original terrain passability bits
+	if tile2&tilePassableEast == 0 && tile2&tilePassableNorth == 0 {
+		return false
+	}
+
+	switch heading {
+	case 0:
+		return tile1&tilePassableNorth != 0
+	case 1:
+		tile3 := t.accessTile(mapID, x, y-1)
+		tile4 := t.accessTile(mapID, x+1, y)
+		return (tile3&tilePassableEast != 0) || (tile4&tilePassableNorth != 0)
+	case 2:
+		return tile1&tilePassableEast != 0
+	case 3:
+		tile3 := t.accessTile(mapID, x, y+1)
+		return tile3&tilePassableEast != 0
+	case 4:
+		return tile2&tilePassableNorth != 0
+	case 5:
+		return (tile2&tilePassableEast != 0) || (tile2&tilePassableNorth != 0)
+	case 6:
+		return tile2&tilePassableEast != 0
+	case 7:
+		tile3 := t.accessTile(mapID, x-1, y)
+		return tile3&tilePassableNorth != 0
+	}
+	return false
+}
+
 // SetImpassable sets or clears the dynamic impassable flag (for mob blocking).
 func (t *MapDataTable) SetImpassable(mapID int16, x, y int32, blocked bool) {
 	e := t.maps[mapID]

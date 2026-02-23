@@ -6,6 +6,7 @@ import (
 
 	coresys "github.com/l1jgo/server/internal/core/system"
 	"github.com/l1jgo/server/internal/data"
+	"github.com/l1jgo/server/internal/handler"
 	"github.com/l1jgo/server/internal/net"
 	"github.com/l1jgo/server/internal/net/packet"
 	"github.com/l1jgo/server/internal/persist"
@@ -24,6 +25,7 @@ type InputSystem struct {
 	accountRepo *persist.AccountRepo
 	charRepo    *persist.CharacterRepo
 	itemRepo    *persist.ItemRepo
+	buffRepo    *persist.BuffRepo
 	worldState  *world.State
 	mapData     *data.MapDataTable
 }
@@ -35,6 +37,7 @@ func NewInputSystem(
 	accountRepo *persist.AccountRepo,
 	charRepo *persist.CharacterRepo,
 	itemRepo *persist.ItemRepo,
+	buffRepo *persist.BuffRepo,
 	worldState *world.State,
 	mapData *data.MapDataTable,
 	log *zap.Logger,
@@ -48,6 +51,7 @@ func NewInputSystem(
 		accountRepo: accountRepo,
 		charRepo:    charRepo,
 		itemRepo:    itemRepo,
+		buffRepo:    buffRepo,
 		worldState:  worldState,
 		mapData:     mapData,
 	}
@@ -123,14 +127,14 @@ doneDead:
 // handleDisconnect cleans up when a session closes:
 // removes from world state, broadcasts S_REMOVE_OBJECT, saves position, marks offline.
 func (s *InputSystem) handleDisconnect(sess *net.Session) {
+	// Clear player tile before removal (for NPC pathfinding)
+	if pre := s.worldState.GetBySession(sess.ID); pre != nil && s.mapData != nil {
+		s.mapData.SetImpassable(pre.MapID, pre.X, pre.Y, false)
+	}
+
 	// Remove from world state and broadcast removal
 	player := s.worldState.RemovePlayer(sess.ID)
 	if player != nil {
-		// Clear tile collision for the position this player was occupying
-		if s.mapData != nil {
-			s.mapData.SetImpassable(player.MapID, player.X, player.Y, false)
-		}
-
 		// Clean up trade if in progress — restore partner's items (items are deducted on add-to-trade)
 		if player.TradePartnerID != 0 {
 			partner := s.worldState.GetByCharID(player.TradePartnerID)
@@ -254,12 +258,16 @@ func (s *InputSystem) handleDisconnect(sess *net.Session) {
 			}
 		}
 
-		// Broadcast S_REMOVE_OBJECT to nearby players
+		// Broadcast S_REMOVE_OBJECT + entity collision unblock to nearby players
 		nearby := s.worldState.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
 		removePacket := buildRemoveObjectPacket(player.CharID)
 		for _, other := range nearby {
 			other.Session.Send(removePacket)
+			handler.SendEntityUnblock(other.Session, player.X, player.Y)
 		}
+
+		// Clean up entity door tracking for this viewer (no packets — client is gone)
+		handler.CleanupViewerEntityDoors(sess.ID)
 
 		// Save full character state to DB
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -317,6 +325,21 @@ func (s *InputSystem) handleDisconnect(sess *net.Session) {
 			)
 		}
 		cancel3()
+
+		// Save active buffs to DB (including polymorph state)
+		if s.buffRepo != nil && len(player.ActiveBuffs) > 0 {
+			buffRows := buffRowsFromPlayer(player)
+			if len(buffRows) > 0 {
+				ctx4, cancel4 := context.WithTimeout(context.Background(), 3*time.Second)
+				if err := s.buffRepo.SaveBuffs(ctx4, player.CharID, buffRows); err != nil {
+					s.log.Error("斷線存檔buff失敗",
+						zap.String("name", player.Name),
+						zap.Error(err),
+					)
+				}
+				cancel4()
+			}
+		}
 	}
 
 	// Mark account offline
@@ -349,6 +372,7 @@ func buildRemoveObjectPacket(charID int32) []byte {
 	return w.Bytes()
 }
 
+
 // SessionCount returns the current number of active sessions.
 func (s *InputSystem) SessionCount() int {
 	return len(s.sessions)
@@ -363,7 +387,8 @@ func restoreTradeItemsOnDisconnect(p *world.PlayerInfo) {
 		existing := p.Inv.FindByItemID(item.ItemID)
 		wasExisting := existing != nil && item.Stackable
 
-		newItem := p.Inv.AddItem(item.ItemID, item.Count, item.Name, item.InvGfx, item.Weight, item.Stackable, item.EnchantLvl)
+		newItem := p.Inv.AddItem(item.ItemID, item.Count, item.Name, item.InvGfx, item.Weight, item.Stackable, item.Bless)
+		newItem.EnchantLvl = item.EnchantLvl
 		newItem.UseType = item.UseType // preserve original use_type
 		if wasExisting {
 			sendChangeItemUsePacket(p.Session, newItem)
@@ -420,7 +445,7 @@ func sendAddItemPacket(sess *net.Session, item *world.InvItem) {
 	w.WriteC(0)
 	w.WriteH(0)
 	w.WriteH(0)
-	w.WriteC(item.EnchantLvl)
+	w.WriteC(byte(item.EnchantLvl))
 	w.WriteD(item.ObjectID)              // world serial
 	w.WriteD(0)
 	w.WriteD(0)
@@ -453,6 +478,60 @@ func sendServerMessageArgsPacket(sess *net.Session, msgID uint16, args ...string
 		w.WriteS(arg)
 	}
 	sess.Send(w.Bytes())
+}
+
+// buffRowsFromPlayer converts active buffs to persist.BuffRow for DB save.
+// Duplicated from handler.BuffRowsFromPlayer to avoid circular imports.
+const skillShapeChange int32 = 67
+
+func buffRowsFromPlayer(p *world.PlayerInfo) []persist.BuffRow {
+	if len(p.ActiveBuffs) == 0 {
+		return nil
+	}
+	rows := make([]persist.BuffRow, 0, len(p.ActiveBuffs))
+	for _, buff := range p.ActiveBuffs {
+		if buff.SetInvisible || buff.SetParalyzed || buff.SetSleeped {
+			continue
+		}
+		remainSec := buff.TicksLeft / 5
+		if remainSec <= 0 {
+			continue
+		}
+		row := persist.BuffRow{
+			CharID:        p.CharID,
+			SkillID:       buff.SkillID,
+			RemainingTime: remainSec,
+			DeltaAC:       buff.DeltaAC,
+			DeltaStr:      buff.DeltaStr,
+			DeltaDex:      buff.DeltaDex,
+			DeltaCon:      buff.DeltaCon,
+			DeltaWis:      buff.DeltaWis,
+			DeltaIntel:    buff.DeltaIntel,
+			DeltaCha:      buff.DeltaCha,
+			DeltaMaxHP:    buff.DeltaMaxHP,
+			DeltaMaxMP:    buff.DeltaMaxMP,
+			DeltaHitMod:   buff.DeltaHitMod,
+			DeltaDmgMod:   buff.DeltaDmgMod,
+			DeltaSP:       buff.DeltaSP,
+			DeltaMR:       buff.DeltaMR,
+			DeltaHPR:      buff.DeltaHPR,
+			DeltaMPR:      buff.DeltaMPR,
+			DeltaBowHit:   buff.DeltaBowHit,
+			DeltaBowDmg:   buff.DeltaBowDmg,
+			DeltaFireRes:  buff.DeltaFireRes,
+			DeltaWaterRes: buff.DeltaWaterRes,
+			DeltaWindRes:  buff.DeltaWindRes,
+			DeltaEarthRes: buff.DeltaEarthRes,
+			DeltaDodge:    buff.DeltaDodge,
+			SetMoveSpeed:  buff.SetMoveSpeed,
+			SetBraveSpeed: buff.SetBraveSpeed,
+		}
+		if buff.SkillID == skillShapeChange {
+			row.PolyID = p.PolyID
+		}
+		rows = append(rows, row)
+	}
+	return rows
 }
 
 func boolToInt(b bool) int {

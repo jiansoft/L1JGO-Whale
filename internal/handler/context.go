@@ -35,6 +35,8 @@ type Deps struct {
 	WarehouseRepo  *persist.WarehouseRepo
 	WALRepo        *persist.WALRepo
 	ClanRepo       *persist.ClanRepo
+	BuffRepo       *persist.BuffRepo
+	Doors          *data.DoorTable
 }
 
 // RegisterAll registers all packet handlers into the registry.
@@ -234,6 +236,11 @@ func RegisterAll(reg *packet.Registry, deps *Deps) {
 	reg.Register(packet.C_OPCODE_SAVEIO, inWorldStates,
 		func(sess any, r *packet.Reader) {
 			HandleCharConfig(sess.(*net.Session), r, deps)
+		},
+	)
+	reg.Register(packet.C_OPCODE_OPEN, inWorldStates,
+		func(sess any, r *packet.Reader) {
+			HandleOpen(sess.(*net.Session), r, deps)
 		},
 	)
 

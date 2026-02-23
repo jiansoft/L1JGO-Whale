@@ -62,6 +62,7 @@ type NpcInfo struct {
 	AggroTarget  uint64 // SessionID of hate target (0 = no target)
 	AttackTimer  int    // ticks until next attack (cooldown)
 	MoveTimer    int    // ticks until next move towards target
+	StuckTicks   int    // consecutive ticks blocked by another entity (for stuck detection)
 
 	// Idle wandering state (Java: _randomMoveDistance / _randomMoveDirection)
 	WanderDist   int   // remaining tiles to walk in current wander direction

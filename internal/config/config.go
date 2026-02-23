@@ -105,7 +105,7 @@ func defaults() *Config {
 			BindAddress:       "0.0.0.0:7001",
 			TickRate:          200 * time.Millisecond,
 			InQueueSize:       128,
-			OutQueueSize:      256,
+			OutQueueSize:      2048,
 			MaxPacketsPerTick: 32,
 			WriteTimeout:      10 * time.Second,
 			ReadTimeout:       60 * time.Second,
@@ -117,8 +117,8 @@ func defaults() *Config {
 			LawfulRate: 1.0,
 		},
 		Enchant: EnchantConfig{
-			WeaponChance: 0.5,
-			ArmorChance:  1.0 / 3.0,
+			WeaponChance: 0.68, // Java default ENCHANT_CHANCE_WEAPON = 68
+			ArmorChance:  0.52, // Java default ENCHANT_CHANCE_ARMOR = 52
 		},
 		Character: CharacterConfig{
 			DefaultSlots:         6,

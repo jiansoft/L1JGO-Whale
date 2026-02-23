@@ -21,7 +21,7 @@ type GroundItem struct {
 	ID         int32  // unique ground object ID
 	ItemID     int32  // template ID
 	Count      int32  // stack count
-	EnchantLvl byte   // enchant level
+	EnchantLvl int8   // enchant level (signed: cursed scrolls can go negative)
 	Name       string // display name
 	GrdGfx     int32  // ground visual GFX ID
 	X          int32

@@ -266,14 +266,18 @@ func HandleFarAttack(sess *net.Session, r *packet.Reader, deps *Deps) {
 func handleNpcDeath(npc *world.NpcInfo, killer *world.PlayerInfo, nearby []*world.PlayerInfo, deps *Deps) {
 	npc.Dead = true
 
+	// Remove from NPC AOI grid + entity grid (dead NPC doesn't block)
+	deps.World.NpcDied(npc)
+
 	// Clear tile collision (dead NPC doesn't block movement)
 	if deps.MapData != nil {
 		deps.MapData.SetImpassable(npc.MapID, npc.X, npc.Y, false)
 	}
 
-	// Broadcast death animation
+	// Broadcast death animation + unblock entity collision
 	for _, viewer := range nearby {
 		sendActionGfx(viewer.Session, npc.ID, 8) // ACTION_Die = 8
+		SendEntityUnblock(viewer.Session, npc.X, npc.Y)
 	}
 
 	// Schedule removal after delay (Java: NPC_DELETION_TIME = 10 seconds = 50 ticks)
@@ -281,20 +285,24 @@ func handleNpcDeath(npc *world.NpcInfo, killer *world.PlayerInfo, nearby []*worl
 	// tickNpcRespawn will send S_RemoveObject when DeleteTimer expires.
 	npc.DeleteTimer = 50
 
-	// Give exp to killer (apply server exp rate)
-	expGain := npc.Exp
-	if deps.Config.Rates.ExpRate > 0 {
-		expGain = int32(float64(expGain) * deps.Config.Rates.ExpRate)
-	}
-	if expGain > 0 {
-		addExp(killer, expGain, deps)
-	}
+	// Guards: no exp, no lawful, no drops (Java: L1GuardInstance has no reward logic)
+	expGain := int32(0)
+	if npc.Impl != "L1Guard" {
+		// Give exp to killer (apply server exp rate)
+		expGain = npc.Exp
+		if deps.Config.Rates.ExpRate > 0 {
+			expGain = int32(float64(expGain) * deps.Config.Rates.ExpRate)
+		}
+		if expGain > 0 {
+			addExp(killer, expGain, deps)
+		}
 
-	// Give lawful from kill
-	addLawfulFromNpc(killer, npc.Lawful, deps)
+		// Give lawful from kill
+		addLawfulFromNpc(killer, npc.Lawful, deps)
 
-	// Give drops to killer
-	GiveDrops(killer, npc.NpcID, deps)
+		// Give drops to killer
+		GiveDrops(killer, npc.NpcID, deps)
+	}
 
 	// Set respawn timer (in ticks: delay_seconds * 5 at 200ms tick)
 	if npc.RespawnDelay > 0 {

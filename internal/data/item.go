@@ -19,7 +19,7 @@ const (
 // useTypeMap maps YAML use_type / armor type strings to the integer values
 // the 3.80C client expects in inventory packets. Java: ItemTable._useTypes
 var useTypeMap = map[string]byte{
-	"none":        0, // Java uses -1 but client byte is unsigned; 0 = unusable
+	"none":        0xFF, // Java: -1 (signed) = 0xFF (unsigned). Client treats 0xFF as not usable.
 	"weapon":      1,
 	"armor":       2,
 	"spell_long":  5,
@@ -67,7 +67,7 @@ func UseTypeToID(s string) byte {
 	if v, ok := useTypeMap[s]; ok {
 		return v
 	}
-	return 0
+	return 0xFF // unknown = not usable
 }
 
 // materialMap maps YAML material strings to the integer values
@@ -178,6 +178,12 @@ type ItemInfo struct {
 
 	// Identify description
 	ItemDescID int // itemdesc_id for S_IdentifyDesc packet
+
+	// Fixed teleport destination (etcitem only — for 指定傳送卷軸).
+	// If LocX != 0, this item teleports the player to (LocX, LocY, LocMapID) on use.
+	LocX     int32
+	LocY     int32
+	LocMapID int16
 }
 
 // ItemTable holds all item templates indexed by ItemID.
@@ -434,6 +440,9 @@ type etcItemEntry struct {
 	DmgLarge       int    `yaml:"dmg_large"`
 	MinLevel       int    `yaml:"min_level"`
 	MaxLevel       int    `yaml:"max_level"`
+	LocX           int32  `yaml:"loc_x"`
+	LocY           int32  `yaml:"loc_y"`
+	MapID          int16  `yaml:"map_id"`
 	Bless          int    `yaml:"bless"`
 	Tradeable      bool   `yaml:"tradeable"`
 	DelayID        int    `yaml:"delay_id"`
@@ -480,6 +489,9 @@ func loadEtcItems(t *ItemTable, path string) error {
 			FoodVolume:     e.FoodVolume,
 			DelayID:        e.DelayID,
 			DelayTime:      e.DelayTime,
+			LocX:           e.LocX,
+			LocY:           e.LocY,
+			LocMapID:       e.MapID,
 		}
 	}
 	return nil

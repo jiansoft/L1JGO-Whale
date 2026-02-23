@@ -46,7 +46,7 @@ type InvItem struct {
 	InvGfx     int32  // inventory graphic ID
 	Count      int32  // stack count (1 for non-stackable)
 	Identified bool
-	EnchantLvl byte
+	EnchantLvl int8
 	Bless      byte   // 0=normal, 1=blessed, 2=cursed, >=128=sealed
 	Stackable  bool
 	Weight     int32  // per-unit weight

@@ -136,6 +136,7 @@ func run() error {
 	warehouseRepo := persist.NewWarehouseRepo(db)
 	walRepo := persist.NewWALRepo(db)
 	clanRepo := persist.NewClanRepo(db)
+	buffRepo := persist.NewBuffRepo(db)
 
 	// 5. Create ECS World and game World State
 	ecsWorld := ecs.NewWorld()
@@ -229,6 +230,13 @@ func run() error {
 	}
 	printStat("變身形態", polymorphTable.Count())
 
+	doorTable, err := data.LoadDoorTable("data/yaml/door_gfx.yaml", "data/yaml/door_spawn.yaml")
+	if err != nil {
+		return fmt.Errorf("load door table: %w", err)
+	}
+	doorCount := spawnDoors(worldState, doorTable)
+	printStat("門", doorCount)
+
 	// 5b. Initialize Lua scripting engine
 	luaEngine, err := scripting.NewEngine("scripts", log)
 	if err != nil {
@@ -291,6 +299,8 @@ func run() error {
 		WarehouseRepo:  warehouseRepo,
 		WALRepo:        walRepo,
 		ClanRepo:       clanRepo,
+		BuffRepo:       buffRepo,
+		Doors:          doorTable,
 	}
 	handler.RegisterAll(pktReg, deps)
 
@@ -308,7 +318,7 @@ func run() error {
 
 	// 8. Create systems and register with runner
 	runner := coresys.NewRunner()
-	inputSys := system.NewInputSystem(netServer, pktReg, cfg.Network.MaxPacketsPerTick, accountRepo, charRepo, itemRepo, worldState, mapDataTable, log)
+	inputSys := system.NewInputSystem(netServer, pktReg, cfg.Network.MaxPacketsPerTick, accountRepo, charRepo, itemRepo, buffRepo, worldState, mapDataTable, log)
 	runner.Register(inputSys)
 	runner.Register(system.NewRegenSystem(worldState))
 	runner.Register(system.NewCleanupSystem(ecsWorld))
@@ -360,12 +370,12 @@ func run() error {
 			saveCounter++
 			if saveCounter >= saveInterval {
 				saveCounter = 0
-				saveAllPlayers(worldState, charRepo, itemRepo, log)
+				saveAllPlayers(worldState, charRepo, itemRepo, buffRepo, log)
 			}
 		case sig := <-shutdownCh:
 			log.Info("收到關閉信號", zap.String("signal", sig.String()))
 			// Save all players before stopping
-			saveAllPlayers(worldState, charRepo, itemRepo, log)
+			saveAllPlayers(worldState, charRepo, itemRepo, buffRepo, log)
 			netServer.Shutdown()
 			log.Info("伺服器已停止")
 			return nil
@@ -482,6 +492,50 @@ func spawnNpcs(ws *world.State, npcTable *data.NpcTable, spawns []data.SpawnEntr
 	return total
 }
 
+// spawnDoors creates door instances from door spawn data and adds them to world state.
+func spawnDoors(ws *world.State, doorTable *data.DoorTable) int {
+	total := 0
+	for _, spawn := range doorTable.Spawns() {
+		gfx := doorTable.GetGfx(spawn.GfxID)
+		if gfx == nil {
+			continue
+		}
+
+		// Calculate absolute edge locations from base position + offset
+		var baseLoc int32
+		if gfx.Direction == 0 {
+			baseLoc = spawn.X
+		} else {
+			baseLoc = spawn.Y
+		}
+
+		door := &world.DoorInfo{
+			ID:        world.NextDoorID(),
+			DoorID:    spawn.ID,
+			GfxID:     spawn.GfxID,
+			X:         spawn.X,
+			Y:         spawn.Y,
+			MapID:     spawn.MapID,
+			MaxHP:     spawn.HP,
+			HP:        spawn.HP,
+			KeeperID:  spawn.Keeper,
+			Direction: gfx.Direction,
+			LeftEdge:  baseLoc + int32(gfx.LeftEdgeOffset),
+			RightEdge: baseLoc + int32(gfx.RightEdgeOffset),
+		}
+
+		if spawn.IsOpening {
+			door.OpenStatus = world.DoorActionOpen
+		} else {
+			door.OpenStatus = world.DoorActionClose
+		}
+
+		ws.AddDoor(door)
+		total++
+	}
+	return total
+}
+
 // tickNpcRespawn processes NPC delete timers and respawn timers each tick.
 // Flow: NPC dies → DeleteTimer counts down → send S_RemoveObject → RespawnTimer counts down → respawn.
 func tickNpcRespawn(ws *world.State, maps *data.MapDataTable) {
@@ -498,6 +552,8 @@ func tickNpcRespawn(ws *world.State, maps *data.MapDataTable) {
 				nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 				for _, viewer := range nearby {
 					sendRemoveObjectFromMain(viewer.Session, npc.ID)
+					// Entity collision: unblock dead NPC tile
+					handler.SendEntityUnblock(viewer.Session, npc.X, npc.Y)
 				}
 			}
 			continue // don't start respawn timer until delete phase is done
@@ -507,29 +563,194 @@ func tickNpcRespawn(ws *world.State, maps *data.MapDataTable) {
 		if npc.RespawnTimer > 0 {
 			npc.RespawnTimer--
 			if npc.RespawnTimer <= 0 {
-				// Respawn the NPC
+				// Respawn the NPC — find unoccupied spawn tile
+				spawnX, spawnY := npc.SpawnX, npc.SpawnY
+				if ws.IsOccupied(spawnX, spawnY, npc.SpawnMapID, npc.ID) {
+					// Spiral search radius 1~3 for nearest empty tile
+					found := false
+					for r := int32(1); r <= 3 && !found; r++ {
+						for dx := -r; dx <= r && !found; dx++ {
+							for dy := -r; dy <= r && !found; dy++ {
+								tx, ty := spawnX+dx, spawnY+dy
+								if !ws.IsOccupied(tx, ty, npc.SpawnMapID, npc.ID) {
+									spawnX, spawnY = tx, ty
+									found = true
+								}
+							}
+						}
+					}
+				}
+
 				npc.Dead = false
 				npc.HP = npc.MaxHP
 				npc.MP = npc.MaxMP
-				npc.X = npc.SpawnX
-				npc.Y = npc.SpawnY
+				npc.X = spawnX
+				npc.Y = spawnY
 				npc.MapID = npc.SpawnMapID
 				npc.AggroTarget = 0
 				npc.AttackTimer = 0
 				npc.MoveTimer = 0
+				npc.StuckTicks = 0
 
-				// Set tile as blocked
+				// Set tile as blocked (map passability for NPC pathfinding)
 				if maps != nil {
 					maps.SetImpassable(npc.MapID, npc.X, npc.Y, true)
 				}
+
+				// Re-add to NPC AOI grid + entity grid
+				ws.NpcRespawn(npc)
 
 				// Notify nearby players
 				nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 				for _, viewer := range nearby {
 					sendNpcPackFromMain(viewer.Session, npc)
+					// Entity collision: block NPC tile for nearby players
+					handler.SendEntityBlock(viewer.Session, npc.X, npc.Y, npc.MapID, ws)
 				}
 			}
 		}
+	}
+}
+
+// ==================== Guard AI ====================
+
+// tickGuardAI processes a single guard NPC's AI each tick.
+// Guards hunt wanted players (isWanted), counter-attack when hit, and return home when idle.
+// Java reference: L1GuardInstance.java — searchTarget(), onTarget(), noTarget().
+func tickGuardAI(ws *world.State, npc *world.NpcInfo, deps *handler.Deps) {
+	// Decrement timers
+	if npc.AttackTimer > 0 {
+		npc.AttackTimer--
+	}
+	if npc.MoveTimer > 0 {
+		npc.MoveTimer--
+	}
+
+	// --- Target validation ---
+	var target *world.PlayerInfo
+	if npc.AggroTarget != 0 {
+		target = ws.GetBySession(npc.AggroTarget)
+		if target == nil || target.Dead || target.MapID != npc.MapID {
+			npc.AggroTarget = 0
+			target = nil
+		}
+		// Lose aggro if target is too far (Java: getTileLineDistance() > 30)
+		if target != nil && chebyshev32(npc.X, npc.Y, target.X, target.Y) > 30 {
+			npc.AggroTarget = 0
+			target = nil
+		}
+	}
+
+	// --- Target search: scan for wanted players (Java: searchTarget) ---
+	if target == nil {
+		nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
+		bestDist := int32(999)
+		for _, p := range nearby {
+			if p.Dead || p.Invisible {
+				continue // skip dead, invisible
+			}
+			// Java: if (pc.isWanted()) — wanted = PK within last 24h
+			if p.WantedTicks <= 0 && !p.PinkName {
+				continue
+			}
+			dist := chebyshev32(npc.X, npc.Y, p.X, p.Y)
+			if dist <= 8 && dist < bestDist {
+				bestDist = dist
+				target = p
+			}
+		}
+		if target != nil {
+			npc.AggroTarget = target.SessionID
+			npc.MoveTimer = 0
+		}
+	}
+
+	// --- Has target: chase and attack ---
+	if target != nil {
+		dist := chebyshev32(npc.X, npc.Y, target.X, target.Y)
+		atkRange := int32(npc.Ranged)
+		if atkRange < 1 {
+			atkRange = 1
+		}
+
+		if dist <= atkRange {
+			// In attack range
+			if npc.AttackTimer <= 0 {
+				if npc.Ranged > 1 {
+					npcRangedAttack(ws, npc, target, deps)
+				} else {
+					npcMeleeAttack(ws, npc, target, deps)
+				}
+				setNpcAtkCooldown(npc)
+			}
+		} else {
+			// Chase target
+			if npc.MoveTimer <= 0 {
+				npcMoveToward(ws, npc, target.X, target.Y, deps.MapData)
+				moveTicks := 4
+				if npc.MoveSpeed > 0 {
+					moveTicks = int(npc.MoveSpeed) / 200
+					if moveTicks < 2 {
+						moveTicks = 2
+					}
+				}
+				npc.MoveTimer = moveTicks
+			}
+		}
+		return
+	}
+
+	// --- No target: return home ---
+	if npc.X != npc.SpawnX || npc.Y != npc.SpawnY {
+		homeDist := chebyshev32(npc.X, npc.Y, npc.SpawnX, npc.SpawnY)
+		if homeDist > 30 {
+			// Too far from home — teleport back (Java: teleport(homeX, homeY, 1))
+			guardTeleportHome(ws, npc, deps)
+			return
+		}
+		// Walk back toward spawn
+		if npc.MoveTimer <= 0 {
+			npcMoveToward(ws, npc, npc.SpawnX, npc.SpawnY, deps.MapData)
+			moveTicks := 4
+			if npc.MoveSpeed > 0 {
+				moveTicks = int(npc.MoveSpeed) / 200
+				if moveTicks < 2 {
+					moveTicks = 2
+				}
+			}
+			npc.MoveTimer = moveTicks
+		}
+	}
+	// At home with no target: idle (guards don't wander)
+}
+
+// guardTeleportHome instantly moves a guard back to its spawn point.
+// Removes from old position AOI, updates position, appears at new position.
+func guardTeleportHome(ws *world.State, npc *world.NpcInfo, deps *handler.Deps) {
+	oldX, oldY := npc.X, npc.Y
+
+	// Notify old-position viewers: remove NPC + unblock
+	oldNearby := ws.GetNearbyPlayersAt(oldX, oldY, npc.MapID)
+	for _, viewer := range oldNearby {
+		sendRemoveObjectFromMain(viewer.Session, npc.ID)
+		handler.SendEntityUnblock(viewer.Session, oldX, oldY)
+	}
+
+	// Update map passability
+	if deps.MapData != nil {
+		deps.MapData.SetImpassable(npc.MapID, oldX, oldY, false)
+		deps.MapData.SetImpassable(npc.SpawnMapID, npc.SpawnX, npc.SpawnY, true)
+	}
+
+	// Update position (NPC AOI grid + entity grid)
+	ws.UpdateNpcPosition(npc.ID, npc.SpawnX, npc.SpawnY, 0)
+	npc.MapID = npc.SpawnMapID
+
+	// Notify new-position viewers: show NPC + block
+	newNearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
+	for _, viewer := range newNearby {
+		sendNpcPackFromMain(viewer.Session, npc)
+		handler.SendEntityBlock(viewer.Session, npc.X, npc.Y, npc.MapID, ws)
 	}
 }
 
@@ -538,6 +759,11 @@ func tickNpcRespawn(ws *world.State, maps *data.MapDataTable) {
 func tickNpcAI(ws *world.State, deps *handler.Deps) {
 	for _, npc := range ws.NpcList() {
 		if npc.Dead {
+			continue
+		}
+		// Guard AI: separate branch — simple Go logic, no Lua needed.
+		if npc.Impl == "L1Guard" {
+			tickGuardAI(ws, npc, deps)
 			continue
 		}
 		if npc.Impl != "L1Monster" {
@@ -855,43 +1081,92 @@ func executeNpcSkill(ws *world.State, npc *world.NpcInfo, target *world.PlayerIn
 }
 
 // npcMoveToward moves NPC 1 tile toward a target position.
+// If the direct path is blocked by a player, it tries two alternate side-step directions.
 func npcMoveToward(ws *world.State, npc *world.NpcInfo, tx, ty int32, maps *data.MapDataTable) {
 	dx := tx - npc.X
 	dy := ty - npc.Y
-	moveX := npc.X
-	moveY := npc.Y
+
+	// Build candidate list: preferred direction first, then two side-steps
+	type candidate struct{ x, y int32 }
+	candidates := make([]candidate, 0, 3)
+
+	// Primary: direct toward target
+	mx, my := npc.X, npc.Y
 	if dx > 0 {
-		moveX++
+		mx++
 	} else if dx < 0 {
-		moveX--
+		mx--
 	}
 	if dy > 0 {
-		moveY++
+		my++
 	} else if dy < 0 {
-		moveY--
+		my--
+	}
+	candidates = append(candidates, candidate{mx, my})
+
+	// Side-steps: if moving diagonally, try the two axis-aligned components.
+	// If moving axis-aligned, try the two perpendicular diagonals.
+	if dx != 0 && dy != 0 {
+		// Diagonal move blocked → try horizontal-only and vertical-only
+		candidates = append(candidates, candidate{mx, npc.Y}) // horizontal component
+		candidates = append(candidates, candidate{npc.X, my}) // vertical component
+	} else if dx != 0 {
+		// Horizontal blocked → try two diagonals
+		candidates = append(candidates, candidate{mx, npc.Y + 1})
+		candidates = append(candidates, candidate{mx, npc.Y - 1})
+	} else if dy != 0 {
+		// Vertical blocked → try two diagonals
+		candidates = append(candidates, candidate{npc.X + 1, my})
+		candidates = append(candidates, candidate{npc.X - 1, my})
 	}
 
-	heading := calcNpcHeading(npc.X, npc.Y, moveX, moveY)
+	for _, c := range candidates {
+		if c.x == npc.X && c.y == npc.Y {
+			continue
+		}
+		h := calcNpcHeading(npc.X, npc.Y, c.x, c.y)
 
-	// Validate walkability
-	if maps != nil && !maps.IsPassable(npc.MapID, npc.X, npc.Y, int(heading)) {
+		// Validate map walkability
+		if maps != nil && !maps.IsPassable(npc.MapID, npc.X, npc.Y, int(h)) {
+			continue
+		}
+		// NPC-to-NPC: freely overlap. NPC-to-Player: blocked → try next candidate.
+		occupant := ws.OccupantAt(c.x, c.y, npc.MapID)
+		if occupant > 0 && occupant < 200_000_000 {
+			continue
+		}
+
+		// Good candidate — execute move
+		npcExecuteMove(ws, npc, c.x, c.y, h, maps)
 		return
 	}
+	// All candidates blocked — last resort: pass through on primary direction.
+	// Ignores entity collision AND NPC occupancy flags, only checks original terrain.
+	h := calcNpcHeading(npc.X, npc.Y, mx, my)
+	if maps == nil || maps.IsPassableIgnoreOccupant(npc.MapID, npc.X, npc.Y, int(h)) {
+		npcExecuteMove(ws, npc, mx, my, h, maps)
+	}
+}
 
-	npc.Heading = heading
+// npcExecuteMove performs the actual NPC position update and broadcasts.
+func npcExecuteMove(ws *world.State, npc *world.NpcInfo, moveX, moveY int32, heading int16, maps *data.MapDataTable) {
 	oldX, oldY := npc.X, npc.Y
 
-	// Update tile collision
+	// Update tile collision (map passability for NPC pathfinding)
 	if maps != nil {
 		maps.SetImpassable(npc.MapID, oldX, oldY, false)
 		maps.SetImpassable(npc.MapID, moveX, moveY, true)
 	}
 
-	npc.X = moveX
-	npc.Y = moveY
+	// Centralized position update: updates NPC AOI grid + entity grid
+	ws.UpdateNpcPosition(npc.ID, moveX, moveY, heading)
+
 	nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 	for _, viewer := range nearby {
 		sendNpcMoveFromMain(viewer.Session, npc.ID, oldX, oldY, npc.Heading)
+		// Entity collision: unblock old tile, block new tile
+		handler.SendEntityUnblock(viewer.Session, oldX, oldY)
+		handler.SendEntityBlock(viewer.Session, npc.X, npc.Y, npc.MapID, ws)
 	}
 }
 
@@ -933,19 +1208,21 @@ func npcWander(ws *world.State, npc *world.NpcInfo, dir int, maps *data.MapDataT
 
 	oldX, oldY := npc.X, npc.Y
 
-	// Update tile collision
+	// Update tile collision (map passability for NPC pathfinding)
 	if maps != nil {
 		maps.SetImpassable(npc.MapID, oldX, oldY, false)
 		maps.SetImpassable(npc.MapID, moveX, moveY, true)
 	}
 
-	npc.X = moveX
-	npc.Y = moveY
-	npc.Heading = npc.WanderDir
+	// Centralized position update: updates NPC AOI grid + entity grid
+	ws.UpdateNpcPosition(npc.ID, moveX, moveY, npc.WanderDir)
 
 	nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 	for _, viewer := range nearby {
 		sendNpcMoveFromMain(viewer.Session, npc.ID, oldX, oldY, npc.Heading)
+		// Entity collision: unblock old tile, block new tile
+		handler.SendEntityUnblock(viewer.Session, oldX, oldY)
+		handler.SendEntityBlock(viewer.Session, npc.X, npc.Y, npc.MapID, ws)
 	}
 }
 
@@ -1067,7 +1344,7 @@ func sendNpcPackFromMain(sess *gonet.Session, npc *world.NpcInfo) {
 }
 
 // saveAllPlayers persists all online players' character data and inventory to DB.
-func saveAllPlayers(ws *world.State, charRepo *persist.CharacterRepo, itemRepo *persist.ItemRepo, log *zap.Logger) {
+func saveAllPlayers(ws *world.State, charRepo *persist.CharacterRepo, itemRepo *persist.ItemRepo, buffRepo *persist.BuffRepo, log *zap.Logger) {
 	count := 0
 	ws.AllPlayers(func(p *world.PlayerInfo) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -1111,6 +1388,15 @@ func saveAllPlayers(ws *world.State, charRepo *persist.CharacterRepo, itemRepo *
 		}
 		if err := charRepo.SaveKnownSpells(ctx, p.Name, p.KnownSpells); err != nil {
 			log.Error("自動存檔魔法書失敗", zap.String("name", p.Name), zap.Error(err))
+		}
+		// Save active buffs (including polymorph state)
+		if buffRepo != nil && len(p.ActiveBuffs) > 0 {
+			buffRows := handler.BuffRowsFromPlayer(p)
+			if len(buffRows) > 0 {
+				if err := buffRepo.SaveBuffs(ctx, p.CharID, buffRows); err != nil {
+					log.Error("自動存檔buff失敗", zap.String("name", p.Name), zap.Error(err))
+				}
+			}
 		}
 		count++
 	})

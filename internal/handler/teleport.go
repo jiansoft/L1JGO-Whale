@@ -6,18 +6,19 @@ import (
 )
 
 // HandleTeleport processes C_TELEPORT (opcode 52) — teleport confirmation.
-// In Java, the client sends this empty packet after receiving S_Teleport to confirm
-// the teleport should execute. In V381, teleport scrolls execute immediately,
-// so this handler serves as a fallback for the HasTeleport pre-stored destination.
-// Format: opcode only, no payload.
+// Used when SEND_PACKET_BEFORE_TELEPORT=true (server sends S_Teleport, client responds).
+// On failure: send S_Paralysis(TYPE_TELEPORT_UNLOCK=7) to unfreeze client.
+// On success: client unfreezes automatically when it receives S_MapID + S_OwnCharPack.
 func HandleTeleport(sess *net.Session, _ *packet.Reader, deps *Deps) {
 	player := deps.World.GetBySession(sess.ID)
 	if player == nil || player.Dead {
+		sendTeleportUnlock(sess)
 		return
 	}
 
 	// Check for pre-stored teleport destination
 	if !player.HasTeleport {
+		sendTeleportUnlock(sess)
 		return
 	}
 

@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"time"
+
 	"github.com/l1jgo/server/internal/net"
 	"github.com/l1jgo/server/internal/net/packet"
 )
@@ -32,6 +34,19 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 		return
 	}
 
+	// --- Move speed validation (anti speed-hack) ---
+	// Normal walk ~200ms, haste ~133ms. Apply 80% tolerance.
+	now := time.Now().UnixNano()
+	minInterval := int64(160_000_000) // 200ms * 80% = 160ms
+	if player.MoveSpeed == 1 {
+		minInterval = 106_000_000 // 133ms * 80% = 106ms
+	}
+	if player.LastMoveTime > 0 && (now-player.LastMoveTime) < minInterval {
+		sendOwnCharPackPlayer(sess, player) // rubber-band speed hacker
+		return
+	}
+	player.LastMoveTime = now
+
 	// Always use server-tracked position (matching Java Taiwan behavior).
 	curX := player.X
 	curY := player.Y
@@ -40,13 +55,20 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 	destX := curX + headingDX[heading]
 	destY := curY + headingDY[heading]
 
-	// Mark old tile passable, new tile impassable (for NPC pathfinding only).
-	// Java C_MoveChar does NOT validate IsPassable for player movement — client
-	// handles its own collision. Server trusts client position. The impassable
-	// flag is only used by NPC AI pathfinding to avoid walking through players.
+	// Entity collision: S_CHANGE_ATTR blocks 4 cardinal directions client-side,
+	// but diagonal movement (NE/NW/SE/SW) bypasses edge checks.
+	// Server-side IsOccupied catches diagonal bypass attempts.
+	// No rubber-band packet (sendOwnCharPackPlayer causes NPC render suppression).
+	// Instead, silently reject the move — server keeps old position, client auto-corrects
+	// on next move since we always use server-tracked position.
+	if ws.IsOccupied(destX, destY, player.MapID, player.CharID) {
+		return
+	}
+
+	// Java C_MoveChar: marks old tile passable, new tile impassable (bit 0x80).
+	// This prevents NPCs from walking into player tiles (NPC checks isPassable).
 	if deps.MapData != nil {
 		deps.MapData.SetImpassable(player.MapID, curX, curY, false)
-		deps.MapData.SetImpassable(player.MapID, destX, destY, true)
 	}
 
 	// Get old nearby set BEFORE moving
@@ -54,6 +76,11 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 
 	// Update position to DESTINATION
 	ws.UpdatePosition(sess.ID, destX, destY, player.MapID, heading)
+
+	// Mark new position as impassable (for NPC pathfinding)
+	if deps.MapData != nil {
+		deps.MapData.SetImpassable(player.MapID, destX, destY, true)
+	}
 
 	// Auto-cancel trade if partner is too far (> 15 tiles or different map)
 	if player.TradePartnerID != 0 {
@@ -92,18 +119,34 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 		newSet[p.SessionID] = struct{}{}
 	}
 
-	// 1. Players in BOTH old and new: send movement packet with PREVIOUS position
+	// 1. Players in BOTH old and new: send movement
 	for _, other := range newNearby {
 		if _, wasOld := oldSet[other.SessionID]; wasOld {
 			sendMoveObject(other.Session, player.CharID, curX, curY, heading)
+			// Proximity-based: unblock old, conditionally block new
+			SendEntityUnblock(other.Session, curX, curY)
+			if ChebyshevDist(destX, destY, other.X, other.Y) <= entityBlockRange {
+				SendEntityBlock(other.Session, destX, destY, player.MapID, ws)
+			}
+			// Update their blocking for us based on proximity
+			if ChebyshevDist(destX, destY, other.X, other.Y) <= entityBlockRange {
+				SendEntityBlock(sess, other.X, other.Y, player.MapID, ws)
+			} else {
+				SendEntityUnblock(sess, other.X, other.Y)
+			}
 		}
 	}
 
 	// 2. Players in NEW but not OLD: they just entered our view
 	for _, other := range newNearby {
 		if _, wasOld := oldSet[other.SessionID]; !wasOld {
-			sendPutObject(sess, other)           // We see them appear
-			sendPutObject(other.Session, player)  // They see us appear
+			sendPutObject(sess, other)          // We see them appear
+			sendPutObject(other.Session, player) // They see us appear
+			// Only block if within proximity
+			if ChebyshevDist(destX, destY, other.X, other.Y) <= entityBlockRange {
+				SendEntityBlock(sess, other.X, other.Y, player.MapID, ws)
+				SendEntityBlock(other.Session, destX, destY, player.MapID, ws)
+			}
 		}
 	}
 
@@ -112,6 +155,8 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 		if _, isNew := newSet[other.SessionID]; !isNew {
 			sendRemoveObject(sess, other.CharID)
 			sendRemoveObject(other.Session, player.CharID)
+			SendEntityUnblock(sess, other.X, other.Y)
+			SendEntityUnblock(other.Session, curX, curY)
 		}
 	}
 
@@ -128,16 +173,30 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 		newNpcSet[n.ID] = struct{}{}
 	}
 
-	// NPCs newly visible
+	// NPCs newly visible — send appearance (no blocking yet, proximity triggers it)
 	for _, n := range newNpcs {
 		if _, wasOld := oldNpcSet[n.ID]; !wasOld {
 			sendNpcPack(sess, n)
 		}
 	}
-	// NPCs no longer visible
+	// NPCs no longer visible — remove + unblock
 	for _, n := range oldNpcs {
 		if _, isNew := newNpcSet[n.ID]; !isNew {
 			sendRemoveObject(sess, n.ID)
+			SendEntityUnblock(sess, n.X, n.Y)
+		}
+	}
+
+	// Proximity-based entity collision: block/unblock NPCs based on distance
+	for _, n := range newNpcs {
+		if n.Dead {
+			continue
+		}
+		dist := ChebyshevDist(destX, destY, n.X, n.Y)
+		if dist <= entityBlockRange {
+			SendEntityBlock(sess, n.X, n.Y, player.MapID, ws)
+		} else {
+			SendEntityUnblock(sess, n.X, n.Y)
 		}
 	}
 
@@ -162,6 +221,32 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 	for _, g := range oldGnd {
 		if _, isNew := newGndSet[g.ID]; !isNew {
 			sendRemoveObject(sess, g.ID)
+		}
+	}
+
+	// --- Door AOI: show/hide doors as player moves ---
+	oldDoors := ws.GetNearbyDoors(curX, curY, player.MapID)
+	newDoors := ws.GetNearbyDoors(destX, destY, player.MapID)
+
+	oldDoorSet := make(map[int32]struct{}, len(oldDoors))
+	for _, d := range oldDoors {
+		oldDoorSet[d.ID] = struct{}{}
+	}
+	newDoorSet := make(map[int32]struct{}, len(newDoors))
+	for _, d := range newDoors {
+		newDoorSet[d.ID] = struct{}{}
+	}
+
+	// Doors newly visible
+	for _, d := range newDoors {
+		if _, wasOld := oldDoorSet[d.ID]; !wasOld {
+			SendDoorPerceive(sess, d)
+		}
+	}
+	// Doors no longer visible
+	for _, d := range oldDoors {
+		if _, isNew := newDoorSet[d.ID]; !isNew {
+			sendRemoveObject(sess, d.ID)
 		}
 	}
 

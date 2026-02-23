@@ -68,7 +68,7 @@ function calc_level_up_mp(class_type, wis)
     return mp
 end
 
--- Death exp penalty: lose 10% of current level's exp range
+-- Death exp penalty: lose 5% of current level's exp range
 function calc_death_exp_penalty(level, exp)
     if level <= 1 then return 0 end
     local current = EXP_TABLE[level]
@@ -76,7 +76,7 @@ function calc_death_exp_penalty(level, exp)
     if not current then return 0 end
     local range = current - prev
     if range <= 0 then return 0 end
-    local penalty = math.floor(range / 10)
+    local penalty = math.floor(range * 5 / 100)
     -- Don't go below previous level's exp
     if exp - penalty < prev then
         penalty = exp - prev

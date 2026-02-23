@@ -298,7 +298,7 @@ func sendAddItem(sess *net.Session, item *world.InvItem, optInfo ...*data.ItemIn
 	w.WriteC(0)                            // padding
 	w.WriteH(0)                            // padding
 	w.WriteH(0)                            // padding
-	w.WriteC(item.EnchantLvl)              // enchant level
+	w.WriteC(byte(item.EnchantLvl))        // enchant level
 	w.WriteD(item.ObjectID)                // world serial
 	w.WriteD(0)                            // unknown
 	w.WriteD(0)                            // unknown
@@ -389,8 +389,8 @@ func sendInvList(sess *net.Session, inv *world.Inventory, items *data.ItemTable)
 		w.WriteC(0)
 		w.WriteH(0)
 		w.WriteH(0)
-		w.WriteC(item.EnchantLvl)  // enchant level
-		w.WriteD(item.ObjectID)    // world serial
+		w.WriteC(byte(item.EnchantLvl))  // enchant level
+		w.WriteD(item.ObjectID)          // world serial
 		w.WriteD(0)
 		w.WriteD(0)
 		w.WriteD(7)                // flags: deletable

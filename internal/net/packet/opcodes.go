@@ -73,6 +73,7 @@ const (
 	S_OPCODE_CHARTITLE              byte = 183 // S_CharTitle (player title update)
 	S_OPCODE_CLANATTENTION          byte = 200 // S_ClanAttention (clan status change notify)
 	S_OPCODE_POLY                   byte = 76  // S_ChangeShape (polymorph visual change)
+	S_OPCODE_PARALYSIS              byte = 202 // S_Paralysis (paralysis/teleport unlock)
 )
 
 // ---------- Client Opcodes (V381) ----------

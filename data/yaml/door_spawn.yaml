@@ -1,0 +1,5473 @@
+doors:
+  - id: 1
+    gfxid: 2083
+    x: 32681
+    y: 32843
+    map_id: 69
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 2
+    gfxid: 2089
+    x: 32700
+    y: 32848
+    map_id: 69
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 3
+    gfxid: 2114
+    x: 32649
+    y: 32844
+    map_id: 69
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 4
+    gfxid: 2128
+    x: 32690
+    y: 32885
+    map_id: 69
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 5
+    gfxid: 2089
+    x: 32700
+    y: 32848
+    map_id: 2005
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6
+    gfxid: 2128
+    x: 32690
+    y: 32885
+    map_id: 2005
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 100
+    gfxid: 2301
+    x: 32563
+    y: 33085
+    map_id: 0
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 101
+    gfxid: 2346
+    x: 32597
+    y: 32934
+    map_id: 0
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 102
+    gfxid: 2304
+    x: 32586
+    y: 32919
+    map_id: 0
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 103
+    gfxid: 2305
+    x: 32578
+    y: 32918
+    map_id: 0
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 104
+    gfxid: 2303
+    x: 32562
+    y: 32947
+    map_id: 0
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 105
+    gfxid: 2306
+    x: 32559
+    y: 32968
+    map_id: 0
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 106
+    gfxid: 2345
+    x: 32568
+    y: 32969
+    map_id: 0
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 107
+    gfxid: 2344
+    x: 32591
+    y: 32955
+    map_id: 0
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 200
+    gfxid: 1010
+    x: 33098
+    y: 33354
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 201
+    gfxid: 447
+    x: 33077
+    y: 33419
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 202
+    gfxid: 446
+    x: 33052
+    y: 33400
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 203
+    gfxid: 448
+    x: 33095
+    y: 33388
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 204
+    gfxid: 845
+    x: 33108
+    y: 33383
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 205
+    gfxid: 444
+    x: 33095
+    y: 33407
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 300
+    gfxid: 447
+    x: 32630
+    y: 33197
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 301
+    gfxid: 448
+    x: 32623
+    y: 33222
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 302
+    gfxid: 446
+    x: 32591
+    y: 33191
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 303
+    gfxid: 845
+    x: 32620
+    y: 33171
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 304
+    gfxid: 446
+    x: 32642
+    y: 33185
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 305
+    gfxid: 444
+    x: 33069
+    y: 32759
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 306
+    gfxid: 446
+    x: 33069
+    y: 32748
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 307
+    gfxid: 447
+    x: 33063
+    y: 32736
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 308
+    gfxid: 442
+    x: 33050
+    y: 32741
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 309
+    gfxid: 446
+    x: 33034
+    y: 32790
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 310
+    gfxid: 447
+    x: 33047
+    y: 32802
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 400
+    gfxid: 766
+    x: 32725
+    y: 32439
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 401
+    gfxid: 768
+    x: 32754
+    y: 32447
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 402
+    gfxid: 766
+    x: 32758
+    y: 32434
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 403
+    gfxid: 767
+    x: 32744
+    y: 32429
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 405
+    gfxid: 767
+    x: 32730
+    y: 32471
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 406
+    gfxid: 766
+    x: 32738
+    y: 32460
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 407
+    gfxid: 1341
+    x: 33431
+    y: 32792
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 500
+    gfxid: 2161
+    x: 34061
+    y: 32293
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 501
+    gfxid: 2162
+    x: 34064
+    y: 32297
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 502
+    gfxid: 2164
+    x: 34067
+    y: 32299
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 503
+    gfxid: 2163
+    x: 34066
+    y: 32299
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 504
+    gfxid: 2190
+    x: 34035
+    y: 32264
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 505
+    gfxid: 2190
+    x: 34021
+    y: 32264
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 506
+    gfxid: 2191
+    x: 34052
+    y: 32230
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 507
+    gfxid: 2191
+    x: 34067
+    y: 32235
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 508
+    gfxid: 2160
+    x: 34060
+    y: 32259
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 509
+    gfxid: 2162
+    x: 34065
+    y: 32263
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 510
+    gfxid: 2191
+    x: 34077
+    y: 32277
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 511
+    gfxid: 2191
+    x: 34034
+    y: 32257
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 600
+    gfxid: 1689
+    x: 33596
+    y: 33278
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 601
+    gfxid: 1690
+    x: 33603
+    y: 33283
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 602
+    gfxid: 1688
+    x: 33591
+    y: 33275
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 603
+    gfxid: 1744
+    x: 33618
+    y: 33285
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 604
+    gfxid: 1743
+    x: 33622
+    y: 33291
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 605
+    gfxid: 1743
+    x: 33630
+    y: 33287
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 606
+    gfxid: 1750
+    x: 33634
+    y: 33289
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 607
+    gfxid: 1750
+    x: 33640
+    y: 33296
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 608
+    gfxid: 1741
+    x: 33583
+    y: 33306
+    map_id: 4
+    hp: 0
+    keeper: 50617
+    is_opening: false
+  - id: 609
+    gfxid: 1740
+    x: 33584
+    y: 33314
+    map_id: 4
+    hp: 0
+    keeper: 50617
+    is_opening: false
+  - id: 610
+    gfxid: 1737
+    x: 33569
+    y: 33297
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 611
+    gfxid: 1665
+    x: 33581
+    y: 33339
+    map_id: 4
+    hp: 0
+    keeper: 50614
+    is_opening: false
+  - id: 612
+    gfxid: 1691
+    x: 33604
+    y: 33365
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 613
+    gfxid: 1692
+    x: 33592
+    y: 33395
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 614
+    gfxid: 1737
+    x: 33595
+    y: 33410
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 615
+    gfxid: 1664
+    x: 33619
+    y: 33381
+    map_id: 4
+    hp: 0
+    keeper: 50618
+    is_opening: false
+  - id: 616
+    gfxid: 1735
+    x: 33628
+    y: 33403
+    map_id: 4
+    hp: 0
+    keeper: 50616
+    is_opening: false
+  - id: 617
+    gfxid: 1736
+    x: 33634
+    y: 33412
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 618
+    gfxid: 1664
+    x: 33632
+    y: 33248
+    map_id: 4
+    hp: 0
+    keeper: 50621
+    is_opening: false
+  - id: 619
+    gfxid: 1734
+    x: 33626
+    y: 33226
+    map_id: 4
+    hp: 0
+    keeper: 50619
+    is_opening: false
+  - id: 620
+    gfxid: 1735
+    x: 33630
+    y: 33231
+    map_id: 4
+    hp: 0
+    keeper: 50619
+    is_opening: false
+  - id: 621
+    gfxid: 1736
+    x: 33638
+    y: 33220
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 622
+    gfxid: 1691
+    x: 33630
+    y: 33210
+    map_id: 4
+    hp: 0
+    keeper: 50623
+    is_opening: false
+  - id: 623
+    gfxid: 1700
+    x: 33616
+    y: 33213
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 624
+    gfxid: 1738
+    x: 33609
+    y: 33218
+    map_id: 4
+    hp: 0
+    keeper: 50620
+    is_opening: false
+  - id: 625
+    gfxid: 1739
+    x: 33601
+    y: 33217
+    map_id: 4
+    hp: 0
+    keeper: 50620
+    is_opening: false
+  - id: 626
+    gfxid: 1691
+    x: 33584
+    y: 33214
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 627
+    gfxid: 1692
+    x: 33568
+    y: 33215
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 628
+    gfxid: 1750
+    x: 33570
+    y: 33230
+    map_id: 4
+    hp: 0
+    keeper: 50624
+    is_opening: false
+  - id: 629
+    gfxid: 1751
+    x: 33575
+    y: 33234
+    map_id: 4
+    hp: 0
+    keeper: 50624
+    is_opening: false
+  - id: 630
+    gfxid: 1737
+    x: 33565
+    y: 33257
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 631
+    gfxid: 1736
+    x: 33562
+    y: 33270
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 632
+    gfxid: 1692
+    x: 33561
+    y: 33279
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 633
+    gfxid: 1665
+    x: 33625
+    y: 33446
+    map_id: 4
+    hp: 0
+    keeper: 50615
+    is_opening: false
+  - id: 634
+    gfxid: 1691
+    x: 33619
+    y: 33266
+    map_id: 4
+    hp: 0
+    keeper: 50622
+    is_opening: false
+  - id: 635
+    gfxid: 1734
+    x: 33624
+    y: 33398
+    map_id: 4
+    hp: 0
+    keeper: 50616
+    is_opening: false
+  - id: 700
+    gfxid: 1330
+    x: 33449
+    y: 32822
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 701
+    gfxid: 1331
+    x: 33433
+    y: 32760
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 702
+    gfxid: 1329
+    x: 33433
+    y: 32749
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 703
+    gfxid: 1351
+    x: 33451
+    y: 32805
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 704
+    gfxid: 1352
+    x: 33453
+    y: 32808
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 705
+    gfxid: 1334
+    x: 33397
+    y: 32823
+    map_id: 4
+    hp: 0
+    keeper: 50537
+    is_opening: false
+  - id: 706
+    gfxid: 1332
+    x: 33398
+    y: 32813
+    map_id: 4
+    hp: 0
+    keeper: 50517
+    is_opening: false
+  - id: 707
+    gfxid: 1348
+    x: 33392
+    y: 32806
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 708
+    gfxid: 1333
+    x: 33382
+    y: 32805
+    map_id: 4
+    hp: 0
+    keeper: 50535
+    is_opening: false
+  - id: 709
+    gfxid: 1334
+    x: 33376
+    y: 32829
+    map_id: 4
+    hp: 0
+    keeper: 50521
+    is_opening: false
+  - id: 710
+    gfxid: 1334
+    x: 33399
+    y: 32861
+    map_id: 4
+    hp: 0
+    keeper: 50502
+    is_opening: false
+  - id: 711
+    gfxid: 1342
+    x: 33424
+    y: 32787
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 712
+    gfxid: 1331
+    x: 33380
+    y: 32735
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 713
+    gfxid: 1334
+    x: 33375
+    y: 32874
+    map_id: 4
+    hp: 0
+    keeper: 50522
+    is_opening: false
+  - id: 714
+    gfxid: 1333
+    x: 33358
+    y: 32790
+    map_id: 4
+    hp: 0
+    keeper: 50503
+    is_opening: false
+  - id: 715
+    gfxid: 1332
+    x: 33371
+    y: 32792
+    map_id: 4
+    hp: 0
+    keeper: 50508
+    is_opening: false
+  - id: 716
+    gfxid: 1334
+    x: 33351
+    y: 32776
+    map_id: 4
+    hp: 0
+    keeper: 50501
+    is_opening: false
+  - id: 717
+    gfxid: 1334
+    x: 33366
+    y: 32762
+    map_id: 4
+    hp: 0
+    keeper: 50511
+    is_opening: false
+  - id: 718
+    gfxid: 1373
+    x: 33365
+    y: 32754
+    map_id: 4
+    hp: 0
+    keeper: 50511
+    is_opening: false
+  - id: 719
+    gfxid: 1332
+    x: 33383
+    y: 32776
+    map_id: 4
+    hp: 0
+    keeper: 50514
+    is_opening: false
+  - id: 720
+    gfxid: 1332
+    x: 33390
+    y: 32851
+    map_id: 4
+    hp: 0
+    keeper: 50530
+    is_opening: false
+  - id: 721
+    gfxid: 1373
+    x: 33374
+    y: 32866
+    map_id: 4
+    hp: 0
+    keeper: 50522
+    is_opening: false
+  - id: 722
+    gfxid: 1334
+    x: 33404
+    y: 32740
+    map_id: 4
+    hp: 0
+    keeper: 50513
+    is_opening: false
+  - id: 723
+    gfxid: 1373
+    x: 33403
+    y: 32732
+    map_id: 4
+    hp: 0
+    keeper: 50513
+    is_opening: false
+  - id: 724
+    gfxid: 1371
+    x: 33414
+    y: 32719
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 725
+    gfxid: 1327
+    x: 33419
+    y: 32709
+    map_id: 4
+    hp: 0
+    keeper: 50520
+    is_opening: false
+  - id: 726
+    gfxid: 1334
+    x: 33424
+    y: 32719
+    map_id: 4
+    hp: 0
+    keeper: 50528
+    is_opening: false
+  - id: 727
+    gfxid: 1334
+    x: 33375
+    y: 32699
+    map_id: 4
+    hp: 0
+    keeper: 50543
+    is_opening: false
+  - id: 728
+    gfxid: 1373
+    x: 33374
+    y: 32691
+    map_id: 4
+    hp: 0
+    keeper: 50543
+    is_opening: false
+  - id: 729
+    gfxid: 1332
+    x: 33345
+    y: 32675
+    map_id: 4
+    hp: 0
+    keeper: 50504
+    is_opening: false
+  - id: 730
+    gfxid: 1334
+    x: 33341
+    y: 32662
+    map_id: 4
+    hp: 0
+    keeper: 50510
+    is_opening: false
+  - id: 731
+    gfxid: 1334
+    x: 33341
+    y: 32711
+    map_id: 4
+    hp: 0
+    keeper: 50525
+    is_opening: false
+  - id: 732
+    gfxid: 1332
+    x: 33484
+    y: 32794
+    map_id: 4
+    hp: 0
+    keeper: 50544
+    is_opening: false
+  - id: 733
+    gfxid: 1332
+    x: 33498
+    y: 32804
+    map_id: 4
+    hp: 0
+    keeper: 50524
+    is_opening: false
+  - id: 734
+    gfxid: 1371
+    x: 33481
+    y: 32815
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 735
+    gfxid: 1334
+    x: 33459
+    y: 32841
+    map_id: 4
+    hp: 0
+    keeper: 50507
+    is_opening: false
+  - id: 736
+    gfxid: 1332
+    x: 33436
+    y: 32844
+    map_id: 4
+    hp: 0
+    keeper: 50539
+    is_opening: false
+  - id: 737
+    gfxid: 1332
+    x: 33414
+    y: 32853
+    map_id: 4
+    hp: 0
+    keeper: 50506
+    is_opening: false
+  - id: 738
+    gfxid: 1348
+    x: 33381
+    y: 32767
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 739
+    gfxid: 1332
+    x: 33404
+    y: 32757
+    map_id: 4
+    hp: 0
+    keeper: 50542
+    is_opening: false
+  - id: 740
+    gfxid: 1332
+    x: 33354
+    y: 32734
+    map_id: 4
+    hp: 0
+    keeper: 50534
+    is_opening: false
+  - id: 741
+    gfxid: 1373
+    x: 33340
+    y: 32703
+    map_id: 4
+    hp: 0
+    keeper: 50525
+    is_opening: false
+  - id: 742
+    gfxid: 1334
+    x: 33366
+    y: 32715
+    map_id: 4
+    hp: 0
+    keeper: 50540
+    is_opening: false
+  - id: 743
+    gfxid: 1330
+    x: 33377
+    y: 32730
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 744
+    gfxid: 1332
+    x: 33402
+    y: 32794
+    map_id: 4
+    hp: 0
+    keeper: 50532
+    is_opening: false
+  - id: 745
+    gfxid: 1347
+    x: 33416
+    y: 32866
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 746
+    gfxid: 1373
+    x: 33427
+    y: 32864
+    map_id: 4
+    hp: 0
+    keeper: 50541
+    is_opening: false
+  - id: 747
+    gfxid: 1371
+    x: 33362
+    y: 32823
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 748
+    gfxid: 1348
+    x: 33427
+    y: 32733
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 749
+    gfxid: 1334
+    x: 33424
+    y: 32692
+    map_id: 4
+    hp: 0
+    keeper: 50509
+    is_opening: false
+  - id: 750
+    gfxid: 1373
+    x: 33423
+    y: 32684
+    map_id: 4
+    hp: 0
+    keeper: 50509
+    is_opening: false
+  - id: 751
+    gfxid: 1371
+    x: 33411
+    y: 32687
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 752
+    gfxid: 1334
+    x: 33409
+    y: 32676
+    map_id: 4
+    hp: 0
+    keeper: 50536
+    is_opening: false
+  - id: 753
+    gfxid: 1331
+    x: 33395
+    y: 32676
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 754
+    gfxid: 1330
+    x: 33392
+    y: 32671
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 755
+    gfxid: 1334
+    x: 33395
+    y: 32657
+    map_id: 4
+    hp: 0
+    keeper: 50519
+    is_opening: false
+  - id: 756
+    gfxid: 1373
+    x: 33394
+    y: 32649
+    map_id: 4
+    hp: 0
+    keeper: 50519
+    is_opening: false
+  - id: 757
+    gfxid: 1333
+    x: 33384
+    y: 32656
+    map_id: 4
+    hp: 0
+    keeper: 50505
+    is_opening: false
+  - id: 758
+    gfxid: 1332
+    x: 33373
+    y: 32657
+    map_id: 4
+    hp: 0
+    keeper: 50527
+    is_opening: false
+  - id: 759
+    gfxid: 1334
+    x: 33360
+    y: 32671
+    map_id: 4
+    hp: 0
+    keeper: 50512
+    is_opening: false
+  - id: 760
+    gfxid: 1332
+    x: 33362
+    y: 32684
+    map_id: 4
+    hp: 0
+    keeper: 50526
+    is_opening: false
+  - id: 761
+    gfxid: 1332
+    x: 33427
+    y: 32659
+    map_id: 4
+    hp: 0
+    keeper: 50545
+    is_opening: false
+  - id: 762
+    gfxid: 1347
+    x: 33420
+    y: 32652
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 763
+    gfxid: 1334
+    x: 33439
+    y: 32667
+    map_id: 4
+    hp: 0
+    keeper: 50531
+    is_opening: false
+  - id: 764
+    gfxid: 1334
+    x: 33457
+    y: 32655
+    map_id: 4
+    hp: 0
+    keeper: 50529
+    is_opening: false
+  - id: 765
+    gfxid: 1373
+    x: 33456
+    y: 32647
+    map_id: 4
+    hp: 0
+    keeper: 50529
+    is_opening: false
+  - id: 766
+    gfxid: 1332
+    x: 33476
+    y: 32668
+    map_id: 4
+    hp: 0
+    keeper: 50516
+    is_opening: false
+  - id: 767
+    gfxid: 1347
+    x: 33472
+    y: 32659
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 768
+    gfxid: 1334
+    x: 33471
+    y: 32680
+    map_id: 4
+    hp: 0
+    keeper: 50538
+    is_opening: false
+  - id: 769
+    gfxid: 1332
+    x: 33458
+    y: 32700
+    map_id: 4
+    hp: 0
+    keeper: 50518
+    is_opening: false
+  - id: 770
+    gfxid: 1347
+    x: 33468
+    y: 32722
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 771
+    gfxid: 1332
+    x: 33448
+    y: 32732
+    map_id: 4
+    hp: 0
+    keeper: 50533
+    is_opening: false
+  - id: 772
+    gfxid: 1347
+    x: 33458
+    y: 32773
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 773
+    gfxid: 1371
+    x: 33469
+    y: 32790
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 774
+    gfxid: 1331
+    x: 33452
+    y: 32827
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 775
+    gfxid: 1350
+    x: 33472
+    y: 32829
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 776
+    gfxid: 1330
+    x: 33430
+    y: 32755
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 777
+    gfxid: 1373
+    x: 33375
+    y: 32821
+    map_id: 4
+    hp: 0
+    keeper: 50521
+    is_opening: false
+  - id: 778
+    gfxid: 1329
+    x: 33380
+    y: 32724
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 779
+    gfxid: 1332
+    x: 33380
+    y: 32715
+    map_id: 4
+    hp: 0
+    keeper: 50515
+    is_opening: false
+  - id: 780
+    gfxid: 1329
+    x: 33395
+    y: 32665
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 781
+    gfxid: 1350
+    x: 33423
+    y: 32670
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 782
+    gfxid: 1350
+    x: 33407
+    y: 32706
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 783
+    gfxid: 1349
+    x: 33394
+    y: 32695
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 784
+    gfxid: 1348
+    x: 33357
+    y: 32712
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 785
+    gfxid: 1350
+    x: 33367
+    y: 32730
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 786
+    gfxid: 1347
+    x: 33390
+    y: 32738
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 787
+    gfxid: 1347
+    x: 33405
+    y: 32769
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 788
+    gfxid: 1347
+    x: 33388
+    y: 32788
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 789
+    gfxid: 1371
+    x: 33374
+    y: 32847
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 790
+    gfxid: 1348
+    x: 33399
+    y: 32852
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 791
+    gfxid: 1347
+    x: 33410
+    y: 32844
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 793
+    gfxid: 1349
+    x: 33495
+    y: 32816
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 794
+    gfxid: 1348
+    x: 33493
+    y: 32796
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 795
+    gfxid: 1350
+    x: 33461
+    y: 32794
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 796
+    gfxid: 1334
+    x: 33443
+    y: 32871
+    map_id: 4
+    hp: 0
+    keeper: 50523
+    is_opening: false
+  - id: 797
+    gfxid: 1334
+    x: 33428
+    y: 32872
+    map_id: 4
+    hp: 0
+    keeper: 50541
+    is_opening: false
+  - id: 798
+    gfxid: 1349
+    x: 33393
+    y: 32874
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 799
+    gfxid: 1349
+    x: 33370
+    y: 32807
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 800
+    gfxid: 1349
+    x: 33355
+    y: 32766
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 801
+    gfxid: 1350
+    x: 33355
+    y: 32657
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 802
+    gfxid: 1349
+    x: 33445
+    y: 32658
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 803
+    gfxid: 1347
+    x: 33451
+    y: 32676
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 804
+    gfxid: 1371
+    x: 33462
+    y: 32678
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 805
+    gfxid: 1350
+    x: 33471
+    y: 32695
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 806
+    gfxid: 1349
+    x: 33458
+    y: 32724
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 807
+    gfxid: 1349
+    x: 33415
+    y: 32790
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 808
+    gfxid: 1487
+    x: 33521
+    y: 32861
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 809
+    gfxid: 1487
+    x: 33519
+    y: 32863
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 810
+    gfxid: 1487
+    x: 33517
+    y: 32865
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 811
+    gfxid: 1487
+    x: 33515
+    y: 32867
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 812
+    gfxid: 1487
+    x: 33513
+    y: 32869
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1000
+    gfxid: 2581
+    x: 34029
+    y: 33112
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1001
+    gfxid: 2558
+    x: 34043
+    y: 33111
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1002
+    gfxid: 2556
+    x: 34041
+    y: 33108
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1003
+    gfxid: 2556
+    x: 34041
+    y: 33106
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1004
+    gfxid: 2580
+    x: 34051
+    y: 33109
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1005
+    gfxid: 2582
+    x: 34055
+    y: 33105
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1006
+    gfxid: 2581
+    x: 34055
+    y: 33112
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1007
+    gfxid: 2583
+    x: 34060
+    y: 33109
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1008
+    gfxid: 2580
+    x: 34096
+    y: 33110
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1009
+    gfxid: 2582
+    x: 34099
+    y: 33105
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1010
+    gfxid: 2583
+    x: 34103
+    y: 33110
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1011
+    gfxid: 2603
+    x: 34150
+    y: 33110
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1012
+    gfxid: 2583
+    x: 33904
+    y: 33318
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1013
+    gfxid: 2581
+    x: 34135
+    y: 33132
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1014
+    gfxid: 2582
+    x: 34135
+    y: 33124
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1015
+    gfxid: 2578
+    x: 34127
+    y: 33124
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1016
+    gfxid: 2585
+    x: 34127
+    y: 33132
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1017
+    gfxid: 2580
+    x: 34105
+    y: 33130
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1018
+    gfxid: 2583
+    x: 34113
+    y: 33130
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1019
+    gfxid: 2583
+    x: 34044
+    y: 33129
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1020
+    gfxid: 2581
+    x: 34040
+    y: 33133
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1021
+    gfxid: 2630
+    x: 34030
+    y: 33133
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1022
+    gfxid: 2558
+    x: 34019
+    y: 33130
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1023
+    gfxid: 2580
+    x: 33914
+    y: 33315
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1024
+    gfxid: 2580
+    x: 33900
+    y: 33193
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1025
+    gfxid: 2582
+    x: 33904
+    y: 33189
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1026
+    gfxid: 2581
+    x: 33904
+    y: 33196
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1027
+    gfxid: 2583
+    x: 33909
+    y: 33193
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1028
+    gfxid: 2581
+    x: 33916
+    y: 33196
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1029
+    gfxid: 2582
+    x: 33916
+    y: 33188
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1030
+    gfxid: 2580
+    x: 33930
+    y: 33179
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1031
+    gfxid: 2581
+    x: 33934
+    y: 33182
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1032
+    gfxid: 2582
+    x: 33934
+    y: 33175
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1034
+    gfxid: 2583
+    x: 33939
+    y: 33179
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1035
+    gfxid: 2610
+    x: 34023
+    y: 33151
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1036
+    gfxid: 2583
+    x: 34020
+    y: 33152
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1037
+    gfxid: 2581
+    x: 34015
+    y: 33155
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1038
+    gfxid: 2580
+    x: 34011
+    y: 33152
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1039
+    gfxid: 2582
+    x: 34015
+    y: 33148
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1040
+    gfxid: 2558
+    x: 34021
+    y: 33130
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1041
+    gfxid: 2583
+    x: 33911
+    y: 33230
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1042
+    gfxid: 2556
+    x: 34016
+    y: 33128
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1043
+    gfxid: 2582
+    x: 34038
+    y: 33149
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1044
+    gfxid: 2580
+    x: 34035
+    y: 33154
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1045
+    gfxid: 2583
+    x: 34042
+    y: 33154
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1046
+    gfxid: 2600
+    x: 33895
+    y: 33219
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1047
+    gfxid: 2600
+    x: 33895
+    y: 33216
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1048
+    gfxid: 2580
+    x: 33902
+    y: 33230
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1049
+    gfxid: 2581
+    x: 33906
+    y: 33233
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1050
+    gfxid: 2582
+    x: 33906
+    y: 33226
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1051
+    gfxid: 2580
+    x: 33915
+    y: 33230
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1052
+    gfxid: 2583
+    x: 33923
+    y: 33230
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1053
+    gfxid: 2556
+    x: 33911
+    y: 33209
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1054
+    gfxid: 2558
+    x: 33914
+    y: 33211
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1055
+    gfxid: 2558
+    x: 33916
+    y: 33211
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1056
+    gfxid: 2581
+    x: 33932
+    y: 33214
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1057
+    gfxid: 2583
+    x: 33936
+    y: 33210
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1058
+    gfxid: 2582
+    x: 33932
+    y: 33205
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1059
+    gfxid: 2582
+    x: 33940
+    y: 33207
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1060
+    gfxid: 2581
+    x: 33940
+    y: 33215
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1061
+    gfxid: 2581
+    x: 33949
+    y: 33214
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1062
+    gfxid: 2582
+    x: 33949
+    y: 33206
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1063
+    gfxid: 2580
+    x: 33973
+    y: 33206
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1064
+    gfxid: 2580
+    x: 33973
+    y: 33214
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1065
+    gfxid: 2580
+    x: 33974
+    y: 33224
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1066
+    gfxid: 2581
+    x: 33977
+    y: 33226
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1067
+    gfxid: 2581
+    x: 33979
+    y: 33226
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1068
+    gfxid: 2580
+    x: 33910
+    y: 33291
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1069
+    gfxid: 2580
+    x: 33932
+    y: 33293
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1070
+    gfxid: 2580
+    x: 33932
+    y: 33291
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1071
+    gfxid: 2581
+    x: 33934
+    y: 33296
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1072
+    gfxid: 2581
+    x: 33921
+    y: 33296
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1073
+    gfxid: 2582
+    x: 33921
+    y: 33288
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1074
+    gfxid: 2581
+    x: 33918
+    y: 33318
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1075
+    gfxid: 2582
+    x: 33918
+    y: 33311
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1076
+    gfxid: 2582
+    x: 33905
+    y: 33324
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1077
+    gfxid: 2581
+    x: 33905
+    y: 33332
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1078
+    gfxid: 2575
+    x: 33921
+    y: 33327
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1079
+    gfxid: 2583
+    x: 33910
+    y: 33340
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1080
+    gfxid: 2580
+    x: 33903
+    y: 33350
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1081
+    gfxid: 2583
+    x: 33911
+    y: 33350
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1082
+    gfxid: 2583
+    x: 33895
+    y: 33354
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1083
+    gfxid: 2582
+    x: 33891
+    y: 33349
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1084
+    gfxid: 2605
+    x: 33889
+    y: 33384
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1085
+    gfxid: 2606
+    x: 33883
+    y: 33383
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1086
+    gfxid: 2606
+    x: 33883
+    y: 33381
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1087
+    gfxid: 2556
+    x: 33899
+    y: 33380
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1088
+    gfxid: 2558
+    x: 33902
+    y: 33382
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1089
+    gfxid: 2628
+    x: 33894
+    y: 33396
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1090
+    gfxid: 2629
+    x: 33902
+    y: 33396
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1091
+    gfxid: 2582
+    x: 33898
+    y: 33402
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1092
+    gfxid: 2583
+    x: 33903
+    y: 33406
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1093
+    gfxid: 2583
+    x: 33923
+    y: 33411
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1094
+    gfxid: 2582
+    x: 33919
+    y: 33406
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1095
+    gfxid: 2580
+    x: 33912
+    y: 33389
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1096
+    gfxid: 2575
+    x: 33917
+    y: 33373
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1097
+    gfxid: 2580
+    x: 33912
+    y: 33365
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1098
+    gfxid: 2583
+    x: 33919
+    y: 33365
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1099
+    gfxid: 2581
+    x: 33900
+    y: 33372
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1100
+    gfxid: 2582
+    x: 33900
+    y: 33364
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1101
+    gfxid: 2583
+    x: 33920
+    y: 33389
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1102
+    gfxid: 2582
+    x: 33917
+    y: 33395
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1103
+    gfxid: 2630
+    x: 33932
+    y: 33409
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1104
+    gfxid: 2631
+    x: 33932
+    y: 33401
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1105
+    gfxid: 2589
+    x: 33940
+    y: 33405
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1106
+    gfxid: 2628
+    x: 33942
+    y: 33296
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1107
+    gfxid: 2629
+    x: 33950
+    y: 33296
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1108
+    gfxid: 2581
+    x: 33947
+    y: 33309
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1109
+    gfxid: 2582
+    x: 33947
+    y: 33301
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1110
+    gfxid: 2591
+    x: 33955
+    y: 33316
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1111
+    gfxid: 2610
+    x: 33940
+    y: 33327
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1112
+    gfxid: 2610
+    x: 33940
+    y: 33324
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1113
+    gfxid: 2580
+    x: 33952
+    y: 33417
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1114
+    gfxid: 2582
+    x: 33958
+    y: 33414
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1115
+    gfxid: 2580
+    x: 33955
+    y: 33412
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1116
+    gfxid: 2574
+    x: 33954
+    y: 33404
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1117
+    gfxid: 2583
+    x: 33959
+    y: 33417
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1118
+    gfxid: 2581
+    x: 33964
+    y: 33407
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1119
+    gfxid: 2582
+    x: 33967
+    y: 33413
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1120
+    gfxid: 2582
+    x: 33976
+    y: 33399
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1121
+    gfxid: 2581
+    x: 33976
+    y: 33407
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1122
+    gfxid: 2582
+    x: 33987
+    y: 33400
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1123
+    gfxid: 2583
+    x: 33992
+    y: 33404
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1124
+    gfxid: 2628
+    x: 34002
+    y: 33403
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1125
+    gfxid: 2629
+    x: 34010
+    y: 33403
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1126
+    gfxid: 2574
+    x: 34012
+    y: 33391
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1127
+    gfxid: 2629
+    x: 34019
+    y: 33374
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1128
+    gfxid: 2597
+    x: 34015
+    y: 33356
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1129
+    gfxid: 2599
+    x: 34019
+    y: 33352
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1130
+    gfxid: 2598
+    x: 34015
+    y: 33347
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1131
+    gfxid: 2596
+    x: 34012
+    y: 33352
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1132
+    gfxid: 2580
+    x: 34011
+    y: 33340
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1133
+    gfxid: 2583
+    x: 34020
+    y: 33340
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1134
+    gfxid: 2582
+    x: 34015
+    y: 33336
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1135
+    gfxid: 2582
+    x: 33975
+    y: 33260
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1136
+    gfxid: 2580
+    x: 33971
+    y: 33264
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1137
+    gfxid: 2583
+    x: 33980
+    y: 33264
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1138
+    gfxid: 2628
+    x: 33972
+    y: 33274
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1139
+    gfxid: 2629
+    x: 33980
+    y: 33274
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1140
+    gfxid: 2581
+    x: 33983
+    y: 33300
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1141
+    gfxid: 2581
+    x: 33955
+    y: 33421
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1142
+    gfxid: 2628
+    x: 34011
+    y: 33374
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1143
+    gfxid: 2579
+    x: 34001
+    y: 33328
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1144
+    gfxid: 2578
+    x: 34001
+    y: 33320
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1145
+    gfxid: 2580
+    x: 33998
+    y: 33309
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1146
+    gfxid: 2583
+    x: 34005
+    y: 33309
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1147
+    gfxid: 2582
+    x: 34001
+    y: 33304
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1148
+    gfxid: 2581
+    x: 33996
+    y: 33300
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1149
+    gfxid: 2580
+    x: 33992
+    y: 33297
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1150
+    gfxid: 2582
+    x: 33996
+    y: 33293
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1152
+    gfxid: 2630
+    x: 33987
+    y: 33294
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1153
+    gfxid: 2631
+    x: 33987
+    y: 33286
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1154
+    gfxid: 2583
+    x: 33981
+    y: 33214
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1155
+    gfxid: 2580
+    x: 33973
+    y: 33203
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1156
+    gfxid: 2558
+    x: 33974
+    y: 33171
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1157
+    gfxid: 2556
+    x: 33971
+    y: 33169
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1158
+    gfxid: 2606
+    x: 34022
+    y: 33382
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1159
+    gfxid: 2606
+    x: 34022
+    y: 33384
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1160
+    gfxid: 2608
+    x: 34028
+    y: 33385
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1161
+    gfxid: 2588
+    x: 34060
+    y: 33397
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1162
+    gfxid: 2589
+    x: 34068
+    y: 33397
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1163
+    gfxid: 2591
+    x: 34071
+    y: 33415
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1164
+    gfxid: 2590
+    x: 34071
+    y: 33407
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1165
+    gfxid: 2581
+    x: 34077
+    y: 33399
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1166
+    gfxid: 2582
+    x: 34077
+    y: 33392
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1167
+    gfxid: 2583
+    x: 34082
+    y: 33396
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1168
+    gfxid: 2610
+    x: 34072
+    y: 33383
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1169
+    gfxid: 2610
+    x: 34072
+    y: 33380
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1170
+    gfxid: 2581
+    x: 34061
+    y: 33380
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1171
+    gfxid: 2580
+    x: 34058
+    y: 33376
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1172
+    gfxid: 2583
+    x: 34065
+    y: 33376
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1173
+    gfxid: 2582
+    x: 34061
+    y: 33371
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1174
+    gfxid: 2580
+    x: 34070
+    y: 33356
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1175
+    gfxid: 2581
+    x: 34074
+    y: 33359
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1176
+    gfxid: 2583
+    x: 34079
+    y: 33356
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1177
+    gfxid: 2582
+    x: 34074
+    y: 33352
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1178
+    gfxid: 2591
+    x: 34091
+    y: 33353
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1179
+    gfxid: 2590
+    x: 34091
+    y: 33345
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1180
+    gfxid: 2634
+    x: 34100
+    y: 33354
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1181
+    gfxid: 2635
+    x: 34100
+    y: 33346
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1182
+    gfxid: 2591
+    x: 34109
+    y: 33352
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1183
+    gfxid: 2590
+    x: 34109
+    y: 33344
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1184
+    gfxid: 2590
+    x: 34109
+    y: 33364
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1185
+    gfxid: 2591
+    x: 34109
+    y: 33372
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1186
+    gfxid: 2581
+    x: 34098
+    y: 33373
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1187
+    gfxid: 2582
+    x: 34098
+    y: 33366
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1188
+    gfxid: 2580
+    x: 34094
+    y: 33370
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1189
+    gfxid: 2582
+    x: 34095
+    y: 33387
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1190
+    gfxid: 2581
+    x: 34095
+    y: 33394
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1191
+    gfxid: 2583
+    x: 34100
+    y: 33391
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1192
+    gfxid: 2580
+    x: 34091
+    y: 33391
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1193
+    gfxid: 2634
+    x: 34106
+    y: 33409
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1194
+    gfxid: 2635
+    x: 34106
+    y: 33401
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1195
+    gfxid: 2581
+    x: 34107
+    y: 33396
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1196
+    gfxid: 2583
+    x: 34111
+    y: 33392
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1198
+    gfxid: 2580
+    x: 34104
+    y: 33392
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1199
+    gfxid: 2582
+    x: 34107
+    y: 33387
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1200
+    gfxid: 2580
+    x: 34124
+    y: 33401
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1201
+    gfxid: 2583
+    x: 34131
+    y: 33401
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1202
+    gfxid: 2581
+    x: 34128
+    y: 33394
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1203
+    gfxid: 2580
+    x: 34124
+    y: 33391
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1204
+    gfxid: 2582
+    x: 34128
+    y: 33387
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1205
+    gfxid: 2581
+    x: 34127
+    y: 33372
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1206
+    gfxid: 2583
+    x: 34131
+    y: 33368
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1207
+    gfxid: 2580
+    x: 34124
+    y: 33368
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1208
+    gfxid: 2582
+    x: 34127
+    y: 33363
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1209
+    gfxid: 2580
+    x: 34124
+    y: 33354
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1210
+    gfxid: 2583
+    x: 34132
+    y: 33354
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1211
+    gfxid: 2580
+    x: 34136
+    y: 33364
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1212
+    gfxid: 2580
+    x: 34136
+    y: 33361
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1213
+    gfxid: 2580
+    x: 34131
+    y: 33418
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1214
+    gfxid: 2581
+    x: 34139
+    y: 33418
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1215
+    gfxid: 2581
+    x: 34158
+    y: 33404
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1216
+    gfxid: 2580
+    x: 34155
+    y: 33400
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1217
+    gfxid: 2583
+    x: 34162
+    y: 33400
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1218
+    gfxid: 2582
+    x: 34158
+    y: 33395
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1219
+    gfxid: 2608
+    x: 34143
+    y: 33398
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1220
+    gfxid: 2591
+    x: 34147
+    y: 33373
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1221
+    gfxid: 2590
+    x: 34147
+    y: 33365
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1222
+    gfxid: 2581
+    x: 34155
+    y: 33171
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1223
+    gfxid: 2582
+    x: 34155
+    y: 33163
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1224
+    gfxid: 2583
+    x: 34148
+    y: 33167
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1225
+    gfxid: 2580
+    x: 34140
+    y: 33167
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1226
+    gfxid: 2581
+    x: 34144
+    y: 33146
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1227
+    gfxid: 2583
+    x: 34149
+    y: 33143
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1228
+    gfxid: 2582
+    x: 34144
+    y: 33139
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1229
+    gfxid: 2581
+    x: 34157
+    y: 33145
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1230
+    gfxid: 2583
+    x: 34161
+    y: 33141
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1231
+    gfxid: 2582
+    x: 34157
+    y: 33136
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1233
+    gfxid: 2580
+    x: 34140
+    y: 33143
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1235
+    gfxid: 2580
+    x: 34118
+    y: 33163
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1236
+    gfxid: 2583
+    x: 34127
+    y: 33163
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1237
+    gfxid: 2582
+    x: 34122
+    y: 33159
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1238
+    gfxid: 2581
+    x: 34105
+    y: 33170
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1239
+    gfxid: 2583
+    x: 34109
+    y: 33166
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1240
+    gfxid: 2582
+    x: 34105
+    y: 33161
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1241
+    gfxid: 2580
+    x: 34102
+    y: 33166
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1242
+    gfxid: 2600
+    x: 34105
+    y: 33119
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1243
+    gfxid: 2581
+    x: 34099
+    y: 33114
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1244
+    gfxid: 2578
+    x: 34029
+    y: 33104
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1245
+    gfxid: 2631
+    x: 34030
+    y: 33125
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1246
+    gfxid: 2581
+    x: 33992
+    y: 33198
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1247
+    gfxid: 2581
+    x: 33990
+    y: 33198
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1248
+    gfxid: 2580
+    x: 33989
+    y: 33193
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1249
+    gfxid: 2558
+    x: 33904
+    y: 33382
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1250
+    gfxid: 2558
+    x: 33976
+    y: 33171
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1251
+    gfxid: 2608
+    x: 34146
+    y: 33398
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1252
+    gfxid: 2610
+    x: 34023
+    y: 33154
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1253
+    gfxid: 2580
+    x: 33936
+    y: 33192
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1254
+    gfxid: 2580
+    x: 33936
+    y: 33194
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1255
+    gfxid: 2581
+    x: 33942
+    y: 33195
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1256
+    gfxid: 2600
+    x: 34105
+    y: 33122
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1257
+    gfxid: 2558
+    x: 34123
+    y: 33151
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1258
+    gfxid: 2558
+    x: 34125
+    y: 33151
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1259
+    gfxid: 2556
+    x: 34120
+    y: 33149
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1260
+    gfxid: 2603
+    x: 34106
+    y: 33155
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1261
+    gfxid: 2603
+    x: 34104
+    y: 33155
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1262
+    gfxid: 2582
+    x: 34129
+    y: 33110
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1263
+    gfxid: 2580
+    x: 33896
+    y: 33318
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1264
+    gfxid: 2581
+    x: 34077
+    y: 33373
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1265
+    gfxid: 2582
+    x: 34077
+    y: 33365
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1266
+    gfxid: 2580
+    x: 34154
+    y: 33141
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1267
+    gfxid: 2583
+    x: 34001
+    y: 33297
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1268
+    gfxid: 2589
+    x: 33956
+    y: 33324
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 1300
+    gfxid: 6026
+    x: 32597
+    y: 32747
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 1301
+    gfxid: 6027
+    x: 32634
+    y: 32776
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 1302
+    gfxid: 6028
+    x: 32634
+    y: 32787
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 1303
+    gfxid: 6028
+    x: 32591
+    y: 32732
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 1304
+    gfxid: 6029
+    x: 32631
+    y: 32757
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 1305
+    gfxid: 6030
+    x: 32626
+    y: 32765
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 1306
+    gfxid: 6031
+    x: 32595
+    y: 32775
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 1307
+    gfxid: 6032
+    x: 32607
+    y: 32746
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 1308
+    gfxid: 6032
+    x: 32604
+    y: 32769
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 1309
+    gfxid: 6033
+    x: 32593
+    y: 32785
+    map_id: 4
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 1310
+    gfxid: 6028
+    x: 32559
+    y: 32671
+    map_id: 4
+    hp: 0
+    keeper: 50626
+    is_opening: false
+  - id: 1311
+    gfxid: 6026
+    x: 32560
+    y: 32672
+    map_id: 4
+    hp: 0
+    keeper: 50626
+    is_opening: false
+  - id: 1312
+    gfxid: 6026
+    x: 32564
+    y: 32676
+    map_id: 4
+    hp: 0
+    keeper: 50626
+    is_opening: false
+  - id: 1313
+    gfxid: 6028
+    x: 32548
+    y: 32707
+    map_id: 4
+    hp: 0
+    keeper: 50627
+    is_opening: false
+  - id: 1314
+    gfxid: 6028
+    x: 32551
+    y: 32714
+    map_id: 4
+    hp: 0
+    keeper: 50627
+    is_opening: false
+  - id: 1315
+    gfxid: 6026
+    x: 32549
+    y: 32708
+    map_id: 4
+    hp: 0
+    keeper: 50627
+    is_opening: false
+  - id: 1316
+    gfxid: 6026
+    x: 32553
+    y: 32715
+    map_id: 4
+    hp: 0
+    keeper: 50627
+    is_opening: false
+  - id: 1317
+    gfxid: 6028
+    x: 32537
+    y: 32782
+    map_id: 4
+    hp: 0
+    keeper: 50628
+    is_opening: false
+  - id: 1318
+    gfxid: 6026
+    x: 32538
+    y: 32783
+    map_id: 4
+    hp: 0
+    keeper: 50628
+    is_opening: false
+  - id: 1319
+    gfxid: 6026
+    x: 32542
+    y: 32787
+    map_id: 4
+    hp: 0
+    keeper: 50628
+    is_opening: false
+  - id: 1320
+    gfxid: 6026
+    x: 32558
+    y: 32787
+    map_id: 4
+    hp: 0
+    keeper: 50629
+    is_opening: false
+  - id: 1321
+    gfxid: 6026
+    x: 32554
+    y: 32783
+    map_id: 4
+    hp: 0
+    keeper: 50629
+    is_opening: false
+  - id: 1322
+    gfxid: 6028
+    x: 32553
+    y: 32782
+    map_id: 4
+    hp: 0
+    keeper: 50629
+    is_opening: false
+  - id: 1323
+    gfxid: 6028
+    x: 32535
+    y: 32809
+    map_id: 4
+    hp: 0
+    keeper: 50630
+    is_opening: false
+  - id: 1324
+    gfxid: 6028
+    x: 32538
+    y: 32816
+    map_id: 4
+    hp: 0
+    keeper: 50630
+    is_opening: false
+  - id: 1325
+    gfxid: 6026
+    x: 32536
+    y: 32810
+    map_id: 4
+    hp: 0
+    keeper: 50630
+    is_opening: false
+  - id: 1326
+    gfxid: 6026
+    x: 32540
+    y: 32817
+    map_id: 4
+    hp: 0
+    keeper: 50630
+    is_opening: false
+  - id: 1327
+    gfxid: 6028
+    x: 32553
+    y: 32819
+    map_id: 4
+    hp: 0
+    keeper: 50631
+    is_opening: false
+  - id: 1328
+    gfxid: 6028
+    x: 32557
+    y: 32815
+    map_id: 4
+    hp: 0
+    keeper: 50631
+    is_opening: false
+  - id: 2000
+    gfxid: 339
+    x: 33171
+    y: 32759
+    map_id: 4
+    hp: 0
+    keeper: 70656
+    is_opening: false
+  - id: 2001
+    gfxid: 2736
+    x: 33112
+    y: 32771
+    map_id: 4
+    hp: 10000
+    keeper: 70549
+    is_opening: false
+  - id: 2002
+    gfxid: 3234
+    x: 33152
+    y: 32807
+    map_id: 4
+    hp: 10000
+    keeper: 70985
+    is_opening: false
+  - id: 2010
+    gfxid: 2732
+    x: 32785
+    y: 32323
+    map_id: 4
+    hp: 10000
+    keeper: 70600
+    is_opening: false
+  - id: 2020
+    gfxid: 339
+    x: 32678
+    y: 33392
+    map_id: 4
+    hp: 0
+    keeper: 70778
+    is_opening: false
+  - id: 2021
+    gfxid: 2736
+    x: 32590
+    y: 33409
+    map_id: 4
+    hp: 10000
+    keeper: 70987
+    is_opening: false
+  - id: 2022
+    gfxid: 3234
+    x: 32625
+    y: 33436
+    map_id: 4
+    hp: 10000
+    keeper: 70687
+    is_opening: false
+  - id: 2030
+    gfxid: 1336
+    x: 33632
+    y: 32660
+    map_id: 4
+    hp: 0
+    keeper: 70817
+    is_opening: false
+  - id: 2031
+    gfxid: 2745
+    x: 33631
+    y: 32734
+    map_id: 4
+    hp: 10000
+    keeper: 70800
+    is_opening: false
+  - id: 2032
+    gfxid: 2746
+    x: 33580
+    y: 32678
+    map_id: 4
+    hp: 10000
+    keeper: 70988
+    is_opening: false
+  - id: 2033
+    gfxid: 2744
+    x: 33631
+    y: 32702
+    map_id: 4
+    hp: 10000
+    keeper: 70990
+    is_opening: false
+  - id: 2034
+    gfxid: 1338
+    x: 33609
+    y: 32677
+    map_id: 4
+    hp: 3000
+    keeper: 70989
+    is_opening: false
+  - id: 2035
+    gfxid: 1338
+    x: 33656
+    y: 32677
+    map_id: 4
+    hp: 3000
+    keeper: 70991
+    is_opening: false
+  - id: 2040
+    gfxid: 1336
+    x: 33523
+    y: 33385
+    map_id: 4
+    hp: 0
+    keeper: 70863
+    is_opening: false
+  - id: 2041
+    gfxid: 1745
+    x: 33524
+    y: 33470
+    map_id: 4
+    hp: 10000
+    keeper: 70992
+    is_opening: false
+  - id: 2042
+    gfxid: 1336
+    x: 33525
+    y: 33344
+    map_id: 4
+    hp: 3000
+    keeper: 70862
+    is_opening: false
+  - id: 2050
+    gfxid: 443
+    x: 32845
+    y: 32812
+    map_id: 66
+    hp: 0
+    keeper: 70995
+    is_opening: false
+  - id: 2051
+    gfxid: 1826
+    x: 32780
+    y: 32859
+    map_id: 66
+    hp: 10000
+    keeper: 70994
+    is_opening: false
+  - id: 2052
+    gfxid: 1827
+    x: 32811
+    y: 32887
+    map_id: 66
+    hp: 10000
+    keeper: 70993
+    is_opening: false
+  - id: 2060
+    gfxid: 1336
+    x: 34091
+    y: 33203
+    map_id: 4
+    hp: 0
+    keeper: 70996
+    is_opening: false
+  - id: 3001
+    gfxid: 6351
+    x: 32726
+    y: 32830
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3002
+    gfxid: 6379
+    x: 32766
+    y: 32788
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3003
+    gfxid: 6336
+    x: 32761
+    y: 32797
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3004
+    gfxid: 6379
+    x: 32763
+    y: 32807
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3005
+    gfxid: 6336
+    x: 32762
+    y: 32819
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3006
+    gfxid: 6379
+    x: 32768
+    y: 32827
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3007
+    gfxid: 6336
+    x: 32760
+    y: 32841
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3008
+    gfxid: 6379
+    x: 32766
+    y: 32848
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3009
+    gfxid: 6336
+    x: 32759
+    y: 32860
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3010
+    gfxid: 6379
+    x: 32763
+    y: 32867
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3011
+    gfxid: 6379
+    x: 32778
+    y: 32796
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3012
+    gfxid: 6379
+    x: 32788
+    y: 32787
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3013
+    gfxid: 6379
+    x: 32793
+    y: 32802
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3014
+    gfxid: 6379
+    x: 32778
+    y: 32815
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3015
+    gfxid: 6379
+    x: 32791
+    y: 32816
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3016
+    gfxid: 6379
+    x: 32800
+    y: 32810
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3017
+    gfxid: 6379
+    x: 32790
+    y: 32830
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3018
+    gfxid: 6379
+    x: 32785
+    y: 32853
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3019
+    gfxid: 6379
+    x: 32803
+    y: 32849
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3020
+    gfxid: 6379
+    x: 32789
+    y: 32871
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3021
+    gfxid: 6379
+    x: 32801
+    y: 32867
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3022
+    gfxid: 6379
+    x: 32817
+    y: 32790
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3023
+    gfxid: 6336
+    x: 32807
+    y: 32803
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3024
+    gfxid: 6379
+    x: 32817
+    y: 32818
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3025
+    gfxid: 6336
+    x: 32812
+    y: 32831
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3026
+    gfxid: 6379
+    x: 32817
+    y: 32838
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3027
+    gfxid: 6379
+    x: 32811
+    y: 32858
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3028
+    gfxid: 6379
+    x: 32809
+    y: 32873
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3029
+    gfxid: 6379
+    x: 32841
+    y: 32787
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3030
+    gfxid: 6379
+    x: 32864
+    y: 32786
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3031
+    gfxid: 6336
+    x: 32846
+    y: 32797
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3032
+    gfxid: 6379
+    x: 32840
+    y: 32806
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3033
+    gfxid: 6336
+    x: 32841
+    y: 32819
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3034
+    gfxid: 6336
+    x: 32856
+    y: 32816
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3035
+    gfxid: 6336
+    x: 32869
+    y: 32816
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3036
+    gfxid: 6379
+    x: 32833
+    y: 32827
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3037
+    gfxid: 6379
+    x: 32830
+    y: 32845
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3038
+    gfxid: 6379
+    x: 32848
+    y: 32832
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3039
+    gfxid: 6379
+    x: 32858
+    y: 32828
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3040
+    gfxid: 6336
+    x: 32870
+    y: 32844
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3041
+    gfxid: 6379
+    x: 32861
+    y: 32852
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3042
+    gfxid: 6336
+    x: 32856
+    y: 32844
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3043
+    gfxid: 6336
+    x: 32841
+    y: 32865
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3044
+    gfxid: 6379
+    x: 32835
+    y: 32874
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3045
+    gfxid: 6379
+    x: 32852
+    y: 32872
+    map_id: 5140
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 3501
+    gfxid: 6677
+    x: 32762
+    y: 32848
+    map_id: 5143
+    hp: 0
+    keeper: 5143
+    is_opening: false
+  - id: 3502
+    gfxid: 2510
+    x: 32772
+    y: 32848
+    map_id: 5143
+    hp: 0
+    keeper: 5143
+    is_opening: false
+  - id: 4001
+    gfxid: 93
+    x: 32742
+    y: 32805
+    map_id: 87
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 4002
+    gfxid: 93
+    x: 32742
+    y: 32809
+    map_id: 87
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 4003
+    gfxid: 92
+    x: 32729
+    y: 32793
+    map_id: 87
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 4004
+    gfxid: 92
+    x: 32725
+    y: 32793
+    map_id: 87
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 5001
+    gfxid: 6640
+    x: 32859
+    y: 32835
+    map_id: 72
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 5002
+    gfxid: 6640
+    x: 32862
+    y: 32764
+    map_id: 73
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 5003
+    gfxid: 6640
+    x: 32845
+    y: 32809
+    map_id: 73
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 5004
+    gfxid: 6642
+    x: 32825
+    y: 32862
+    map_id: 73
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 5005
+    gfxid: 6642
+    x: 32767
+    y: 32837
+    map_id: 73
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 5006
+    gfxid: 6642
+    x: 32752
+    y: 32753
+    map_id: 73
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 5007
+    gfxid: 6640
+    x: 32784
+    y: 32818
+    map_id: 74
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 5008
+    gfxid: 6640
+    x: 32852
+    y: 32806
+    map_id: 74
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 5009
+    gfxid: 6640
+    x: 32822
+    y: 32855
+    map_id: 74
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 5010
+    gfxid: 6642
+    x: 32762
+    y: 32916
+    map_id: 74
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 6001
+    gfxid: 92
+    x: 32664
+    y: 32807
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6002
+    gfxid: 93
+    x: 32673
+    y: 32820
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6003
+    gfxid: 92
+    x: 32668
+    y: 32833
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6004
+    gfxid: 88
+    x: 32661
+    y: 32823
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6005
+    gfxid: 89
+    x: 32672
+    y: 32858
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6006
+    gfxid: 93
+    x: 32684
+    y: 32850
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 6007
+    gfxid: 93
+    x: 32723
+    y: 32848
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 6008
+    gfxid: 89
+    x: 32678
+    y: 32877
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6009
+    gfxid: 89
+    x: 32732
+    y: 32872
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6010
+    gfxid: 89
+    x: 32736
+    y: 32872
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6011
+    gfxid: 89
+    x: 32740
+    y: 32872
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6012
+    gfxid: 89
+    x: 32795
+    y: 32870
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6013
+    gfxid: 88
+    x: 32803
+    y: 32862
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6014
+    gfxid: 89
+    x: 32806
+    y: 32824
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6015
+    gfxid: 88
+    x: 32803
+    y: 32832
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6016
+    gfxid: 92
+    x: 32798
+    y: 32844
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 6017
+    gfxid: 93
+    x: 32759
+    y: 32847
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 6018
+    gfxid: 88
+    x: 32808
+    y: 32792
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6019
+    gfxid: 93
+    x: 32776
+    y: 32806
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 6021
+    gfxid: 88
+    x: 32741
+    y: 32804
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6022
+    gfxid: 89
+    x: 32740
+    y: 32788
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6023
+    gfxid: 89
+    x: 32750
+    y: 32793
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6024
+    gfxid: 89
+    x: 32766
+    y: 32791
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6025
+    gfxid: 93
+    x: 32755
+    y: 32818
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6026
+    gfxid: 93
+    x: 32726
+    y: 32812
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6027
+    gfxid: 93
+    x: 32705
+    y: 32816
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6028
+    gfxid: 92
+    x: 32698
+    y: 32803
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6029
+    gfxid: 92
+    x: 32680
+    y: 32797
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6030
+    gfxid: 93
+    x: 32707
+    y: 32789
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6031
+    gfxid: 92
+    x: 32725
+    y: 32795
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 6032
+    gfxid: 92
+    x: 32667
+    y: 32871
+    map_id: 2
+    hp: 0
+    keeper: 0
+    is_opening: true
+  - id: 7001
+    gfxid: 7556
+    x: 32630
+    y: 32800
+    map_id: 1005
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7002
+    gfxid: 7556
+    x: 32658
+    y: 32849
+    map_id: 1005
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7003
+    gfxid: 7556
+    x: 32652
+    y: 32920
+    map_id: 1005
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7004
+    gfxid: 7556
+    x: 32758
+    y: 32800
+    map_id: 1005
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7005
+    gfxid: 7556
+    x: 32786
+    y: 32849
+    map_id: 1005
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7006
+    gfxid: 7556
+    x: 32780
+    y: 32920
+    map_id: 1005
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7007
+    gfxid: 7556
+    x: 32886
+    y: 32800
+    map_id: 1005
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7008
+    gfxid: 7556
+    x: 32914
+    y: 32849
+    map_id: 1005
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7009
+    gfxid: 7556
+    x: 32908
+    y: 32920
+    map_id: 1005
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7010
+    gfxid: 7556
+    x: 32886
+    y: 32608
+    map_id: 1005
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7011
+    gfxid: 7556
+    x: 32914
+    y: 32657
+    map_id: 1005
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7012
+    gfxid: 7556
+    x: 32908
+    y: 32728
+    map_id: 1005
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7013
+    gfxid: 7556
+    x: 32630
+    y: 32800
+    map_id: 1006
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7014
+    gfxid: 7556
+    x: 32658
+    y: 32849
+    map_id: 1006
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7015
+    gfxid: 7556
+    x: 32652
+    y: 32920
+    map_id: 1006
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7016
+    gfxid: 7556
+    x: 32758
+    y: 32800
+    map_id: 1006
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7017
+    gfxid: 7556
+    x: 32786
+    y: 32849
+    map_id: 1006
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7018
+    gfxid: 7556
+    x: 32780
+    y: 32920
+    map_id: 1006
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7019
+    gfxid: 7556
+    x: 32886
+    y: 32800
+    map_id: 1006
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7020
+    gfxid: 7556
+    x: 32914
+    y: 32849
+    map_id: 1006
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7021
+    gfxid: 7556
+    x: 32908
+    y: 32920
+    map_id: 1006
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7022
+    gfxid: 7556
+    x: 32886
+    y: 32608
+    map_id: 1006
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7023
+    gfxid: 7556
+    x: 32914
+    y: 32657
+    map_id: 1006
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7024
+    gfxid: 7556
+    x: 32908
+    y: 32728
+    map_id: 1006
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7025
+    gfxid: 7556
+    x: 32630
+    y: 32800
+    map_id: 1007
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7026
+    gfxid: 7556
+    x: 32658
+    y: 32849
+    map_id: 1007
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7027
+    gfxid: 7556
+    x: 32652
+    y: 32920
+    map_id: 1007
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7028
+    gfxid: 7556
+    x: 32758
+    y: 32800
+    map_id: 1007
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7029
+    gfxid: 7556
+    x: 32786
+    y: 32849
+    map_id: 1007
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7030
+    gfxid: 7556
+    x: 32780
+    y: 32920
+    map_id: 1007
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7031
+    gfxid: 7556
+    x: 32886
+    y: 32800
+    map_id: 1007
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7032
+    gfxid: 7556
+    x: 32914
+    y: 32849
+    map_id: 1007
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7033
+    gfxid: 7556
+    x: 32908
+    y: 32920
+    map_id: 1007
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7034
+    gfxid: 7556
+    x: 32886
+    y: 32608
+    map_id: 1007
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7035
+    gfxid: 7556
+    x: 32914
+    y: 32657
+    map_id: 1007
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7036
+    gfxid: 7556
+    x: 32908
+    y: 32728
+    map_id: 1007
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7037
+    gfxid: 7556
+    x: 32630
+    y: 32800
+    map_id: 1008
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7038
+    gfxid: 7556
+    x: 32658
+    y: 32849
+    map_id: 1008
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7039
+    gfxid: 7556
+    x: 32652
+    y: 32920
+    map_id: 1008
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7040
+    gfxid: 7556
+    x: 32758
+    y: 32800
+    map_id: 1008
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7041
+    gfxid: 7556
+    x: 32786
+    y: 32849
+    map_id: 1008
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7042
+    gfxid: 7556
+    x: 32780
+    y: 32920
+    map_id: 1008
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7043
+    gfxid: 7556
+    x: 32886
+    y: 32800
+    map_id: 1008
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7044
+    gfxid: 7556
+    x: 32914
+    y: 32849
+    map_id: 1008
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7045
+    gfxid: 7556
+    x: 32908
+    y: 32920
+    map_id: 1008
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7046
+    gfxid: 7556
+    x: 32886
+    y: 32608
+    map_id: 1008
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7047
+    gfxid: 7556
+    x: 32914
+    y: 32657
+    map_id: 1008
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7048
+    gfxid: 7556
+    x: 32908
+    y: 32728
+    map_id: 1008
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7049
+    gfxid: 7556
+    x: 32630
+    y: 32800
+    map_id: 1009
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7050
+    gfxid: 7556
+    x: 32658
+    y: 32849
+    map_id: 1009
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7051
+    gfxid: 7556
+    x: 32652
+    y: 32920
+    map_id: 1009
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7052
+    gfxid: 7556
+    x: 32758
+    y: 32800
+    map_id: 1009
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7053
+    gfxid: 7556
+    x: 32786
+    y: 32849
+    map_id: 1009
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7054
+    gfxid: 7556
+    x: 32780
+    y: 32920
+    map_id: 1009
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7055
+    gfxid: 7556
+    x: 32886
+    y: 32800
+    map_id: 1009
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7056
+    gfxid: 7556
+    x: 32914
+    y: 32849
+    map_id: 1009
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7057
+    gfxid: 7556
+    x: 32908
+    y: 32920
+    map_id: 1009
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7058
+    gfxid: 7556
+    x: 32886
+    y: 32608
+    map_id: 1009
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7059
+    gfxid: 7556
+    x: 32914
+    y: 32657
+    map_id: 1009
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7060
+    gfxid: 7556
+    x: 32908
+    y: 32728
+    map_id: 1009
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7061
+    gfxid: 7556
+    x: 32630
+    y: 32800
+    map_id: 1010
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7062
+    gfxid: 7556
+    x: 32658
+    y: 32849
+    map_id: 1010
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7063
+    gfxid: 7556
+    x: 32652
+    y: 32920
+    map_id: 1010
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7064
+    gfxid: 7556
+    x: 32758
+    y: 32800
+    map_id: 1010
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7065
+    gfxid: 7556
+    x: 32786
+    y: 32849
+    map_id: 1010
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7066
+    gfxid: 7556
+    x: 32780
+    y: 32920
+    map_id: 1010
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7067
+    gfxid: 7556
+    x: 32886
+    y: 32800
+    map_id: 1010
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7068
+    gfxid: 7556
+    x: 32914
+    y: 32849
+    map_id: 1010
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7069
+    gfxid: 7556
+    x: 32908
+    y: 32920
+    map_id: 1010
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7070
+    gfxid: 7556
+    x: 32886
+    y: 32608
+    map_id: 1010
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7071
+    gfxid: 7556
+    x: 32914
+    y: 32657
+    map_id: 1010
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7072
+    gfxid: 7556
+    x: 32908
+    y: 32728
+    map_id: 1010
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7073
+    gfxid: 7858
+    x: 32933
+    y: 32584
+    map_id: 1011
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7074
+    gfxid: 7859
+    x: 32971
+    y: 32553
+    map_id: 1011
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7075
+    gfxid: 7858
+    x: 33053
+    y: 32581
+    map_id: 1011
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7076
+    gfxid: 7858
+    x: 32933
+    y: 32584
+    map_id: 1012
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7077
+    gfxid: 7859
+    x: 32971
+    y: 32553
+    map_id: 1012
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7078
+    gfxid: 7858
+    x: 33053
+    y: 32581
+    map_id: 1012
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7079
+    gfxid: 7858
+    x: 32933
+    y: 32584
+    map_id: 1013
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7080
+    gfxid: 7859
+    x: 32971
+    y: 32553
+    map_id: 1013
+    hp: 0
+    keeper: 0
+    is_opening: false
+  - id: 7081
+    gfxid: 7858
+    x: 33053
+    y: 32581
+    map_id: 1013
+    hp: 0
+    keeper: 0
+    is_opening: false
