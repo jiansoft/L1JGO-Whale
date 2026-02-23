@@ -72,6 +72,7 @@ const (
 	S_OPCODE_EMBLEM                 byte = 118 // S_Emblem (emblem data download)
 	S_OPCODE_CHARTITLE              byte = 183 // S_CharTitle (player title update)
 	S_OPCODE_CLANATTENTION          byte = 200 // S_ClanAttention (clan status change notify)
+	S_OPCODE_POLY                   byte = 76  // S_ChangeShape (polymorph visual change)
 )
 
 // ---------- Client Opcodes (V381) ----------

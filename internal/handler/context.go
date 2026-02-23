@@ -31,6 +31,7 @@ type Deps struct {
 	Npcs          *data.NpcTable
 	MobSkills      *data.MobSkillTable
 	MapData        *data.MapDataTable
+	Polys          *data.PolymorphTable
 	WarehouseRepo  *persist.WarehouseRepo
 	WALRepo        *persist.WALRepo
 	ClanRepo       *persist.ClanRepo
@@ -103,6 +104,11 @@ func RegisterAll(reg *packet.Registry, deps *Deps) {
 	reg.Register(packet.C_OPCODE_ATTR, inWorldStates,
 		func(sess any, r *packet.Reader) {
 			HandleAttr(sess.(*net.Session), r, deps)
+		},
+	)
+	reg.Register(packet.C_OPCODE_DUEL, inWorldStates,
+		func(sess any, r *packet.Reader) {
+			HandleDuel(sess.(*net.Session), r, deps)
 		},
 	)
 	reg.Register(packet.C_OPCODE_ATTACK, inWorldStates,
@@ -312,6 +318,13 @@ func RegisterAll(reg *packet.Registry, deps *Deps) {
 	reg.Register(packet.C_OPCODE_ALT_ATTACK, inWorldStates,
 		func(sess any, r *packet.Reader) {
 			HandleEmblemDownload(sess.(*net.Session), r, deps)
+		},
+	)
+
+	// Polymorph (monlist dialog input)
+	reg.Register(packet.C_OPCODE_HYPERTEXT_INPUT_RESULT, inWorldStates,
+		func(sess any, r *packet.Reader) {
+			HandleHypertextInputResult(sess.(*net.Session), r, deps)
 		},
 	)
 

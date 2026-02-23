@@ -78,6 +78,10 @@ func HandleGMCommand(sess *net.Session, player *world.PlayerInfo, text string, d
 		gmRez(sess, player, args, deps)
 	case "ac":
 		gmShowInfo(sess, player)
+	case "poly":
+		gmPoly(sess, player, args, deps)
+	case "undopoly":
+		gmUndoPoly(sess, player, args, deps)
 	default:
 		gmMsg(sess, "\\f3未知的GM指令: ."+cmd+"  輸入 .help 查看指令列表")
 	}
@@ -119,6 +123,8 @@ func gmHelp(sess *net.Session) {
 	gmMsg(sess, ".exp <數值>  — 給予經驗值")
 	gmMsg(sess, ".class <0-6>  — 變更職業外觀")
 	gmMsg(sess, ".rez [玩家名]  — 復活(自己或指定玩家)")
+	gmMsg(sess, ".poly <polyID> [玩家名]  — 變身(自己或指定玩家)")
+	gmMsg(sess, ".undopoly [玩家名]  — 解除變身")
 	gmMsg(sess, ".save  — 手動存檔")
 	gmMsg(sess, ".ac  — 顯示角色詳細資訊")
 }
@@ -602,8 +608,8 @@ func gmKill(sess *net.Session, player *world.PlayerInfo, args []string, deps *De
 			viewers := deps.World.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 			for _, v := range viewers {
 				sendActionGfx(v.Session, npc.ID, 8)
-				sendRemoveObject(v.Session, npc.ID)
 			}
+			npc.DeleteTimer = 50 // 10 seconds for death animation
 			if npc.RespawnDelay > 0 {
 				npc.RespawnTimer = npc.RespawnDelay * 5
 			}
@@ -625,8 +631,8 @@ func gmKillAll(sess *net.Session, player *world.PlayerInfo, deps *Deps) {
 		viewers := deps.World.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 		for _, v := range viewers {
 			sendActionGfx(v.Session, npc.ID, 8)
-			sendRemoveObject(v.Session, npc.ID)
 		}
+		npc.DeleteTimer = 50 // 10 seconds for death animation
 		if npc.RespawnDelay > 0 {
 			npc.RespawnTimer = npc.RespawnDelay * 5
 		}
@@ -931,4 +937,62 @@ func calcBaseHPMP(classType, level, con, wis int16, deps *Deps) (int16, int16) {
 	}
 
 	return baseHP, baseMP
+}
+
+func gmPoly(sess *net.Session, player *world.PlayerInfo, args []string, deps *Deps) {
+	if len(args) < 1 {
+		gmMsg(sess, "\\f3用法: .poly <polyID> [玩家名]")
+		return
+	}
+	polyID, err := strconv.Atoi(args[0])
+	if err != nil || polyID <= 0 {
+		gmMsg(sess, "\\f3無效的變身ID")
+		return
+	}
+
+	target := player
+	if len(args) >= 2 {
+		target = deps.World.GetByName(args[1])
+		if target == nil {
+			gmMsgf(sess, "\\f3找不到玩家: %s", args[1])
+			return
+		}
+	}
+
+	if deps.Polys == nil {
+		gmMsg(sess, "\\f3變身資料未載入")
+		return
+	}
+
+	poly := deps.Polys.GetByID(int32(polyID))
+	if poly == nil {
+		gmMsgf(sess, "\\f3找不到變身形態: %d", polyID)
+		return
+	}
+
+	DoPoly(target, int32(polyID), 7200, data.PolyCauseGM, deps)
+	gmMsgf(sess, "已將 %s 變身為 %s (GFX:%d)", target.Name, poly.Name, polyID)
+}
+
+func gmUndoPoly(sess *net.Session, player *world.PlayerInfo, args []string, deps *Deps) {
+	target := player
+	if len(args) >= 1 {
+		target = deps.World.GetByName(args[0])
+		if target == nil {
+			gmMsgf(sess, "\\f3找不到玩家: %s", args[0])
+			return
+		}
+	}
+
+	if target.TempCharGfx == 0 {
+		gmMsgf(sess, "%s 沒有變身", target.Name)
+		return
+	}
+
+	UndoPoly(target, deps)
+	if target == player {
+		gmMsg(sess, "已解除變身")
+	} else {
+		gmMsgf(sess, "已解除 %s 的變身", target.Name)
+	}
 }

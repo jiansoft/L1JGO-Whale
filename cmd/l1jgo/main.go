@@ -223,6 +223,12 @@ func run() error {
 	}
 	printStat("怪物技能", mobSkillTable.Count())
 
+	polymorphTable, err := data.LoadPolymorphTable("data/yaml/polymorph_list.yaml")
+	if err != nil {
+		return fmt.Errorf("load polymorph table: %w", err)
+	}
+	printStat("變身形態", polymorphTable.Count())
+
 	// 5b. Initialize Lua scripting engine
 	luaEngine, err := scripting.NewEngine("scripts", log)
 	if err != nil {
@@ -281,6 +287,7 @@ func run() error {
 		Npcs:         npcTable,
 		MobSkills:      mobSkillTable,
 		MapData:        mapDataTable,
+		Polys:          polymorphTable,
 		WarehouseRepo:  warehouseRepo,
 		WALRepo:        walRepo,
 		ClanRepo:       clanRepo,
@@ -475,12 +482,28 @@ func spawnNpcs(ws *world.State, npcTable *data.NpcTable, spawns []data.SpawnEntr
 	return total
 }
 
-// tickNpcRespawn processes NPC respawn timers each tick.
+// tickNpcRespawn processes NPC delete timers and respawn timers each tick.
+// Flow: NPC dies → DeleteTimer counts down → send S_RemoveObject → RespawnTimer counts down → respawn.
 func tickNpcRespawn(ws *world.State, maps *data.MapDataTable) {
 	for _, npc := range ws.NpcList() {
 		if !npc.Dead {
 			continue
 		}
+
+		// Phase 1: Delete timer — wait for death animation to finish before removing
+		if npc.DeleteTimer > 0 {
+			npc.DeleteTimer--
+			if npc.DeleteTimer <= 0 {
+				// Death animation done — remove NPC from client view
+				nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
+				for _, viewer := range nearby {
+					sendRemoveObjectFromMain(viewer.Session, npc.ID)
+				}
+			}
+			continue // don't start respawn timer until delete phase is done
+		}
+
+		// Phase 2: Respawn timer
 		if npc.RespawnTimer > 0 {
 			npc.RespawnTimer--
 			if npc.RespawnTimer <= 0 {

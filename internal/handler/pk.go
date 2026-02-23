@@ -11,6 +11,18 @@ import (
 	"github.com/l1jgo/server/internal/world"
 )
 
+// HandleDuel processes C_DUEL (opcode 5).
+// In 3.80C, this toggles the player's PK mode (fight stance).
+// Client-side: enables/disables targeting players for attack.
+// Server-side: tracks PKMode flag as defense-in-depth against modified clients.
+func HandleDuel(sess *net.Session, _ *packet.Reader, deps *Deps) {
+	player := deps.World.GetBySession(sess.ID)
+	if player == nil {
+		return
+	}
+	player.PKMode = !player.PKMode
+}
+
 // HandleCheckPK processes C_CHECK_PK (opcode 51).
 // Server responds with S_ServerMessage(562) containing the player's PK count.
 func HandleCheckPK(sess *net.Session, _ *packet.Reader, deps *Deps) {
@@ -255,14 +267,36 @@ func dropOneItem(victim *world.PlayerInfo, deps *Deps) {
 
 // ---------- PvP Attack ----------
 
+// inSafetyZone returns true if the player is standing in a safety zone tile.
+func inSafetyZone(p *world.PlayerInfo, deps *Deps) bool {
+	if deps.MapData == nil {
+		return false
+	}
+	return deps.MapData.IsSafetyZone(p.MapID, p.X, p.Y)
+}
+
 // handlePvPAttack processes melee attack against another player.
 func handlePvPAttack(attacker, target *world.PlayerInfo, deps *Deps) {
 	if target.Dead {
 		return
 	}
 
+	// Server-side PK mode check: must have PK button enabled to attack players
+	if !attacker.PKMode {
+		return
+	}
+
 	// Face the target
 	attacker.Heading = calcHeading(attacker.X, attacker.Y, target.X, target.Y)
+
+	// Java: if either attacker or target is in safety zone, play animation only (no damage)
+	if inSafetyZone(attacker, deps) || inSafetyZone(target, deps) {
+		nearby := deps.World.GetNearbyPlayersAt(target.X, target.Y, target.MapID)
+		for _, viewer := range nearby {
+			sendAttackPacket(viewer.Session, attacker.CharID, target.CharID, 0, attacker.Heading)
+		}
+		return
+	}
 
 	// Trigger pink name if applicable
 	triggerPinkName(attacker, target, deps)
@@ -296,13 +330,11 @@ func handlePvPAttack(attacker, target *world.PlayerInfo, deps *Deps) {
 		damage = 0
 	}
 
-	// Broadcast attack animation to all nearby
+	// Broadcast attack animation to all nearby (includes attacker — they're in melee range)
 	nearby := deps.World.GetNearbyPlayersAt(target.X, target.Y, target.MapID)
 	for _, viewer := range nearby {
 		sendAttackPacket(viewer.Session, attacker.CharID, target.CharID, damage, attacker.Heading)
 	}
-	// Also send to attacker if not in nearby list
-	sendAttackPacket(attacker.Session, attacker.CharID, target.CharID, damage, attacker.Heading)
 
 	if damage > 0 {
 		target.HP -= int16(damage)
@@ -324,6 +356,11 @@ func handlePvPFarAttack(attacker, target *world.PlayerInfo, deps *Deps) {
 		return
 	}
 
+	// Server-side PK mode check
+	if !attacker.PKMode {
+		return
+	}
+
 	attacker.Heading = calcHeading(attacker.X, attacker.Y, target.X, target.Y)
 
 	// Range check
@@ -340,6 +377,21 @@ func handlePvPFarAttack(attacker, target *world.PlayerInfo, deps *Deps) {
 		dist = dy
 	}
 	if dist > 10 {
+		return
+	}
+
+	// Java: if either attacker or target is in safety zone, play animation only (no damage)
+	if inSafetyZone(attacker, deps) || inSafetyZone(target, deps) {
+		sendArrowAttackPacket(attacker.Session, attacker.CharID, target.CharID, 0, attacker.Heading,
+			attacker.X, attacker.Y, target.X, target.Y)
+		nearby := deps.World.GetNearbyPlayersAt(target.X, target.Y, target.MapID)
+		for _, viewer := range nearby {
+			if viewer.SessionID == attacker.SessionID {
+				continue
+			}
+			sendArrowAttackPacket(viewer.Session, attacker.CharID, target.CharID, 0, attacker.Heading,
+				attacker.X, attacker.Y, target.X, target.Y)
+		}
 		return
 	}
 

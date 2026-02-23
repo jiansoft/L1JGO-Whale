@@ -19,7 +19,7 @@ func sendPutObject(viewer *net.Session, p *world.PlayerInfo) {
 	w.WriteH(uint16(p.X))
 	w.WriteH(uint16(p.Y))
 	w.WriteD(p.CharID)
-	w.WriteH(uint16(p.ClassID))
+	w.WriteH(uint16(PlayerGfx(p))) // use polymorph GFX if active
 	w.WriteC(p.CurrentWeapon)    // current weapon visual
 	w.WriteC(byte(p.Heading))
 	w.WriteC(0)                  // light size

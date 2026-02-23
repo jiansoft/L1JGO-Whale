@@ -276,10 +276,10 @@ func handleNpcDeath(npc *world.NpcInfo, killer *world.PlayerInfo, nearby []*worl
 		sendActionGfx(viewer.Session, npc.ID, 8) // ACTION_Die = 8
 	}
 
-	// Remove NPC from view
-	for _, viewer := range nearby {
-		sendRemoveObject(viewer.Session, npc.ID)
-	}
+	// Schedule removal after delay (Java: NPC_DELETION_TIME = 10 seconds = 50 ticks)
+	// Do NOT send S_RemoveObject here — the death animation needs time to play.
+	// tickNpcRespawn will send S_RemoveObject when DeleteTimer expires.
+	npc.DeleteTimer = 50
 
 	// Give exp to killer (apply server exp rate)
 	expGain := npc.Exp

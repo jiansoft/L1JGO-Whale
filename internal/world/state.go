@@ -68,6 +68,10 @@ type PlayerInfo struct {
 	Invisible  bool  // true when under Invisibility
 	Paralyzed  bool  // true when frozen/stunned/bound
 	Sleeped    bool  // true when under sleep effect
+	PKMode     bool  // true when PK button is toggled on (client sends C_DUEL to toggle)
+
+	TempCharGfx int32 // 0=use ClassID; >0=current polymorph GFX sprite
+	PolyID      int32 // current polymorph poly_id (for equip/skill checks; 0=not polymorphed)
 
 	Inv          *Inventory // in-memory inventory
 	Equip        Equipment  // equipped items (value type, zero-initialized = all slots empty)

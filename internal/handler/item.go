@@ -333,6 +333,12 @@ func HandleUseItem(sess *net.Session, r *packet.Reader, deps *Deps) {
 		return
 	}
 
+	// Polymorph scrolls have additional data in the packet: [S monsterName]
+	if IsPolyScroll(invItem.ItemID) {
+		handlePolyScroll(sess, r, player, invItem, deps)
+		return
+	}
+
 	switch itemInfo.Category {
 	case data.CategoryWeapon:
 		handleEquipWeapon(sess, player, invItem, itemInfo, deps)
@@ -366,6 +372,15 @@ func handleEquipWeapon(sess *net.Session, player *world.PlayerInfo, invItem *wor
 	// Level restriction check
 	if !checkLevelRestriction(sess, player.Level, itemInfo) {
 		return
+	}
+
+	// Polymorph weapon restriction check
+	if player.PolyID != 0 && deps.Polys != nil {
+		poly := deps.Polys.GetByID(player.PolyID)
+		if poly != nil && !poly.IsWeaponEquipable(itemInfo.Type) {
+			sendServerMessage(sess, 285) // "此形態無法裝備此武器。"
+			return
+		}
 	}
 
 	// Unequip current weapon if any
@@ -451,6 +466,15 @@ func handleEquipArmor(sess *net.Session, player *world.PlayerInfo, invItem *worl
 	// Level restriction check
 	if !checkLevelRestriction(sess, player.Level, itemInfo) {
 		return
+	}
+
+	// Polymorph armor restriction check
+	if player.PolyID != 0 && deps.Polys != nil {
+		poly := deps.Polys.GetByID(player.PolyID)
+		if poly != nil && !poly.IsArmorEquipable(itemInfo.Type) {
+			sendServerMessage(sess, 285) // "此形態無法裝備此防具。"
+			return
+		}
 	}
 
 	// Ring: choose empty slot (Ring1 or Ring2)

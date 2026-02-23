@@ -30,16 +30,16 @@ func ReadFrame(r io.Reader) ([]byte, error) {
 
 // WriteFrame writes one L1J packet frame to w.
 // Wire format: [2 bytes LE: len(data)+2][data].
+// Header and payload are written in a single Write call to avoid
+// Nagle-induced delays from splitting a tiny header + payload.
 func WriteFrame(w io.Writer, data []byte) error {
 	totalLen := len(data) + 2
-	var header [2]byte
-	binary.LittleEndian.PutUint16(header[:], uint16(totalLen))
+	frame := make([]byte, totalLen)
+	binary.LittleEndian.PutUint16(frame[0:2], uint16(totalLen))
+	copy(frame[2:], data)
 
-	if _, err := w.Write(header[:]); err != nil {
-		return fmt.Errorf("write frame header: %w", err)
-	}
-	if _, err := w.Write(data); err != nil {
-		return fmt.Errorf("write frame payload: %w", err)
+	if _, err := w.Write(frame); err != nil {
+		return fmt.Errorf("write frame: %w", err)
 	}
 	return nil
 }

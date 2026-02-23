@@ -57,6 +57,15 @@ func HandleUseSpell(sess *net.Session, r *packet.Reader, deps *Deps) {
 
 	// --- Validation ---
 
+	// Polymorph spell restriction: some forms cannot cast spells
+	if player.PolyID != 0 && deps.Polys != nil {
+		poly := deps.Polys.GetByID(player.PolyID)
+		if poly != nil && !poly.CanUseSkill {
+			sendServerMessage(sess, 285) // "此形態無法使用魔法。"
+			return
+		}
+	}
+
 	// Check if player knows this spell
 	if !playerKnowsSpell(player, skillID) {
 		sendServerMessage(sess, msgCastFail)
@@ -444,6 +453,13 @@ func executeBuffSkill(sess *net.Session, player *world.PlayerInfo, skill *data.S
 	// Broadcast cast animation
 	for _, viewer := range nearby {
 		sendActionGfx(viewer.Session, player.CharID, byte(skill.ActionID))
+	}
+
+	// Skill 67 (Shape Change / 變形術): open monlist dialog, don't apply buff here.
+	// The actual polymorph happens in HandleHypertextInputResult when player submits a name.
+	if skill.SkillID == SkillShapeChange {
+		sendShowPolyList(sess, player.CharID)
+		return
 	}
 
 	// Handle instant-effect spells on target
@@ -942,6 +958,11 @@ func cancelAllBuffs(target *world.PlayerInfo, deps *Deps) {
 		delete(target.ActiveBuffs, skillID)
 		cancelBuffIcon(target, skillID)
 
+		// Revert polymorph on cancellation
+		if skillID == SkillShapeChange {
+			UndoPoly(target, deps)
+		}
+
 		if buff.SetMoveSpeed > 0 {
 			target.MoveSpeed = 0
 			target.HasteTicks = 0
@@ -972,6 +993,11 @@ func TickPlayerBuffs(p *world.PlayerInfo, deps *Deps) {
 
 			// Cancel buff icon
 			cancelBuffIcon(p, skillID)
+
+			// Handle polymorph buff expiry
+			if skillID == SkillShapeChange {
+				UndoPoly(p, deps)
+			}
 
 			// Handle speed-related buff expiry
 			if buff.SetMoveSpeed > 0 {

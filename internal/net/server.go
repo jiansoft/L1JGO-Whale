@@ -53,6 +53,12 @@ func (s *Server) AcceptLoop() {
 			continue
 		}
 
+		// Disable Nagle's algorithm for low-latency packet delivery.
+		// L1J sends many small packets (movement, combat); Nagle delays hurt.
+		if tc, ok := conn.(*net.TCPConn); ok {
+			tc.SetNoDelay(true)
+		}
+
 		id := s.nextID.Add(1)
 		sess := NewSession(conn, id, s.inSize, s.outSize, s.log)
 		sess.Start()

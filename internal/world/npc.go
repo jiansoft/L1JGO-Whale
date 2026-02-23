@@ -55,6 +55,7 @@ type NpcInfo struct {
 
 	// State
 	Dead         bool
+	DeleteTimer  int // ticks until S_RemoveObject is sent (Java: NPC_DELETION_TIME, default 10s = 50 ticks)
 	RespawnTimer int // ticks remaining until respawn
 
 	// AI state
