@@ -32,6 +32,7 @@ type Deps struct {
 	MobSkills      *data.MobSkillTable
 	MapData        *data.MapDataTable
 	Polys          *data.PolymorphTable
+	SprTable       *data.SprTable
 	WarehouseRepo  *persist.WarehouseRepo
 	WALRepo        *persist.WALRepo
 	ClanRepo       *persist.ClanRepo

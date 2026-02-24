@@ -162,7 +162,13 @@ func run() error {
 	}
 	printStat("地圖資料", mapDataTable.Count())
 
-	npcCount := spawnNpcs(worldState, npcTable, spawnList, mapDataTable, log)
+	sprTable, err := data.LoadSprTable("data/yaml/spr_action.yaml")
+	if err != nil {
+		return fmt.Errorf("load spr table: %w", err)
+	}
+	printStat("精靈動作", sprTable.Count())
+
+	npcCount := spawnNpcs(worldState, npcTable, spawnList, mapDataTable, sprTable, log)
 	printStat("NPC 生成", npcCount)
 
 	npcActionTable, err := data.LoadNpcActionTable("data/yaml/npc_action_list.yaml")
@@ -296,6 +302,7 @@ func run() error {
 		MobSkills:      mobSkillTable,
 		MapData:        mapDataTable,
 		Polys:          polymorphTable,
+		SprTable:       sprTable,
 		WarehouseRepo:  warehouseRepo,
 		WALRepo:        walRepo,
 		ClanRepo:       clanRepo,
@@ -431,7 +438,8 @@ func loadClans(ctx context.Context, ws *world.State, clanRepo *persist.ClanRepo)
 }
 
 // spawnNpcs creates NPC instances from spawn list and adds them to world state.
-func spawnNpcs(ws *world.State, npcTable *data.NpcTable, spawns []data.SpawnEntry, maps *data.MapDataTable, log *zap.Logger) int {
+// sprTable may be nil (speeds fall back to YAML template values).
+func spawnNpcs(ws *world.State, npcTable *data.NpcTable, spawns []data.SpawnEntry, maps *data.MapDataTable, sprTable *data.SprTable, log *zap.Logger) int {
 	total := 0
 	for _, spawn := range spawns {
 		tmpl := npcTable.Get(spawn.NpcID)
@@ -448,6 +456,25 @@ func spawnNpcs(ws *world.State, npcTable *data.NpcTable, spawns []data.SpawnEntr
 			if spawn.RandomY > 0 {
 				y += int32(rand.Intn(int(spawn.RandomY*2+1))) - spawn.RandomY
 			}
+
+			// Resolve animation-based speeds from SprTable (mirrors Java L1NpcInstance.initStats).
+			// Only override when the template marks the action as enabled (non-zero).
+			atkSpeed := tmpl.AtkSpeed
+			moveSpeed := tmpl.PassiveSpeed
+			if sprTable != nil {
+				gfx := int(tmpl.GfxID)
+				if tmpl.AtkSpeed != 0 {
+					if v := sprTable.GetAttackSpeed(gfx, data.ActAttack); v > 0 {
+						atkSpeed = int16(v)
+					}
+				}
+				if tmpl.PassiveSpeed != 0 {
+					if v := sprTable.GetMoveSpeed(gfx, data.ActWalk); v > 0 {
+						moveSpeed = int16(v)
+					}
+				}
+			}
+
 			npc := &world.NpcInfo{
 				ID:           world.NextNpcID(),
 				NpcID:        tmpl.NpcID,
@@ -475,8 +502,8 @@ func spawnNpcs(ws *world.State, npcTable *data.NpcTable, spawns []data.SpawnEntr
 				Agro:         tmpl.Agro,
 				AtkDmg:       int32(tmpl.Level) + int32(tmpl.STR)/3,
 				Ranged:       tmpl.Ranged,
-				AtkSpeed:     tmpl.AtkSpeed,
-				MoveSpeed:    tmpl.PassiveSpeed,
+				AtkSpeed:     atkSpeed,
+				MoveSpeed:    moveSpeed,
 				SpawnX:       x,
 				SpawnY:       y,
 				SpawnMapID:   spawn.MapID,

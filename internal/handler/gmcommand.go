@@ -82,6 +82,8 @@ func HandleGMCommand(sess *net.Session, player *world.PlayerInfo, text string, d
 		gmPoly(sess, player, args, deps)
 	case "undopoly":
 		gmUndoPoly(sess, player, args, deps)
+	case "loc", "pos", "coord":
+		gmLoc(sess, player, args, deps)
 	case "wall":
 		gmWall(sess, player, args, deps)
 	case "clearwall":
@@ -131,6 +133,7 @@ func gmHelp(sess *net.Session) {
 	gmMsg(sess, ".undopoly [玩家名]  — 解除變身")
 	gmMsg(sess, ".save  — 手動存檔")
 	gmMsg(sess, ".ac  — 顯示角色詳細資訊")
+	gmMsg(sess, ".loc [玩家名]  — 顯示自己或指定玩家的當下座標")
 	gmMsg(sess, ".wall [1|2|3]  — 測試牆壁: 1=隱形門 2=僅封包 3=可見門")
 	gmMsg(sess, ".clearwall  — 清除測試牆壁")
 }
@@ -546,6 +549,22 @@ func gmSpawn(sess *net.Session, player *world.PlayerInfo, args []string, deps *D
 		x := player.X + int32(rand.Intn(5)) - 2
 		y := player.Y + int32(rand.Intn(5)) - 2
 
+		atkSpeed := tmpl.AtkSpeed
+		moveSpeed := tmpl.PassiveSpeed
+		if deps.SprTable != nil {
+			gfx := int(tmpl.GfxID)
+			if tmpl.AtkSpeed != 0 {
+				if v := deps.SprTable.GetAttackSpeed(gfx, data.ActAttack); v > 0 {
+					atkSpeed = int16(v)
+				}
+			}
+			if tmpl.PassiveSpeed != 0 {
+				if v := deps.SprTable.GetMoveSpeed(gfx, data.ActWalk); v > 0 {
+					moveSpeed = int16(v)
+				}
+			}
+		}
+
 		npc := &world.NpcInfo{
 			ID:           world.NextNpcID(),
 			NpcID:        tmpl.NpcID,
@@ -573,8 +592,8 @@ func gmSpawn(sess *net.Session, player *world.PlayerInfo, args []string, deps *D
 			Agro:         tmpl.Agro,
 			AtkDmg:       int32(tmpl.Level) + int32(tmpl.STR)/3,
 			Ranged:       tmpl.Ranged,
-			AtkSpeed:     tmpl.AtkSpeed,
-			MoveSpeed:    tmpl.PassiveSpeed,
+			AtkSpeed:     atkSpeed,
+			MoveSpeed:    moveSpeed,
 			SpawnX:       x,
 			SpawnY:       y,
 			SpawnMapID:   player.MapID,
@@ -1007,6 +1026,19 @@ func gmUndoPoly(sess *net.Session, player *world.PlayerInfo, args []string, deps
 	} else {
 		gmMsgf(sess, "已解除 %s 的變身", target.Name)
 	}
+}
+
+func gmLoc(sess *net.Session, player *world.PlayerInfo, args []string, deps *Deps) {
+	target := player
+	if len(args) >= 1 {
+		target = deps.World.GetByName(args[0])
+		if target == nil {
+			gmMsgf(sess, "\\f3找不到玩家: %s", args[0])
+			return
+		}
+	}
+	gmMsgf(sess, "[%s] 座標: (%d, %d)  地圖: %d  朝向: %d",
+		target.Name, target.X, target.Y, target.MapID, target.Heading)
 }
 
 // gmWall creates a collision wall (door) at the facing tile for testing.
