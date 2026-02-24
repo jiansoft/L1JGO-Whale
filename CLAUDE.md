@@ -2,6 +2,12 @@
 
 L1J 3.80C game server rewrite in Go. Reference Java codebase at `l1j_java/` for feature behavior only — do NOT copy its architecture.
 
+## 版本號規則
+
+- 每次發布預設遞增 patch：`v0.2.0 → v0.2.1 → v0.2.2 ...`
+- **只有使用者明確說「更新版號為 vX.Y.0」才跳 minor 版號**
+- 目前最新版本：`v0.2.0`
+
 ## Development Workflow (MANDATORY)
 
 Every feature MUST follow this order. No exceptions.
