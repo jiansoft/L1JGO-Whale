@@ -1,0 +1,233 @@
+# Spellbook / Crystal / Tablet level requirements per class.
+# class: 0=Royal, 1=Knight, 2=Elf, 3=Wizard, 4=DarkElf, 5=DragonKnight, 6=Illusionist
+# Ported from Java C_ItemUSe.useSpellBook item ID ranges.
+
+spellbook_level_reqs:
+  # ========== Common Magic Books (shared across classes) ==========
+
+  # 魔法書 L1 (45000-45007)
+  - item_min: 45000
+    item_max: 45007
+    reqs: {0: 10, 1: 50, 2: 8, 3: 4, 4: 10}
+
+  # 魔法書 L2 (45008-45015)
+  - item_min: 45008
+    item_max: 45015
+    reqs: {0: 20, 2: 16, 3: 8, 4: 20}
+
+  # 魔法書 L3 (45016-45022)
+  - item_min: 45016
+    item_max: 45022
+    reqs: {2: 24, 3: 12}
+
+  # 魔法書 L4 (40170-40177)
+  - item_min: 40170
+    item_max: 40177
+    reqs: {2: 32, 3: 16}
+
+  # 魔法書 L5 (40178-40185)
+  - item_min: 40178
+    item_max: 40185
+    reqs: {2: 40, 3: 20}
+
+  # 魔法書 L6 (40186-40193)
+  - item_min: 40186
+    item_max: 40193
+    reqs: {2: 48, 3: 24}
+
+  # 魔法書 L7 (40194-40201)
+  - item_min: 40194
+    item_max: 40201
+    reqs: {3: 28}
+
+  # 魔法書 L8 (40202-40209)
+  - item_min: 40202
+    item_max: 40209
+    reqs: {3: 32}
+
+  # 魔法書 L9 (40210-40217)
+  - item_min: 40210
+    item_max: 40217
+    reqs: {3: 36}
+
+  # 魔法書 L10 (40218-40225)
+  - item_min: 40218
+    item_max: 40225
+    reqs: {3: 40}
+
+  # ========== Royal-only Books ==========
+
+  # 王族專用 (40226-40231)
+  - item_min: 40226
+    item_max: 40231
+    reqs: {0: 15}
+
+  # ========== Knight Books (技術書) ==========
+
+  # 騎士技術書 (40164-40166)
+  - item_min: 40164
+    item_max: 40166
+    reqs: {1: 50}
+
+  # 騎士技術書 extended (41147-41148)
+  - item_min: 41147
+    item_max: 41148
+    reqs: {1: 50}
+
+  # ========== Elf Crystals (精靈水晶) ==========
+
+  # Earth L1 (40232-40234)
+  - item_min: 40232
+    item_max: 40234
+    reqs: {2: 10}
+
+  # Earth L2 (40235-40236)
+  - item_min: 40235
+    item_max: 40236
+    reqs: {2: 20}
+
+  # Earth L3 (40237-40240)
+  - item_min: 40237
+    item_max: 40240
+    reqs: {2: 30}
+
+  # Earth L4 (40241-40243)
+  - item_min: 40241
+    item_max: 40243
+    reqs: {2: 40}
+
+  # Earth L5 (40244-40246)
+  - item_min: 40244
+    item_max: 40246
+    reqs: {2: 50}
+
+  # Water L3 (40247-40248)
+  - item_min: 40247
+    item_max: 40248
+    reqs: {2: 30}
+
+  # Water L4 (40249-40250)
+  - item_min: 40249
+    item_max: 40250
+    reqs: {2: 40}
+
+  # Water L5 (40251-40252)
+  - item_min: 40251
+    item_max: 40252
+    reqs: {2: 50}
+
+  # Water single L3 (40253)
+  - item_min: 40253
+    item_max: 40253
+    reqs: {2: 30}
+
+  # Water single L4 (40254)
+  - item_min: 40254
+    item_max: 40254
+    reqs: {2: 40}
+
+  # Water single L5 (40255)
+  - item_min: 40255
+    item_max: 40255
+    reqs: {2: 50}
+
+  # Fire L3 (40256)
+  - item_min: 40256
+    item_max: 40256
+    reqs: {2: 30}
+
+  # Fire L4 (40257)
+  - item_min: 40257
+    item_max: 40257
+    reqs: {2: 40}
+
+  # Fire L5 (40258-40259)
+  - item_min: 40258
+    item_max: 40259
+    reqs: {2: 50}
+
+  # Wind L3 (40260-40261)
+  - item_min: 40260
+    item_max: 40261
+    reqs: {2: 30}
+
+  # Wind L4 (40262)
+  - item_min: 40262
+    item_max: 40262
+    reqs: {2: 40}
+
+  # Wind L5 (40263-40264)
+  - item_min: 40263
+    item_max: 40264
+    reqs: {2: 50}
+
+  # Extended elf crystals L5 (41149-41150)
+  - item_min: 41149
+    item_max: 41150
+    reqs: {2: 50}
+
+  # Extended elf crystal L4 (41151)
+  - item_min: 41151
+    item_max: 41151
+    reqs: {2: 40}
+
+  # Extended elf crystals L5 (41152-41153)
+  - item_min: 41152
+    item_max: 41153
+    reqs: {2: 50}
+
+  # ========== Dark Elf Crystals (黑暗精靈水晶) ==========
+
+  # DE L1 (40265-40269)
+  - item_min: 40265
+    item_max: 40269
+    reqs: {4: 15}
+
+  # DE L2 (40270-40274)
+  - item_min: 40270
+    item_max: 40274
+    reqs: {4: 30}
+
+  # DE L3 (40275-40279)
+  - item_min: 40275
+    item_max: 40279
+    reqs: {4: 45}
+
+  # ========== Dragon Knight Tablets (龍騎士書板) ==========
+
+  # DK L1 (49102-49106)
+  - item_min: 49102
+    item_max: 49106
+    reqs: {5: 15}
+
+  # DK L2 (49107-49111)
+  - item_min: 49107
+    item_max: 49111
+    reqs: {5: 30}
+
+  # DK L3 (49112-49116)
+  - item_min: 49112
+    item_max: 49116
+    reqs: {5: 45}
+
+  # ========== Illusionist Crystals (記憶水晶) ==========
+
+  # IL L1 (49117-49121)
+  - item_min: 49117
+    item_max: 49121
+    reqs: {6: 10}
+
+  # IL L2 (49122-49126)
+  - item_min: 49122
+    item_max: 49126
+    reqs: {6: 20}
+
+  # IL L3 (49127-49131)
+  - item_min: 49127
+    item_max: 49131
+    reqs: {6: 30}
+
+  # IL L4 (49132-49136)
+  - item_min: 49132
+    item_max: 49136
+    reqs: {6: 40}

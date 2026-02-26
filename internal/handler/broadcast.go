@@ -100,16 +100,16 @@ func sendRemoveObject(viewer *net.Session, charID int32) {
 	viewer.Send(w.Bytes())
 }
 
-// sendMoveObject sends S_MOVE_OBJECT (opcode 10) to animate movement.
+// sendMoveObject sends S_MOVE_OBJECT (opcode 10) to animate PC movement.
 // Sends the PREVIOUS position + heading — client calculates destination.
+// Java S_MoveCharPacket constructor 1: [C op][D id][H locX][H locY][C heading][H 0]
 func sendMoveObject(viewer *net.Session, charID int32, prevX, prevY int32, heading int16) {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_MOVE_OBJECT)
 	w.WriteD(charID)
 	w.WriteH(uint16(prevX))
 	w.WriteH(uint16(prevY))
 	w.WriteC(byte(heading))
-	w.WriteC(0x81) // 0x81 = PC movement
-	w.WriteD(0)    // unknown
+	w.WriteH(0) // Java: writeH(0) — trailing padding
 	viewer.Send(w.Bytes())
 }
 
@@ -126,6 +126,13 @@ func sendChangeHeading(viewer *net.Session, charID int32, heading int16) {
 func sendWeather(sess *net.Session, weather byte) {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_WEATHER)
 	w.WriteC(weather)
+	sess.Send(w.Bytes())
+}
+
+// sendGameTime sends S_GameTime (opcode 123) — current game time in seconds.
+func sendGameTime(sess *net.Session, gameTimeSec int) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_TIME)
+	w.WriteD(int32(gameTimeSec))
 	sess.Send(w.Bytes())
 }
 
@@ -257,6 +264,11 @@ func sendExpUpdate(sess *net.Session, level int16, totalExp int32) {
 
 // sendPlayerStatus sends S_STATUS (opcode 8) — full character status update.
 // Same format as enterworld sendOwnCharStatus but built from PlayerInfo.
+// SendPlayerStatus sends S_STATUS to a player. Exported for system package usage.
+func SendPlayerStatus(sess *net.Session, p *world.PlayerInfo) {
+	sendPlayerStatus(sess, p)
+}
+
 func sendPlayerStatus(sess *net.Session, p *world.PlayerInfo) {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_STATUS)
 	w.WriteD(p.CharID)
@@ -450,5 +462,63 @@ func sendInvisible(sess *net.Session, objectID int32, invisible bool) {
 	} else {
 		w.WriteC(0)
 	}
+	sess.Send(w.Bytes())
+}
+
+// ==================== 狀態異常封包 ====================
+
+// S_Paralysis 子類型常數（Java: S_Paralysis.java）
+const (
+	ParalysisApply     byte = 0x02 // 麻痺施加
+	ParalysisRemove    byte = 0x03 // 麻痺解除
+	ParalysisMobApply  byte = 0x04 // 怪物麻痺毒施加
+	ParalysisMobRemove byte = 0x05 // 怪物麻痺毒解除
+	TeleportLock       byte = 0x06 // 傳送鎖定
+	TeleportUnlock     byte = 0x07 // 傳送解鎖（已用於 sendTeleportUnlock）
+	SleepApply         byte = 0x0A // 睡眠施加
+	SleepRemove        byte = 0x0B // 睡眠解除
+	FreezeApply        byte = 0x0C // 凍結施加
+	FreezeRemove       byte = 0x0D // 凍結解除
+	StunApply          byte = 0x16 // 暈眩施加
+	StunRemove         byte = 0x17 // 暈眩解除
+	BindApply          byte = 0x18 // 束縛施加
+	BindRemove         byte = 0x19 // 束縛解除
+)
+
+// sendParalysis 發送 S_Paralysis (opcode 202) 到目標玩家。
+// Java 格式：[C opcode=202][C subtype]
+// 用於暈眩/凍結/睡眠/麻痺/束縛的施加與解除。
+func sendParalysis(sess *net.Session, subtype byte) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_PARALYSIS)
+	w.WriteC(subtype)
+	sess.Send(w.Bytes())
+}
+
+// sendPoison 發送 S_Poison (opcode 165) — 中毒/凍結色調視覺效果。
+// Java 格式：[C opcode=165][D objectId][C byte1][C byte2]
+// poisonType: 0=治癒（清除色調）, 1=綠色（傷害毒）, 2=灰色（麻痺/凍結）
+func sendPoison(viewer *net.Session, objectID int32, poisonType byte) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_POISON)
+	w.WriteD(objectID)
+	switch poisonType {
+	case 1: // 綠色（傷害毒）
+		w.WriteC(0x01)
+		w.WriteC(0x00)
+	case 2: // 灰色（麻痺/凍結）
+		w.WriteC(0x00)
+		w.WriteC(0x01)
+	default: // 治癒
+		w.WriteC(0x00)
+		w.WriteC(0x00)
+	}
+	viewer.Send(w.Bytes())
+}
+
+// sendCurseBlind 發送 S_CurseBlind (opcode 47) — 致盲螢幕遮罩。
+// Java 格式：[C opcode=47][H type]
+// type: 0=解除, 1=施加, 2=減弱施加
+func sendCurseBlind(sess *net.Session, blindType uint16) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_CURSEBLIND)
+	w.WriteH(blindType)
 	sess.Send(w.Bytes())
 }

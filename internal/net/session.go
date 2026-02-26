@@ -37,22 +37,30 @@ type Session struct {
 	AccountName string
 	CharName    string
 
+	outBuf [][]byte // buffered packets, flushed by OutputSystem (game loop only)
+
 	closeCh   chan struct{}
 	closeOnce sync.Once
 	closed    atomic.Bool
 
+	// Per-second packet rate limiter (readLoop goroutine only, no lock needed)
+	pktPerSec  int   // max packets/sec (0 = unlimited)
+	pktCount   int   // packets received this second
+	pktResetAt int64 // unix second of last counter reset
+
 	log *zap.Logger
 }
 
-func NewSession(conn net.Conn, id uint64, inSize, outSize int, log *zap.Logger) *Session {
+func NewSession(conn net.Conn, id uint64, inSize, outSize, pktPerSec int, log *zap.Logger) *Session {
 	s := &Session{
-		ID:       id,
-		conn:     conn,
-		InQueue:  make(chan []byte, inSize),
-		OutQueue: make(chan []byte, outSize),
-		IP:       conn.RemoteAddr().String(),
-		closeCh:  make(chan struct{}),
-		log:      log.With(zap.Uint64("session", id)),
+		ID:        id,
+		conn:      conn,
+		InQueue:   make(chan []byte, inSize),
+		OutQueue:  make(chan []byte, outSize),
+		IP:        conn.RemoteAddr().String(),
+		closeCh:   make(chan struct{}),
+		pktPerSec: pktPerSec,
+		log:       log.With(zap.Uint64("session", id)),
 	}
 	s.state.Store(int32(packet.StateHandshake))
 	return s
@@ -95,18 +103,31 @@ func (s *Session) Start() {
 	go s.writeLoop()
 }
 
-// Send queues an already-built (unencrypted, padded) packet for sending.
-// Non-blocking: if OutQueue is full, the session is disconnected (backpressure).
+// Send buffers a packet for sending. The packet is not written to TCP until
+// FlushOutput is called by OutputSystem at Phase 4.
+// Called only from the game loop goroutine — no lock needed on outBuf.
 func (s *Session) Send(data []byte) {
 	if s.closed.Load() {
 		return
 	}
-	select {
-	case s.OutQueue <- data:
-	default:
-		s.log.Warn("輸出佇列已滿，斷開慢速連線")
-		s.Close()
+	s.outBuf = append(s.outBuf, data)
+}
+
+// FlushOutput drains the output buffer to OutQueue for the writeLoop goroutine.
+// Called by OutputSystem at Phase 4 (once per tick).
+// Non-blocking: if OutQueue is full, the session is disconnected (backpressure).
+func (s *Session) FlushOutput() {
+	for _, data := range s.outBuf {
+		select {
+		case s.OutQueue <- data:
+		default:
+			s.log.Warn("輸出佇列已滿，斷開慢速連線")
+			s.Close()
+			s.outBuf = s.outBuf[:0]
+			return
+		}
 	}
+	s.outBuf = s.outBuf[:0]
 }
 
 // Close gracefully shuts down the session.
@@ -144,6 +165,20 @@ func (s *Session) readLoop() {
 		}
 
 		decrypted := s.cipher.Decrypt(payload)
+
+		// Per-second packet rate limiter
+		if s.pktPerSec > 0 {
+			now := time.Now().Unix()
+			if now != s.pktResetAt {
+				s.pktCount = 0
+				s.pktResetAt = now
+			}
+			s.pktCount++
+			if s.pktCount > s.pktPerSec {
+				s.log.Warn("封包速率超限，斷開連線", zap.Int("pps", s.pktCount))
+				return
+			}
+		}
 
 		// Block until InQueue has space or session closes.
 		// Java processes packets inline (no queue, no drops). Dropping C_MOVE

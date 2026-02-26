@@ -289,16 +289,25 @@ func handlePolyScroll(sess *net.Session, r *packet.Reader, player *world.PlayerI
 }
 
 // HandleHypertextInputResult processes C_HYPERTEXT_INPUT_RESULT (opcode 11).
-// This is called when the player submits a name in the monlist dialog.
-// Format: [D objectID][S userInput]
+// This opcode is shared between two use cases:
+// 1. Monlist polymorph dialog: [D objectID][S monsterName]
+// 2. Crafting batch (C_Amount): [D npcObjID][D amount][C unknown][S actionStr]
+// We distinguish by checking player.PendingCraftAction — set when S_InputAmount was sent.
 func HandleHypertextInputResult(sess *net.Session, r *packet.Reader, deps *Deps) {
-	_ = r.ReadD()       // objectID (player's charID)
-	input := r.ReadS()  // monster name entered by player
-
 	player := deps.World.GetBySession(sess.ID)
 	if player == nil || player.Dead {
 		return
 	}
+
+	// Route to crafting amount handler if a batch dialog is pending
+	if player.PendingCraftAction != "" {
+		HandleCraftAmount(sess, r, player, deps)
+		return
+	}
+
+	// Otherwise: monlist polymorph dialog — format: [D objectID][S monsterName]
+	_ = r.ReadD()       // objectID (player's charID)
+	input := r.ReadS()  // monster name entered by player
 
 	if deps.Polys == nil {
 		return

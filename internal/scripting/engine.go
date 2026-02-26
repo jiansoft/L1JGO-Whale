@@ -462,12 +462,14 @@ func (e *Engine) CalcLevelUp(classType, con, wis int) LevelUpResult {
 
 // PotionEffect holds potion data returned by Lua.
 type PotionEffect struct {
-	Type       string // "heal", "mana", "haste", "brave", "wisdom"
-	Amount     int    // heal/mana amount
-	Duration   int    // haste/brave/wisdom duration in seconds
-	BraveType  int    // brave sub-type (1=brave, 3=elf brave)
-	GfxID      int    // visual effect GFX
-	SP         int    // wisdom potion: SP bonus to add
+	Type          string // "heal", "mana", "haste", "brave", "wisdom", "blue_potion", "cure_poison", "eva_breath", "third_speed", "blind"
+	Amount        int    // heal/mana base amount
+	Range         int    // mana: if > 0, actual = amount + rand(range)
+	Duration      int    // buff duration in seconds
+	BraveType     int    // brave sub-type (1=brave, 3=elf brave, 5=ribrave)
+	GfxID         int    // visual effect GFX
+	SP            int    // wisdom potion: SP bonus to add
+	ClassRestrict string // brave class restriction: "knight","elf","crown","notDKIL","DKIL",""
 }
 
 // GetPotionEffect calls Lua get_potion_effect(item_id).
@@ -499,12 +501,14 @@ func (e *Engine) GetPotionEffect(itemID int) *PotionEffect {
 	}
 
 	return &PotionEffect{
-		Type:      lStr(rt, "type"),
-		Amount:    lInt(rt, "amount"),
-		Duration:  lInt(rt, "duration"),
-		BraveType: lInt(rt, "brave_type"),
-		GfxID:     lInt(rt, "gfx"),
-		SP:        lInt(rt, "sp"),
+		Type:          lStr(rt, "type"),
+		Amount:        lInt(rt, "amount"),
+		Range:         lInt(rt, "range"),
+		Duration:      lInt(rt, "duration"),
+		BraveType:     lInt(rt, "brave_type"),
+		GfxID:         lInt(rt, "gfx"),
+		SP:            lInt(rt, "sp"),
+		ClassRestrict: lStr(rt, "class_restrict"),
 	}
 }
 
@@ -1035,6 +1039,330 @@ func (e *Engine) CalcNpcRanged(ctx CombatContext) CombatResult {
 		IsHit:  rt2.RawGetString("is_hit") == lua.LTrue,
 		Damage: int(lua.LVAsNumber(rt2.RawGetString("damage"))),
 	}
+}
+
+// --- PK System Bridge ---
+
+// PKLawfulResult holds the calculated new lawful value after a PK kill.
+type PKLawfulResult struct {
+	NewLawful int32
+}
+
+// CalcPKLawfulPenalty calls Lua calc_pk_lawful_penalty(ctx).
+func (e *Engine) CalcPKLawfulPenalty(killerLevel int, killerLawful int32) PKLawfulResult {
+	fn := e.vm.GetGlobal("calc_pk_lawful_penalty")
+	if fn == lua.LNil {
+		e.log.Error("lua function calc_pk_lawful_penalty not found")
+		return PKLawfulResult{NewLawful: killerLawful - 1000}
+	}
+
+	t := e.vm.NewTable()
+	t.RawSetString("killer_level", lua.LNumber(killerLevel))
+	t.RawSetString("killer_lawful", lua.LNumber(killerLawful))
+
+	if err := e.vm.CallByParam(lua.P{
+		Fn:      fn,
+		NRet:    1,
+		Protect: true,
+	}, t); err != nil {
+		e.log.Error("lua calc_pk_lawful_penalty error", zap.Error(err))
+		return PKLawfulResult{NewLawful: killerLawful - 1000}
+	}
+
+	result := e.vm.Get(-1)
+	e.vm.Pop(1)
+
+	rt, ok := result.(*lua.LTable)
+	if !ok {
+		return PKLawfulResult{NewLawful: killerLawful - 1000}
+	}
+
+	return PKLawfulResult{
+		NewLawful: int32(lua.LVAsNumber(rt.RawGetString("new_lawful"))),
+	}
+}
+
+// PKItemDropResult holds the item drop decision from Lua.
+type PKItemDropResult struct {
+	ShouldDrop bool
+	Count      int
+}
+
+// CalcPKItemDrop calls Lua calc_pk_item_drop(ctx).
+func (e *Engine) CalcPKItemDrop(victimLawful int32) PKItemDropResult {
+	fn := e.vm.GetGlobal("calc_pk_item_drop")
+	if fn == lua.LNil {
+		return PKItemDropResult{}
+	}
+
+	t := e.vm.NewTable()
+	t.RawSetString("victim_lawful", lua.LNumber(victimLawful))
+
+	if err := e.vm.CallByParam(lua.P{
+		Fn:      fn,
+		NRet:    1,
+		Protect: true,
+	}, t); err != nil {
+		e.log.Error("lua calc_pk_item_drop error", zap.Error(err))
+		return PKItemDropResult{}
+	}
+
+	result := e.vm.Get(-1)
+	e.vm.Pop(1)
+
+	rt, ok := result.(*lua.LTable)
+	if !ok {
+		return PKItemDropResult{}
+	}
+
+	return PKItemDropResult{
+		ShouldDrop: rt.RawGetString("should_drop") == lua.LTrue,
+		Count:      lInt(rt, "count"),
+	}
+}
+
+// PKTimers holds PK-related timer durations from Lua.
+type PKTimers struct {
+	PinkNameTicks int
+	WantedTicks   int
+}
+
+// GetPKTimers calls Lua get_pk_timers().
+func (e *Engine) GetPKTimers() PKTimers {
+	fn := e.vm.GetGlobal("get_pk_timers")
+	if fn == lua.LNil {
+		return PKTimers{PinkNameTicks: 900, WantedTicks: 432000}
+	}
+
+	if err := e.vm.CallByParam(lua.P{
+		Fn:      fn,
+		NRet:    1,
+		Protect: true,
+	}); err != nil {
+		e.log.Error("lua get_pk_timers error", zap.Error(err))
+		return PKTimers{PinkNameTicks: 900, WantedTicks: 432000}
+	}
+
+	result := e.vm.Get(-1)
+	e.vm.Pop(1)
+
+	rt, ok := result.(*lua.LTable)
+	if !ok {
+		return PKTimers{PinkNameTicks: 900, WantedTicks: 432000}
+	}
+
+	return PKTimers{
+		PinkNameTicks: int(lua.LVAsNumber(rt.RawGetString("pink_name_ticks"))),
+		WantedTicks:   int(lua.LVAsNumber(rt.RawGetString("wanted_ticks"))),
+	}
+}
+
+// PKThresholds holds PK count thresholds from Lua.
+type PKThresholds struct {
+	Warning int32 // matches PKCount type (int32)
+	Punish  int32
+}
+
+// GetPKThresholds calls Lua get_pk_thresholds().
+func (e *Engine) GetPKThresholds() PKThresholds {
+	fn := e.vm.GetGlobal("get_pk_thresholds")
+	if fn == lua.LNil {
+		return PKThresholds{Warning: 5, Punish: 10}
+	}
+
+	if err := e.vm.CallByParam(lua.P{
+		Fn:      fn,
+		NRet:    1,
+		Protect: true,
+	}); err != nil {
+		e.log.Error("lua get_pk_thresholds error", zap.Error(err))
+		return PKThresholds{Warning: 5, Punish: 10}
+	}
+
+	result := e.vm.Get(-1)
+	e.vm.Pop(1)
+
+	rt, ok := result.(*lua.LTable)
+	if !ok {
+		return PKThresholds{Warning: 5, Punish: 10}
+	}
+
+	return PKThresholds{
+		Warning: int32(lua.LVAsNumber(rt.RawGetString("warning"))),
+		Punish:  int32(lua.LVAsNumber(rt.RawGetString("punish"))),
+	}
+}
+
+// --- Durability Bridge ---
+
+// DurabilityContext holds data for weapon durability damage calculation.
+type DurabilityContext struct {
+	EnchantLvl        int
+	Bless             int
+	CurrentDurability int
+}
+
+// DurabilityResult holds the result of durability damage calculation.
+type DurabilityResult struct {
+	ShouldDamage  bool
+	MaxDurability int
+}
+
+// CalcDurabilityDamage calls Lua calc_durability_damage(ctx).
+func (e *Engine) CalcDurabilityDamage(ctx DurabilityContext) DurabilityResult {
+	fn := e.vm.GetGlobal("calc_durability_damage")
+	if fn == lua.LNil {
+		return DurabilityResult{ShouldDamage: false, MaxDurability: ctx.EnchantLvl + 5}
+	}
+
+	t := e.vm.NewTable()
+	t.RawSetString("enchant_lvl", lua.LNumber(ctx.EnchantLvl))
+	t.RawSetString("bless", lua.LNumber(ctx.Bless))
+	t.RawSetString("current_durability", lua.LNumber(ctx.CurrentDurability))
+
+	if err := e.vm.CallByParam(lua.P{
+		Fn:      fn,
+		NRet:    1,
+		Protect: true,
+	}, t); err != nil {
+		e.log.Error("lua calc_durability_damage error", zap.Error(err))
+		return DurabilityResult{ShouldDamage: false, MaxDurability: ctx.EnchantLvl + 5}
+	}
+
+	result := e.vm.Get(-1)
+	e.vm.Pop(1)
+
+	rt, ok := result.(*lua.LTable)
+	if !ok {
+		return DurabilityResult{ShouldDamage: false, MaxDurability: ctx.EnchantLvl + 5}
+	}
+
+	return DurabilityResult{
+		ShouldDamage:  rt.RawGetString("should_damage") == lua.LTrue,
+		MaxDurability: lInt(rt, "max_durability"),
+	}
+}
+
+// --- Regen Bridge ---
+
+// GetHPRegenInterval calls Lua get_hp_regen_interval(level, class_type).
+// Returns seconds between HP regen events.
+func (e *Engine) GetHPRegenInterval(level, classType int) int {
+	return e.callIntFunc("get_hp_regen_interval", level, classType)
+}
+
+// HPRegenContext holds data for HP regen calculation.
+type HPRegenContext struct {
+	Level               int
+	Con                 int
+	HPR                 int
+	Food                int
+	WeightPct           int
+	HasExoticVitalize   bool
+	HasAdditionalFire   bool
+}
+
+// CalcHPRegenAmount calls Lua calc_hp_regen_amount(ctx).
+func (e *Engine) CalcHPRegenAmount(ctx HPRegenContext) int {
+	fn := e.vm.GetGlobal("calc_hp_regen_amount")
+	if fn == lua.LNil {
+		return 1
+	}
+
+	t := e.vm.NewTable()
+	t.RawSetString("level", lua.LNumber(ctx.Level))
+	t.RawSetString("con", lua.LNumber(ctx.Con))
+	t.RawSetString("hpr", lua.LNumber(ctx.HPR))
+	t.RawSetString("food", lua.LNumber(ctx.Food))
+	t.RawSetString("weight_pct", lua.LNumber(ctx.WeightPct))
+	if ctx.HasExoticVitalize {
+		t.RawSetString("has_exotic_vitalize", lua.LTrue)
+	} else {
+		t.RawSetString("has_exotic_vitalize", lua.LFalse)
+	}
+	if ctx.HasAdditionalFire {
+		t.RawSetString("has_additional_fire", lua.LTrue)
+	} else {
+		t.RawSetString("has_additional_fire", lua.LFalse)
+	}
+
+	if err := e.vm.CallByParam(lua.P{
+		Fn:      fn,
+		NRet:    1,
+		Protect: true,
+	}, t); err != nil {
+		e.log.Error("lua calc_hp_regen_amount error", zap.Error(err))
+		return 1
+	}
+
+	result := e.vm.Get(-1)
+	e.vm.Pop(1)
+
+	rt, ok := result.(*lua.LTable)
+	if !ok {
+		return 1
+	}
+
+	return lInt(rt, "amount")
+}
+
+// MPRegenContext holds data for MP regen calculation.
+type MPRegenContext struct {
+	Wis                 int
+	MPR                 int
+	Food                int
+	WeightPct           int
+	HasExoticVitalize   bool
+	HasAdditionalFire   bool
+	HasBluePotion       bool
+}
+
+// CalcMPRegenAmount calls Lua calc_mp_regen_amount(ctx).
+func (e *Engine) CalcMPRegenAmount(ctx MPRegenContext) int {
+	fn := e.vm.GetGlobal("calc_mp_regen_amount")
+	if fn == lua.LNil {
+		return 1
+	}
+
+	t := e.vm.NewTable()
+	t.RawSetString("wis", lua.LNumber(ctx.Wis))
+	t.RawSetString("mpr", lua.LNumber(ctx.MPR))
+	t.RawSetString("food", lua.LNumber(ctx.Food))
+	t.RawSetString("weight_pct", lua.LNumber(ctx.WeightPct))
+	if ctx.HasExoticVitalize {
+		t.RawSetString("has_exotic_vitalize", lua.LTrue)
+	} else {
+		t.RawSetString("has_exotic_vitalize", lua.LFalse)
+	}
+	if ctx.HasAdditionalFire {
+		t.RawSetString("has_additional_fire", lua.LTrue)
+	} else {
+		t.RawSetString("has_additional_fire", lua.LFalse)
+	}
+	if ctx.HasBluePotion {
+		t.RawSetString("has_blue_potion", lua.LTrue)
+	} else {
+		t.RawSetString("has_blue_potion", lua.LFalse)
+	}
+
+	if err := e.vm.CallByParam(lua.P{
+		Fn:      fn,
+		NRet:    1,
+		Protect: true,
+	}, t); err != nil {
+		e.log.Error("lua calc_mp_regen_amount error", zap.Error(err))
+		return 1
+	}
+
+	result := e.vm.Get(-1)
+	e.vm.Pop(1)
+
+	rt, ok := result.(*lua.LTable)
+	if !ok {
+		return 1
+	}
+
+	return lInt(rt, "amount")
 }
 
 // --- Lua helpers ---

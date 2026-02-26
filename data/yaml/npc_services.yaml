@@ -1,0 +1,75 @@
+# NPC service definitions — all parameters for NPC-provided services.
+# Execution logic remains in Go; only data (NPC IDs, costs, durations, effects) is here.
+
+npc_services:
+  # ========== Healer NPCs ==========
+  healers:
+    - npc_id: 70512
+      heal_type: random    # "random" or "full"
+      heal_min: 70
+      heal_max: 90
+      target: hp           # "hp" or "hp_mp"
+      cost: 0
+      gfx: 830
+      msg_id: 77           # "你覺得舒服多了"
+
+    - npc_id: 71037
+      heal_type: full
+      target: hp_mp
+      cost: 0
+      gfx: 830
+      msg_id: 77
+
+    - npc_id: 71030
+      heal_type: full
+      target: hp_mp
+      cost: 5
+      gfx: 830
+      msg_id: 77
+
+  # ========== Cancellation NPC ==========
+  cancel:
+    npc_id: 71002
+    max_level: 13
+    gfx: 2169
+
+  # ========== Haste Buffer NPC ==========
+  haste:
+    npc_id: 70514
+    duration_sec: 1600
+    gfx: 755
+    msg_id: 183            # "身體因魔力而輕飄飄的。"
+
+  # ========== Weapon Enchanter NPC ==========
+  weapon_enchant:
+    dmg_bonus: 2
+    duration_sec: 1800
+    gfx: 747
+
+  # ========== Armor Enchanter NPC ==========
+  armor_enchant:
+    ac_bonus: 3
+    duration_sec: 1800
+    gfx: 748
+
+  # ========== Polymorph NPC ==========
+  polymorph:
+    cost: 100
+    duration_sec: 1800
+    forms:
+      - action: "skeleton nbmorph"
+        poly_id: 2374
+      - action: "lycanthrope nbmorph"
+        poly_id: 3874
+      - action: "shelob nbmorph"
+        poly_id: 95
+      - action: "ghoul nbmorph"
+        poly_id: 3873
+      - action: "ghast nbmorph"
+        poly_id: 3875
+      - action: "atuba orc nbmorph"
+        poly_id: 3868
+      - action: "skeleton axeman nbmorph"
+        poly_id: 2376
+      - action: "troll nbmorph"
+        poly_id: 3878

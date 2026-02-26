@@ -19,7 +19,7 @@ import (
 type InputSystem struct {
 	netServer   *net.Server
 	registry    *packet.Registry
-	sessions    map[uint64]*net.Session
+	store       *net.SessionStore
 	maxPerTick  int
 	log         *zap.Logger
 	accountRepo *persist.AccountRepo
@@ -28,11 +28,13 @@ type InputSystem struct {
 	buffRepo    *persist.BuffRepo
 	worldState  *world.State
 	mapData     *data.MapDataTable
+	petRepo     *persist.PetRepo
 }
 
 func NewInputSystem(
 	netServer *net.Server,
 	registry *packet.Registry,
+	store *net.SessionStore,
 	maxPerTick int,
 	accountRepo *persist.AccountRepo,
 	charRepo *persist.CharacterRepo,
@@ -40,12 +42,13 @@ func NewInputSystem(
 	buffRepo *persist.BuffRepo,
 	worldState *world.State,
 	mapData *data.MapDataTable,
+	petRepo *persist.PetRepo,
 	log *zap.Logger,
 ) *InputSystem {
 	return &InputSystem{
 		netServer:   netServer,
 		registry:    registry,
-		sessions:    make(map[uint64]*net.Session),
+		store:       store,
 		maxPerTick:  maxPerTick,
 		log:         log,
 		accountRepo: accountRepo,
@@ -54,6 +57,7 @@ func NewInputSystem(
 		buffRepo:    buffRepo,
 		worldState:  worldState,
 		mapData:     mapData,
+		petRepo:     petRepo,
 	}
 }
 
@@ -64,7 +68,7 @@ func (s *InputSystem) Update(_ time.Duration) {
 	for {
 		select {
 		case sess := <-s.netServer.NewSessions():
-			s.sessions[sess.ID] = sess
+			s.store.Add(sess)
 		default:
 			goto doneNew
 		}
@@ -75,7 +79,7 @@ doneNew:
 	for {
 		select {
 		case id := <-s.netServer.DeadSessions():
-			delete(s.sessions, id)
+			s.store.Remove(id)
 		default:
 			goto doneDead
 		}
@@ -83,7 +87,7 @@ doneNew:
 doneDead:
 
 	// Drain packets from each session (up to maxPerTick per session)
-	for id, sess := range s.sessions {
+	for id, sess := range s.store.Raw() {
 		if sess.IsClosed() {
 			// Drain any remaining packets BEFORE cleanup (e.g. C_SAVEIO sent just before disconnect).
 			// Use the last known state so handlers like HandleCharConfig can still find the player.
@@ -101,15 +105,19 @@ doneDead:
 				}
 			}
 		doneClosing:
+			// Flush any remaining buffered output before disconnect cleanup
+			sess.FlushOutput()
 			s.handleDisconnect(sess)
 			s.netServer.NotifyDead(id)
-			delete(s.sessions, id)
+			s.store.Remove(id)
 			continue
 		}
 
+		processed := false
 		for i := 0; i < s.maxPerTick; i++ {
 			select {
 			case data := <-sess.InQueue:
+				processed = true
 				if err := s.registry.Dispatch(sess, sess.State(), data); err != nil {
 					s.log.Debug("封包分派錯誤",
 						zap.Uint64("session", sess.ID),
@@ -121,6 +129,13 @@ doneDead:
 			}
 		}
 	nextSession:
+		// Mark player dirty if any in-world packets were processed this tick.
+		// PersistenceSystem will only save dirty players.
+		if processed && sess.State() == packet.StateInWorld {
+			if p := s.worldState.GetBySession(sess.ID); p != nil {
+				p.Dirty = true
+			}
+		}
 	}
 }
 
@@ -258,12 +273,14 @@ func (s *InputSystem) handleDisconnect(sess *net.Session) {
 			}
 		}
 
-		// Broadcast S_REMOVE_OBJECT + entity collision unblock to nearby players
+		// Clean up all companion entities (summons, dolls, followers)
+		s.cleanupCompanions(player)
+
+		// Broadcast S_REMOVE_OBJECT to nearby players
 		nearby := s.worldState.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
 		removePacket := buildRemoveObjectPacket(player.CharID)
 		for _, other := range nearby {
 			other.Session.Send(removePacket)
-			handler.SendEntityUnblock(other.Session, player.X, player.Y)
 		}
 
 		// Clean up entity door tracking for this viewer (no packets — client is gone)
@@ -375,7 +392,7 @@ func buildRemoveObjectPacket(charID int32) []byte {
 
 // SessionCount returns the current number of active sessions.
 func (s *InputSystem) SessionCount() int {
-	return len(s.sessions)
+	return len(s.store.Raw())
 }
 
 // --- Disconnect cleanup packet helpers ---
@@ -432,7 +449,7 @@ func sendChangeItemUsePacket(sess *net.Session, item *world.InvItem) {
 func sendAddItemPacket(sess *net.Session, item *world.InvItem) {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_ADD_ITEM)
 	w.WriteD(item.ObjectID)
-	w.WriteH(0)                    // descId
+	w.WriteH(world.ItemDescID(item.ItemID)) // descId — Java: switch(itemId) for material items
 	w.WriteC(item.UseType)
 	w.WriteC(0)                    // charge count
 	w.WriteH(uint16(item.InvGfx))
@@ -532,6 +549,145 @@ func buffRowsFromPlayer(p *world.PlayerInfo) []persist.BuffRow {
 		rows = append(rows, row)
 	}
 	return rows
+}
+
+// cleanupCompanions removes all companion entities owned by a disconnecting player.
+// Summons: broadcast death sound + remove. Dolls: broadcast dismiss sound + remove (no bonus reversal needed — player offline).
+// Followers: respawn original NPC + remove.
+func (s *InputSystem) cleanupCompanions(player *world.PlayerInfo) {
+	ws := s.worldState
+
+	// Remove summons
+	for _, sum := range ws.GetSummonsByOwner(player.CharID) {
+		ws.RemoveSummon(sum.ID)
+		nearby := ws.GetNearbyPlayersAt(sum.X, sum.Y, sum.MapID)
+		for _, viewer := range nearby {
+			sendCompanionEffectPacket(viewer.Session, sum.ID, 169) // death sound
+			sendRemoveCompanionPacket(viewer.Session, sum.ID)
+		}
+	}
+
+	// Remove dolls (no bonus reversal — player is leaving world)
+	for _, doll := range ws.GetDollsByOwner(player.CharID) {
+		ws.RemoveDoll(doll.ID)
+		nearby := ws.GetNearbyPlayersAt(doll.X, doll.Y, doll.MapID)
+		for _, viewer := range nearby {
+			sendCompanionEffectPacket(viewer.Session, doll.ID, 5936) // dismiss sound
+			sendRemoveCompanionPacket(viewer.Session, doll.ID)
+		}
+	}
+
+	// Remove pets — save to DB before removal (pets persist across sessions)
+	for _, pet := range ws.GetPetsByOwner(player.CharID) {
+		// Save pet state to DB
+		if s.petRepo != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			s.petRepo.Save(ctx, &persist.PetRow{
+				ItemObjID: pet.ItemObjID,
+				ObjID:     pet.ID,
+				NpcID:     pet.NpcID,
+				Name:      pet.Name,
+				Level:     pet.Level,
+				HP:        pet.HP,
+				MaxHP:     pet.MaxHP,
+				MP:        pet.MP,
+				MaxMP:     pet.MaxMP,
+				Exp:       pet.Exp,
+				Lawful:    pet.Lawful,
+			})
+			cancel()
+		}
+		ws.RemovePet(pet.ID)
+		nearby := ws.GetNearbyPlayersAt(pet.X, pet.Y, pet.MapID)
+		for _, viewer := range nearby {
+			sendRemoveCompanionPacket(viewer.Session, pet.ID)
+		}
+	}
+
+	// Remove follower — respawn original NPC at spawn location
+	if f := ws.GetFollowerByOwner(player.CharID); f != nil {
+		ws.RemoveFollower(f.ID)
+		nearby := ws.GetNearbyPlayersAt(f.X, f.Y, f.MapID)
+		for _, viewer := range nearby {
+			sendRemoveCompanionPacket(viewer.Session, f.ID)
+		}
+		// Respawn original NPC
+		if f.OrigNpcID != 0 && s.mapData != nil {
+			// Look up NPC template from world state (spawned NPCs store template data)
+			// We don't have Deps here, so just create a basic NPC shell
+			npc := &world.NpcInfo{
+				ID:         world.NextNpcID(),
+				NpcID:      f.OrigNpcID,
+				GfxID:      f.GfxID,
+				Name:       f.Name,
+				NameID:     f.NameID,
+				Level:      f.Level,
+				HP:         f.MaxHP,
+				MaxHP:      f.MaxHP,
+				X:          f.SpawnX,
+				Y:          f.SpawnY,
+				MapID:      f.SpawnMapID,
+				SpawnX:     f.SpawnX,
+				SpawnY:     f.SpawnY,
+				SpawnMapID: f.SpawnMapID,
+			}
+			ws.AddNpc(npc)
+			respawnNearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
+			for _, viewer := range respawnNearby {
+				sendNpcPackForInput(viewer.Session, npc)
+			}
+		}
+	}
+}
+
+// sendCompanionEffectPacket sends S_EFFECT (opcode 55) for companion sound effects.
+func sendCompanionEffectPacket(sess *net.Session, objID int32, gfxID int32) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_EFFECT)
+	w.WriteD(objID)
+	w.WriteH(uint16(gfxID))
+	sess.Send(w.Bytes())
+}
+
+// sendRemoveCompanionPacket sends S_REMOVE_OBJECT for a companion entity.
+func sendRemoveCompanionPacket(sess *net.Session, objID int32) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_REMOVE_OBJECT)
+	w.WriteD(objID)
+	sess.Send(w.Bytes())
+}
+
+// sendNpcPackForInput sends S_PUT_OBJECT (87) for an NPC — minimal version for input system.
+// Duplicated from handler/broadcast.go to avoid circular imports.
+func sendNpcPackForInput(sess *net.Session, npc *world.NpcInfo) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_PUT_OBJECT)
+	w.WriteH(uint16(npc.X))
+	w.WriteH(uint16(npc.Y))
+	w.WriteD(npc.ID)
+	w.WriteH(uint16(npc.GfxID))
+
+	status := byte(0)
+	if npc.Dead {
+		status = 8
+	}
+	w.WriteC(status)
+	w.WriteC(byte(npc.Heading))
+	w.WriteC(0) // light
+	w.WriteC(byte(npc.MoveSpeed))
+	w.WriteD(0)
+	w.WriteH(0)
+	w.WriteS(npc.NameID)
+	w.WriteS(npc.Name)
+	w.WriteC(0) // poison
+	w.WriteD(0)
+	w.WriteS("")
+	w.WriteS("")
+	w.WriteC(0)
+	w.WriteC(0xFF)
+	w.WriteC(0)
+	w.WriteC(0)
+	w.WriteC(0)
+	w.WriteC(0xFF)
+	w.WriteC(0xFF)
+	sess.Send(w.Bytes())
 }
 
 func boolToInt(b bool) int {

@@ -87,13 +87,19 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 	// Load known spells from DB (JSONB column)
 	loadKnownSpellsFromDB(player, deps)
 
+	// Load buddy list from DB
+	loadBuddiesFromDB(player, deps)
+
+	// Load exclude/block list from DB
+	loadExcludesFromDB(player, deps)
+
 	// Detect complete armor set from loaded equipment (sets ActiveSetID before stats calc).
 	detectActiveArmorSet(player, deps.ArmorSets)
 
 	// Apply all equipment stat bonuses (AC, STR, DEX, etc.) silently — no packets yet.
 	// EquipBonuses starts at zero, so this correctly adds all equipment contributions
 	// including any active armor set stat bonuses.
-	player.AC = 10 // base AC before equipment
+	player.AC = int16(deps.Config.Gameplay.BaseAC)
 	applyEquipStats(player, deps.Items, deps.ArmorSets)
 
 	// Restore persisted buffs (including polymorph state)
@@ -123,7 +129,11 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 	sendMagicStatus(sess, byte(player.SP), uint16(player.MR))
 
 	// 7. S_WEATHER (opcode 115) — weather
-	sendWeather(sess, 0)
+	sendWeather(sess, deps.World.Weather)
+
+	// 7b. S_GameTime (opcode 123) — current game time
+	// NOTE: Moved to AFTER all initialization packets to avoid client desync.
+	// Some 3.80C clients don't expect S_GameTime mid-initialization.
 
 	// 8. S_ABILITY_SCORES (opcode 174) — AC + resistances
 	sendAbilityScores(sess, player)
@@ -186,6 +196,38 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 		}
 	}
 
+	// --- Send nearby companions (summons, dolls, followers, pets) ---
+	nearbySum := deps.World.GetNearbySummons(ch.X, ch.Y, ch.MapID)
+	for _, sum := range nearbySum {
+		isOwner := sum.OwnerCharID == player.CharID
+		masterName := ""
+		if master := deps.World.GetByCharID(sum.OwnerCharID); master != nil {
+			masterName = master.Name
+		}
+		sendSummonPack(sess, sum, isOwner, masterName)
+	}
+	nearbyDolls := deps.World.GetNearbyDolls(ch.X, ch.Y, ch.MapID)
+	for _, doll := range nearbyDolls {
+		masterName := ""
+		if master := deps.World.GetByCharID(doll.OwnerCharID); master != nil {
+			masterName = master.Name
+		}
+		sendDollPack(sess, doll, masterName)
+	}
+	nearbyFollowers := deps.World.GetNearbyFollowers(ch.X, ch.Y, ch.MapID)
+	for _, f := range nearbyFollowers {
+		sendFollowerPack(sess, f)
+	}
+	nearbyPets := deps.World.GetNearbyPets(ch.X, ch.Y, ch.MapID)
+	for _, pet := range nearbyPets {
+		isOwner := pet.OwnerCharID == player.CharID
+		masterName := ""
+		if master := deps.World.GetByCharID(pet.OwnerCharID); master != nil {
+			masterName = master.Name
+		}
+		sendPetPack(sess, pet, isOwner, masterName)
+	}
+
 	// --- Send nearby ground items ---
 	nearbyGnd := deps.World.GetNearbyGroundItems(ch.X, ch.Y, ch.MapID)
 	for _, g := range nearbyGnd {
@@ -204,7 +246,10 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 	}
 
 	// --- Send restored buff icons (AFTER all init packets) ---
-	sendRestoredBuffIcons(player)
+	sendRestoredBuffIcons(player, deps)
+
+	// S_GameTime — sent LAST to avoid interfering with client init parser
+	sendGameTime(sess, world.GameTimeNow().Seconds())
 }
 
 func sendLoginGame(sess *net.Session, clanID int32, clanMemberID int32) {
@@ -247,6 +292,7 @@ func loadInventoryFromDB(player *world.PlayerInfo, deps *Deps) {
 				invItem.EnchantLvl = int8(row.EnchantLvl)
 				invItem.Identified = row.Identified
 				invItem.UseType = itemInfo.UseTypeID
+				invItem.Durability = int8(row.Durability)
 				if row.Equipped && row.EquipSlot > 0 {
 					invItem.Equipped = true
 					slot := world.EquipSlot(row.EquipSlot)
@@ -483,7 +529,7 @@ func loadAndRestoreBuffs(player *world.PlayerInfo, deps *Deps) {
 
 // sendRestoredBuffIcons sends buff icon/speed/poly packets for all active buffs.
 // Must be called AFTER the init packet sequence (OwnCharPack etc.) is complete.
-func sendRestoredBuffIcons(player *world.PlayerInfo) {
+func sendRestoredBuffIcons(player *world.PlayerInfo, deps *Deps) {
 	if len(player.ActiveBuffs) == 0 {
 		return
 	}
@@ -499,7 +545,7 @@ func sendRestoredBuffIcons(player *world.PlayerInfo) {
 			sendSpeedPacket(sess, player.CharID, buff.SetMoveSpeed, remainSec)
 		}
 		if buff.SetBraveSpeed > 0 {
-			sendSpeedPacket(sess, player.CharID, buff.SetBraveSpeed, remainSec)
+			sendBravePacket(sess, player.CharID, buff.SetBraveSpeed, remainSec)
 		}
 
 		// Polymorph icon
@@ -507,7 +553,7 @@ func sendRestoredBuffIcons(player *world.PlayerInfo) {
 			sendPolyIcon(sess, remainSec)
 		} else {
 			// Other buff icons
-			sendBuffIcon(player, buff.SkillID, remainSec)
+			sendBuffIcon(player, buff.SkillID, remainSec, deps)
 		}
 	}
 }
@@ -525,4 +571,43 @@ func loadAndSendCharConfig(sess *net.Session, charID int32, deps *Deps) {
 	if len(data) > 0 {
 		sendCharConfig(sess, data)
 	}
+}
+
+// loadBuddiesFromDB loads the buddy list from the character_buddys table.
+func loadBuddiesFromDB(player *world.PlayerInfo, deps *Deps) {
+	if deps.BuddyRepo == nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := deps.BuddyRepo.LoadByCharID(ctx, player.CharID)
+	if err != nil {
+		deps.Log.Error("載入好友失敗", zap.String("name", player.Name), zap.Error(err))
+		return
+	}
+	for _, row := range rows {
+		player.Buddies = append(player.Buddies, world.BuddyEntry{
+			CharID: row.BuddyID,
+			Name:   row.BuddyName,
+		})
+	}
+}
+
+// loadExcludesFromDB loads the exclude/block list from the character_excludes table.
+func loadExcludesFromDB(player *world.PlayerInfo, deps *Deps) {
+	if deps.ExcludeRepo == nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	names, err := deps.ExcludeRepo.LoadByCharID(ctx, player.CharID)
+	if err != nil {
+		deps.Log.Error("載入黑名單失敗", zap.String("name", player.Name), zap.Error(err))
+		return
+	}
+	player.ExcludeList = names
 }

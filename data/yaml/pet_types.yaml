@@ -1,0 +1,397 @@
+pet_types:
+  - base_npc_id: 45034
+    name: 牧羊犬
+    can_equip: false
+    taming_item_id: 40057
+    hp_up_min: 5
+    hp_up_max: 8
+    mp_up_min: 1
+    mp_up_max: 2
+    evolv_item_id: 40070
+    evolv_npc_id: 45687
+    msg_ids: [1088, 1089, 1090, 1091, 1092]
+    defy_msg_id: 1074
+  - base_npc_id: 45039
+    name: 貓
+    can_equip: false
+    taming_item_id: 40057
+    hp_up_min: 3
+    hp_up_max: 6
+    mp_up_min: 3
+    mp_up_max: 5
+    evolv_item_id: 40070
+    evolv_npc_id: 45696
+    msg_ids: [2728, 2729, 2730, 2731, 2731]
+    defy_msg_id: 2732
+  - base_npc_id: 45040
+    name: 熊
+    can_equip: false
+    taming_item_id: 40057
+    hp_up_min: 8
+    hp_up_max: 14
+    mp_up_min: 1
+    mp_up_max: 2
+    evolv_item_id: 40070
+    evolv_npc_id: 45690
+    msg_ids: [2738, 2739, 2740, 2741, 2741]
+    defy_msg_id: 2742
+  - base_npc_id: 45042
+    name: 杜賓狗
+    can_equip: false
+    taming_item_id: 40057
+    hp_up_min: 3
+    hp_up_max: 6
+    mp_up_min: 1
+    mp_up_max: 2
+    evolv_item_id: 40070
+    evolv_npc_id: 45688
+    msg_ids: [1088, 1089, 1090, 1091, 1092]
+    defy_msg_id: 1074
+  - base_npc_id: 45043
+    name: 狼
+    can_equip: false
+    taming_item_id: 40057
+    hp_up_min: 3
+    hp_up_max: 9
+    mp_up_min: 1
+    mp_up_max: 2
+    evolv_item_id: 40070
+    evolv_npc_id: 45686
+    msg_ids: [1088, 1089, 1090, 1091, 1092]
+    defy_msg_id: 1074
+  - base_npc_id: 45044
+    name: 浣熊
+    can_equip: false
+    taming_item_id: 40057
+    hp_up_min: 3
+    hp_up_max: 9
+    mp_up_min: 2
+    mp_up_max: 4
+    evolv_item_id: 40070
+    evolv_npc_id: 45697
+    msg_ids: [3578, 3579, 3580, 3581, 3581]
+    defy_msg_id: 3582
+  - base_npc_id: 45046
+    name: 小獵犬
+    can_equip: false
+    taming_item_id: 40057
+    hp_up_min: 4
+    hp_up_max: 8
+    mp_up_min: 2
+    mp_up_max: 4
+    evolv_item_id: 40070
+    evolv_npc_id: 45692
+    msg_ids: [1088, 1089, 1090, 1091, 1092]
+    defy_msg_id: 1074
+  - base_npc_id: 45047
+    name: 聖伯納犬
+    can_equip: false
+    taming_item_id: 40057
+    hp_up_min: 6
+    hp_up_max: 10
+    mp_up_min: 2
+    mp_up_max: 4
+    evolv_item_id: 40070
+    evolv_npc_id: 45693
+    msg_ids: [1088, 1089, 1090, 1091, 1092]
+    defy_msg_id: 1074
+  - base_npc_id: 45048
+    name: 狐狸
+    can_equip: false
+    taming_item_id: 40057
+    hp_up_min: 3
+    hp_up_max: 9
+    mp_up_min: 2
+    mp_up_max: 3
+    evolv_item_id: 40070
+    evolv_npc_id: 45694
+    msg_ids: [2733, 2734, 2735, 2736, 2736]
+    defy_msg_id: 2737
+  - base_npc_id: 45049
+    name: 暴走兔
+    can_equip: false
+    taming_item_id: 40060
+    hp_up_min: 3
+    hp_up_max: 8
+    mp_up_min: 3
+    mp_up_max: 5
+    evolv_item_id: 40070
+    evolv_npc_id: 45695
+    msg_ids: [2723, 2724, 2725, 2726, 2726]
+    defy_msg_id: 2727
+  - base_npc_id: 45053
+    name: 哈士奇
+    can_equip: false
+    taming_item_id: 40057
+    hp_up_min: 8
+    hp_up_max: 13
+    mp_up_min: 1
+    mp_up_max: 2
+    evolv_item_id: 40070
+    evolv_npc_id: 45689
+    msg_ids: [1088, 1089, 1090, 1091, 1092]
+    defy_msg_id: 1074
+  - base_npc_id: 45054
+    name: 柯利
+    can_equip: false
+    taming_item_id: 40057
+    hp_up_min: 8
+    hp_up_max: 11
+    mp_up_min: 3
+    mp_up_max: 4
+    evolv_item_id: 40070
+    evolv_npc_id: 45691
+    msg_ids: [1088, 1089, 1090, 1091, 1092]
+    defy_msg_id: 1074
+  - base_npc_id: 45313
+    name: 虎男
+    can_equip: false
+    taming_item_id: 40057
+    hp_up_min: 8
+    hp_up_max: 14
+    mp_up_min: 3
+    mp_up_max: 5
+    evolv_item_id: 40070
+    evolv_npc_id: 45710
+    msg_ids: [4135, 4136, 4137, 4138, 4138]
+    defy_msg_id: 4134
+  - base_npc_id: 45686
+    name: 高等狼
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 3
+    hp_up_max: 9
+    mp_up_min: 1
+    mp_up_max: 2
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [2823, 2824, 2825, 2826, 2826]
+    defy_msg_id: 1074
+  - base_npc_id: 45687
+    name: 高等牧羊犬
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 5
+    hp_up_max: 8
+    mp_up_min: 1
+    mp_up_max: 2
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [2819, 2820, 2821, 2822, 2822]
+    defy_msg_id: 1074
+  - base_npc_id: 45688
+    name: 高等杜賓狗
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 4
+    hp_up_max: 6
+    mp_up_min: 1
+    mp_up_max: 2
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [2811, 2812, 2813, 2814, 2814]
+    defy_msg_id: 1074
+  - base_npc_id: 45689
+    name: 高等哈士奇
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 10
+    hp_up_max: 15
+    mp_up_min: 1
+    mp_up_max: 2
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [2815, 2816, 2817, 2818, 2818]
+    defy_msg_id: 1074
+  - base_npc_id: 45690
+    name: 高等熊
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 8
+    hp_up_max: 14
+    mp_up_min: 1
+    mp_up_max: 2
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [2831, 2832, 2833, 2834, 2834]
+    defy_msg_id: 2742
+  - base_npc_id: 45691
+    name: 高等柯利
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 10
+    hp_up_max: 14
+    mp_up_min: 3
+    mp_up_max: 4
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [2827, 2828, 2829, 2830, 2830]
+    defy_msg_id: 1074
+  - base_npc_id: 45692
+    name: 高等小獵犬
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 4
+    hp_up_max: 8
+    mp_up_min: 2
+    mp_up_max: 4
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [2847, 2848, 2849, 2850, 2850]
+    defy_msg_id: 1074
+  - base_npc_id: 45693
+    name: 高等聖伯納犬
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 6
+    hp_up_max: 9
+    mp_up_min: 2
+    mp_up_max: 4
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [2851, 2852, 2853, 2854, 2854]
+    defy_msg_id: 1074
+  - base_npc_id: 45694
+    name: 高等狐狸
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 3
+    hp_up_max: 9
+    mp_up_min: 2
+    mp_up_max: 4
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [2835, 2836, 2837, 2838, 2838]
+    defy_msg_id: 2737
+  - base_npc_id: 45695
+    name: 高等暴走兔
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 3
+    hp_up_max: 8
+    mp_up_min: 3
+    mp_up_max: 5
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [2843, 2844, 2845, 2846, 2846]
+    defy_msg_id: 2727
+  - base_npc_id: 45696
+    name: 高等貓
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 3
+    hp_up_max: 6
+    mp_up_min: 3
+    mp_up_max: 5
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [2839, 2840, 2841, 2842, 2842]
+    defy_msg_id: 2732
+  - base_npc_id: 45697
+    name: 高等浣熊
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 5
+    hp_up_max: 9
+    mp_up_min: 3
+    mp_up_max: 5
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [3583, 3584, 3585, 3586, 3586]
+    defy_msg_id: 3582
+  - base_npc_id: 45710
+    name: 真．虎男
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 10
+    hp_up_max: 15
+    mp_up_min: 3
+    mp_up_max: 5
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [4140, 4141, 4142, 4143, 4143]
+    defy_msg_id: 4134
+  - base_npc_id: 45711
+    name: 高麗幼犬
+    can_equip: false
+    taming_item_id: 40057
+    hp_up_min: 3
+    hp_up_max: 6
+    mp_up_min: 3
+    mp_up_max: 5
+    evolv_item_id: 40070
+    evolv_npc_id: 45712
+    msg_ids: [4125, 4126, 4127, 4128, 4128]
+    defy_msg_id: 4124
+  - base_npc_id: 45712
+    name: 高麗犬
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 5
+    hp_up_max: 8
+    mp_up_min: 3
+    mp_up_max: 5
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [4130, 4131, 4132, 4133, 4133]
+    defy_msg_id: 4124
+  - base_npc_id: 46046
+    name: 黃金龍
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 8
+    hp_up_max: 13
+    mp_up_min: 2
+    mp_up_max: 4
+    evolv_item_id: 0
+    evolv_npc_id: 0
+    msg_ids: [0, 0, 0, 0, 0]
+    defy_msg_id: 0
+  - base_npc_id: 97022
+    name: 頑皮龍
+    can_equip: false
+    taming_item_id: 0
+    hp_up_min: 8
+    hp_up_max: 14
+    mp_up_min: 3
+    mp_up_max: 5
+    evolv_item_id: 40070
+    evolv_npc_id: 97024
+    msg_ids: [7781, 7782, 7783, 7784, 7785]
+    defy_msg_id: 7781
+  - base_npc_id: 97023
+    name: 淘氣龍
+    can_equip: false
+    taming_item_id: 0
+    hp_up_min: 8
+    hp_up_max: 14
+    mp_up_min: 3
+    mp_up_max: 5
+    evolv_item_id: 40070
+    evolv_npc_id: 97025
+    msg_ids: [7781, 7782, 7783, 7784, 7785]
+    defy_msg_id: 7781
+  - base_npc_id: 97024
+    name: 高等頑皮龍
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 10
+    hp_up_max: 15
+    mp_up_min: 3
+    mp_up_max: 5
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [7789, 7790, 7791, 7792, 7793]
+    defy_msg_id: 7789
+  - base_npc_id: 97025
+    name: 高等淘氣龍
+    can_equip: true
+    taming_item_id: 0
+    hp_up_min: 10
+    hp_up_max: 15
+    mp_up_min: 3
+    mp_up_max: 5
+    evolv_item_id: 41310
+    evolv_npc_id: 46046
+    msg_ids: [7789, 7790, 7791, 7792, 7793]
+    defy_msg_id: 7789

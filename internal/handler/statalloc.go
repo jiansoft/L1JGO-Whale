@@ -16,15 +16,23 @@ const (
 )
 
 // HandlePlate processes C_PLATE (opcode 10) — stat point allocation (bonus stats at level 51+).
+// NOTE: Opcode 10 is shared with bulletin board (C_Board). HandleBoardOrPlate in board.go
+// dispatches to this function when the packet is not a board request.
 // Java equivalent: C_Attr case 479.
 // Format: [H attrcode(479)][C confirm(1=yes)][S statName]
 func HandlePlate(sess *net.Session, r *packet.Reader, deps *Deps) {
 	attrCode := r.ReadH()
+	confirm := r.ReadC()
+	handleStatAlloc(sess, attrCode, confirm, r, deps)
+}
+
+// handleStatAlloc is the core stat allocation logic, called either from HandlePlate
+// or from HandleBoardOrPlate when opcode 10 is not a board request.
+func handleStatAlloc(sess *net.Session, attrCode uint16, confirm byte, r *packet.Reader, deps *Deps) {
 	if attrCode != statAllocAttrCode {
 		return
 	}
 
-	confirm := r.ReadC()
 	if confirm != 1 {
 		return
 	}

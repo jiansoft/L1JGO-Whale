@@ -1,545 +1,681 @@
 door_gfxs:
   - gfxid: 88
+    note: 話せる島の洞窟2階
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 89
+    note: 話せる島の洞窟2階
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 92
+    note: Pagos Room
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 1
   - gfxid: 93
+    note: Pagos Room
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 339
+    note: Kent Castle
     direction: 0
     left_edge_offset: -1
     right_edge_offset: 0
   - gfxid: 442
+    note: Windawood
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 443
+    note: Dwarf Castle
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 1
   - gfxid: 444
+    note: SKT
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 446
+    note: SKT
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 447
+    note: SKT
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 448
+    note: SKT
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 766
+    note: Orcish Forest
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 767
+    note: Orcish Forest
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 768
+    note: Orcish Forest
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 845
+    note: SKT
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1010
+    note: SKT
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1327
+    note: Giran
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1329
+    note: Giran
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1330
+    note: Giran
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1331
+    note: Giran
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1332
+    note: Giran
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1333
+    note: Giran
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1334
+    note: Giran
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1336
+    note: Giran Castle
     direction: 0
     left_edge_offset: -1
     right_edge_offset: 0
   - gfxid: 1338
+    note: Giran Castle
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 1
   - gfxid: 1341
+    note: Orcish Forest
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1342
+    note: Giran
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 1
   - gfxid: 1347
+    note: Giran
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1348
+    note: Giran
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1349
+    note: Giran
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1350
+    note: Giran
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1351
+    note: Giran
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1352
+    note: Giran
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1371
+    note: Giran
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1373
+    note: Giran
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1487
+    note: Giran Dog Race
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1664
+    note: Heine
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1665
+    note: Heine
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1688
+    note: Heine
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1689
+    note: Heine
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1690
+    note: Heine
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1691
+    note: Heine
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1692
+    note: Heine
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1700
+    note: Heine
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1734
+    note: Heine
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1735
+    note: Heine
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1736
+    note: Heine
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1737
+    note: Heine
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1738
+    note: Heine
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1739
+    note: Heine
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1740
+    note: Heine
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1741
+    note: Heine
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1743
+    note: Heine
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1744
+    note: Heine
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1745
+    note: Heine Castle
     direction: 0
     left_edge_offset: -2
     right_edge_offset: 0
   - gfxid: 1750
+    note: Heine
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1751
+    note: Heine
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 1826
+    note: Dwarf Castle
     direction: 1
     left_edge_offset: -2
     right_edge_offset: 1
   - gfxid: 1827
+    note: Dwarf Castle
     direction: 0
     left_edge_offset: -1
     right_edge_offset: 2
   - gfxid: 2083
+    note: Hidden Valley
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2089
+    note: Hidden Valley
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2114
+    note: Hidden Valley
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2128
+    note: Hidden Valley
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2160
+    note: Oren
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2161
+    note: Oren
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2162
+    note: Oren
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2163
+    note: Oren
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2164
+    note: Oren
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2190
+    note: Oren
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2191
+    note: Oren
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2301
+    note: Talking Island
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2303
+    note: Talking Island
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2304
+    note: Talking Island
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2305
+    note: Talking Island
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2306
+    note: Talking Island
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2344
+    note: Talking Island
     direction: 1
     left_edge_offset: -364
     right_edge_offset: -364
   - gfxid: 2345
+    note: Talking Island
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2346
+    note: Talking Island
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2510
+    note: race
     direction: 1
     left_edge_offset: -3
     right_edge_offset: 4
   - gfxid: 2556
+    note: Aden
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2558
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2574
+    note: Aden
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2575
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2578
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2579
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2580
+    note: Aden
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2581
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2582
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2583
+    note: Aden
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2585
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2588
+    note: Aden
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2589
+    note: Aden
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2590
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2591
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2596
+    note: Aden
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2597
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2598
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2599
+    note: Aden
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2600
+    note: Aden
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2603
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2605
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2606
+    note: Aden
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2608
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2610
+    note: Aden
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2628
+    note: Aden
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2629
+    note: Aden
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2630
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2631
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2634
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2635
+    note: Aden
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 2732
+    note: OT Castle
     direction: 0
     left_edge_offset: -1
     right_edge_offset: 2
   - gfxid: 2736
+    note: Kent Castle
     direction: 1
     left_edge_offset: -2
     right_edge_offset: 1
   - gfxid: 2744
+    note: Giran Castle
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 3
   - gfxid: 2745
+    note: Giran Castle
     direction: 0
     left_edge_offset: -1
     right_edge_offset: 2
   - gfxid: 2746
+    note: Giran Castle
     direction: 1
     left_edge_offset: -2
     right_edge_offset: 1
   - gfxid: 3234
+    note: Kent Castle
     direction: 0
     left_edge_offset: -2
     right_edge_offset: 1
   - gfxid: 6026
+    note: Gludio
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 6027
+    note: Gludio
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 6028
+    note: Gludio
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 6029
+    note: Gludio
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 1
   - gfxid: 6030
+    note: Gludio
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 1
   - gfxid: 6031
+    note: Gludio
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 6032
+    note: Gludio
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 6033
+    note: Gludio
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 6336
+    note: Haunted House
     direction: 0
     left_edge_offset: -1
     right_edge_offset: 1
   - gfxid: 6351
+    note: Haunted House
     direction: 1
     left_edge_offset: -3
     right_edge_offset: 3
   - gfxid: 6379
+    note: Haunted House
     direction: 1
     left_edge_offset: 0
     right_edge_offset: 2
   - gfxid: 6640
+    note: 水晶の洞窟1階
     direction: 1
     left_edge_offset: -1
     right_edge_offset: 3
   - gfxid: 6642
+    note: 水晶の洞窟2階
     direction: 0
     left_edge_offset: -2
     right_edge_offset: 2
   - gfxid: 6677
+    note: race
     direction: 1
     left_edge_offset: -3
     right_edge_offset: 4
   - gfxid: 6692
+    note: Death match
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 1
   - gfxid: 6694
+    note: Death match
     direction: 1
     left_edge_offset: -1
     right_edge_offset: 0
   - gfxid: 7536
+    note: Hardin Quest
     direction: 0
     left_edge_offset: 0
     right_edge_offset: 0
   - gfxid: 7556
+    note: 安塔瑞斯洞穴
     direction: 1
     left_edge_offset: -2
     right_edge_offset: 2
   - gfxid: 7858
+    note: 法利昂洞穴
     direction: 0
     left_edge_offset: -2
     right_edge_offset: 2
   - gfxid: 7859
+    note: 法利昂洞穴
     direction: 1
     left_edge_offset: -2
     right_edge_offset: 2

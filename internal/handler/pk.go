@@ -2,9 +2,9 @@ package handler
 
 import (
 	"fmt"
-	"math"
 	"math/rand"
 
+	"github.com/l1jgo/server/internal/core/event"
 	"github.com/l1jgo/server/internal/net"
 	"github.com/l1jgo/server/internal/net/packet"
 	"github.com/l1jgo/server/internal/scripting"
@@ -52,9 +52,9 @@ func triggerPinkName(attacker, victim *world.PlayerInfo, deps *Deps) {
 		return // victim is red/pink — attacking them is "justified"
 	}
 
-	// Set pink name for 180 seconds (900 ticks at 200ms)
+	// Set pink name — duration from Lua
 	attacker.PinkName = true
-	attacker.PinkNameTicks = 900
+	attacker.PinkNameTicks = deps.Scripting.GetPKTimers().PinkNameTicks
 
 	// Send S_PinkName to attacker and nearby
 	sendPinkName(attacker.Session, attacker.CharID, 180)
@@ -121,34 +121,17 @@ func processPKKill(killer, victim *world.PlayerInfo, deps *Deps) {
 
 	// Only count as PK if victim was blue-named (lawful >= 0) and not pink
 	if victim.Lawful >= 0 && !victim.PinkName {
-		// Set wanted status — guards will hunt this player for 24 hours
-		// Java: addPkTime() sets _lastPk = current timestamp, isWanted() checks 24h window
-		killer.WantedTicks = 432000 // 24 hours at 200ms/tick
+		// Set wanted status — guards will hunt this player (duration from Lua)
+		killer.WantedTicks = deps.Scripting.GetPKTimers().WantedTicks
 
 		// PKCount incremented if killer's lawful < 30000 (Java condition)
 		if killer.Lawful < 30000 {
 			killer.PKCount++
 		}
 
-		// Calculate lawful decrease based on killer's level
-		// Java: Level < 50: -(Level^2 * 4); Level >= 50: -(Level^3 * 0.08)
-		var newLawful int32
-		lvl := float64(killer.Level)
-		if killer.Level < 50 {
-			newLawful = -1 * int32(math.Pow(lvl, 2)*4)
-		} else {
-			newLawful = -1 * int32(math.Pow(lvl, 3)*0.08)
-		}
-
-		// Clamp: if current_lawful - 1000 is already lower than calculated, use that instead
-		if killer.Lawful-1000 < newLawful {
-			newLawful = killer.Lawful - 1000
-		}
-		if newLawful < -32768 {
-			newLawful = -32768
-		}
-		killer.Lawful = newLawful
-		clampLawful(&killer.Lawful)
+		// Calculate lawful decrease via Lua (level-based formula + clamping)
+		pkResult := deps.Scripting.CalcPKLawfulPenalty(int(killer.Level), killer.Lawful)
+		killer.Lawful = pkResult.NewLawful
 
 		// Send lawful update
 		sendLawful(killer.Session, killer.CharID, killer.Lawful)
@@ -160,13 +143,24 @@ func processPKKill(killer, victim *world.PlayerInfo, deps *Deps) {
 		// Send PK status messages
 		sendPlayerStatus(killer.Session, killer)
 
-		// Warning at PKCount 5-9: message 551 (你的PK次數為%0，達到%1次會被丟進地獄)
-		// Java uses S_RedMessage (center screen red text) with 2 args: PKCount and "10"
-		if killer.PKCount >= 5 && killer.PKCount < 10 {
-			sendRedMessage(killer.Session, 551, fmt.Sprintf("%d", killer.PKCount), "10")
+		// Warning at PKCount thresholds (from Lua): message 551
+		pkThresh := deps.Scripting.GetPKThresholds()
+		if killer.PKCount >= pkThresh.Warning && killer.PKCount < pkThresh.Punish {
+			sendRedMessage(killer.Session, 551, fmt.Sprintf("%d", killer.PKCount), fmt.Sprintf("%d", pkThresh.Punish))
 		}
 
 		deps.Log.Info(fmt.Sprintf("PK 擊殺  擊殺者=%s  受害者=%s  PK次數=%d  正義值=%d", killer.Name, victim.Name, killer.PKCount, killer.Lawful))
+	}
+
+	// Emit PlayerKilled event (PvP-specific, in addition to PlayerDied from KillPlayer)
+	if deps.Bus != nil {
+		event.Emit(deps.Bus, event.PlayerKilled{
+			KillerCharID: killer.CharID,
+			VictimCharID: victim.CharID,
+			MapID:        victim.MapID,
+			X:            victim.X,
+			Y:            victim.Y,
+		})
 	}
 
 	// Item drop from victim based on victim's lawful
@@ -175,41 +169,14 @@ func processPKKill(killer, victim *world.PlayerInfo, deps *Deps) {
 
 // ---------- Item Drop on PK Death ----------
 
-// dropItemsOnPKDeath drops random items from the victim based on their lawful value.
-// Java formula: lostRate = ((lawful + 32768) / 1000 - 65) * 4
-// Only drops for red-named (lawful < 0) players, doubled rate.
+// dropItemsOnPKDeath drops random items from the victim based on Lua formula.
 func dropItemsOnPKDeath(victim *world.PlayerInfo, deps *Deps) {
-	if victim.Lawful >= 0 {
-		return // blue-named players don't drop items on death
-	}
-
-	lostRate := int((float64(victim.Lawful+32768)/1000.0 - 65.0) * 4.0)
-	if lostRate >= 0 {
+	dropResult := deps.Scripting.CalcPKItemDrop(victim.Lawful)
+	if !dropResult.ShouldDrop || dropResult.Count <= 0 {
 		return
 	}
-	lostRate = -lostRate
-	// Double rate for red-named
-	if victim.Lawful < 0 {
-		lostRate *= 2
-	}
 
-	// Roll the dice (out of 1000)
-	rnd := rand.Intn(1000) + 1
-	if rnd > lostRate {
-		return // no drop
-	}
-
-	// Determine how many items to drop
-	count := 1
-	if victim.Lawful <= -30000 {
-		count = rand.Intn(4) + 1
-	} else if victim.Lawful <= -20000 {
-		count = rand.Intn(3) + 1
-	} else if victim.Lawful <= -10000 {
-		count = rand.Intn(2) + 1
-	}
-
-	for i := 0; i < count; i++ {
+	for i := 0; i < dropResult.Count; i++ {
 		dropOneItem(victim, deps)
 	}
 }

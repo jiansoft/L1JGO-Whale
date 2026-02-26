@@ -1,6 +1,7 @@
 package world
 
 import (
+	"math/rand"
 	"time"
 
 	"github.com/l1jgo/server/internal/net"
@@ -77,6 +78,10 @@ type PlayerInfo struct {
 	PolyID      int32 // current polymorph poly_id (for equip/skill checks; 0=not polymorphed)
 	ActiveSetID int   // armor set ID currently active (0=none); cleared when set is incomplete
 
+	// Summon selection mode: true when "summonlist" dialog is open, waiting for player to pick a summon.
+	// Set by executeSummonMonster when ring equipped; cleared by HandleNpcAction on numeric response.
+	SummonSelectionMode bool
+
 	Inv          *Inventory // in-memory inventory
 	Equip        Equipment  // equipped items (value type, zero-initialized = all slots empty)
 	EquipBonuses EquipStats // cached equipment stat contributions (for diff on equip/unequip)
@@ -129,6 +134,33 @@ type PlayerInfo struct {
 	// Party position refresh: Java L1PartyRefresh runs every 25 seconds.
 	// Counter decrements each tick; at 0, sends position refresh and resets.
 	PartyRefreshTicks int
+
+	// Crafting: set when S_InputAmount is sent, cleared on C_Amount response.
+	// Non-empty value means the next opcode 11 (C_HYPERTEXT_INPUT_RESULT) should be
+	// interpreted as C_Amount (crafting batch response) instead of monlist (polymorph).
+	PendingCraftAction string
+
+	// Paginated teleport (Npc_Teleport): current browsing state
+	TelePage     int    // current page (0-based)
+	TeleCategory string // current category key (e.g., "A", "B", "H01")
+	TeleNpcObjID int32  // NPC object ID for the teleport dialog
+
+	// Buddy/friend list (persisted to DB, loaded on enter world)
+	Buddies []BuddyEntry
+
+	// Exclude/block list (session-only, max 16 entries, NOT persisted)
+	ExcludeList []string
+
+	// Dirty flag for batch persistence. Set to true when any persisted state
+	// changes (position, HP/MP, exp, inventory, buffs). PersistenceSystem only
+	// saves dirty players and resets this flag after each successful save.
+	Dirty bool
+}
+
+// BuddyEntry represents a single buddy in the player's friend list.
+type BuddyEntry struct {
+	CharID int32
+	Name   string
 }
 
 // WarehouseCache maps a temporary objectID to a DB warehouse item.
@@ -189,6 +221,14 @@ func (p *PlayerInfo) HasBuff(skillID int32) bool {
 	}
 	_, ok := p.ActiveBuffs[skillID]
 	return ok
+}
+
+// GetBuff returns the active buff for a skillID, or nil if not found.
+func (p *PlayerInfo) GetBuff(skillID int32) *ActiveBuff {
+	if p.ActiveBuffs == nil {
+		return nil
+	}
+	return p.ActiveBuffs[skillID]
 }
 
 // AddBuff adds or replaces a buff. Returns the old buff if replaced, for stat reversal.
@@ -309,11 +349,36 @@ type State struct {
 	doors    map[int32]*DoorInfo // door object ID → DoorInfo
 	doorList []*DoorInfo         // all doors (for tick iteration)
 
+	pets      map[int32]*PetInfo      // pet object ID → PetInfo
+	summons   map[int32]*SummonInfo   // summon object ID → SummonInfo
+	dolls     map[int32]*DollInfo     // doll object ID → DollInfo
+	followers map[int32]*FollowerInfo // follower object ID → FollowerInfo
+
 	groundItems map[int32]*GroundItem // ground item object ID → GroundItem
 
 	Parties     *PartyManager
 	ChatParties *ChatPartyManager
 	Clans       *ClanManager
+
+	// Weather & game time (accessed from game loop only)
+	Weather  byte // current weather type (0=clear, 1-3=snow, 17-19=rain)
+	LastHour int  // last game hour for hour-change detection (-1 = uninitialized)
+}
+
+// RandomizeWeather picks a random weather with weighted distribution.
+// Java defaults weather to 4 (clear) and never auto-changes. In Go, we add
+// some variety but keep clear weather dominant (~60%) to avoid constant rain/snow.
+// Valid values: 0=clear, 1-3=snow, 17-19=rain (Java confirms 17-19, not 16).
+func (s *State) RandomizeWeather() {
+	roll := rand.Intn(10) // 0-9
+	switch {
+	case roll < 6: // 60% clear
+		s.Weather = 0
+	case roll < 8: // 20% snow (light)
+		s.Weather = byte(1 + rand.Intn(3)) // 1, 2, or 3
+	default: // 20% rain (light)
+		s.Weather = byte(17 + rand.Intn(3)) // 17, 18, or 19
+	}
 }
 
 func NewState() *State {
@@ -329,7 +394,12 @@ func NewState() *State {
 		Clans:       NewClanManager(),
 		npcs:        make(map[int32]*NpcInfo),
 		doors:       make(map[int32]*DoorInfo),
+		pets:        make(map[int32]*PetInfo),
+		summons:     make(map[int32]*SummonInfo),
+		dolls:       make(map[int32]*DollInfo),
+		followers:   make(map[int32]*FollowerInfo),
 		groundItems: make(map[int32]*GroundItem),
+		LastHour:    -1,
 	}
 }
 
@@ -490,6 +560,29 @@ func (s *State) UpdateNpcPosition(npcID int32, newX, newY int32, heading int16) 
 	s.entity.Move(npc.MapID, oldX, oldY, newX, newY, npcID)
 }
 
+// RemoveNpc permanently removes an NPC from the world (used for taming, conversion).
+// Unlike NpcDied, this also deletes the NPC from the internal maps.
+func (s *State) RemoveNpc(npcID int32) *NpcInfo {
+	npc, ok := s.npcs[npcID]
+	if !ok {
+		return nil
+	}
+	if !npc.Dead {
+		s.npcAoi.Remove(npc.ID, npc.X, npc.Y, npc.MapID)
+		s.entity.Vacate(npc.MapID, npc.X, npc.Y, npc.ID)
+	}
+	delete(s.npcs, npcID)
+	// Remove from npcList (swap-delete for O(1))
+	for i, n := range s.npcList {
+		if n.ID == npcID {
+			s.npcList[i] = s.npcList[len(s.npcList)-1]
+			s.npcList = s.npcList[:len(s.npcList)-1]
+			break
+		}
+	}
+	return npc
+}
+
 // NpcDied removes a dead NPC from the NPC AOI grid and entity grid.
 // Call this when an NPC's Dead flag is set to true.
 func (s *State) NpcDied(npc *NpcInfo) {
@@ -624,6 +717,34 @@ func (s *State) RemoveDoor(id int32) {
 // DoorCount returns total door count.
 func (s *State) DoorCount() int {
 	return len(s.doors)
+}
+
+// GetNearbyPets returns all alive pets visible from the given position (Chebyshev <= 20).
+func (s *State) GetNearbyPets(x, y int32, mapID int16) []*PetInfo {
+	nearbyIDs := s.npcAoi.GetNearby(x, y, mapID)
+	var result []*PetInfo
+	for _, nid := range nearbyIDs {
+		pet := s.pets[nid]
+		if pet == nil || pet.Dead {
+			continue
+		}
+		dx := pet.X - x
+		dy := pet.Y - y
+		if dx < 0 {
+			dx = -dx
+		}
+		if dy < 0 {
+			dy = -dy
+		}
+		dist := dx
+		if dy > dist {
+			dist = dy
+		}
+		if dist <= 20 {
+			result = append(result, pet)
+		}
+	}
+	return result
 }
 
 // --- Ground item methods ---

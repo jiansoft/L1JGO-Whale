@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 
+	"github.com/l1jgo/server/internal/core/event"
 	"github.com/l1jgo/server/internal/net"
 	"github.com/l1jgo/server/internal/net/packet"
 	"github.com/l1jgo/server/internal/world"
@@ -33,7 +34,7 @@ func HandleRestart(sess *net.Session, _ *packet.Reader, deps *Deps) {
 	if player.MP > player.MaxMP {
 		player.MP = player.MaxMP
 	}
-	player.Food = 40 // Java: C_Restart sets food = 40
+	player.Food = int16(deps.Config.Gameplay.InitialFood)
 
 	// Get respawn location based on current map (Lua: scripts/world/respawn.lua)
 	rx, ry, rmap := getBackLocation(player.MapID, deps)
@@ -43,11 +44,10 @@ func HandleRestart(sess *net.Session, _ *packet.Reader, deps *Deps) {
 		deps.MapData.SetImpassable(player.MapID, player.X, player.Y, false)
 	}
 
-	// Broadcast removal from old position + unblock entity collision
+	// Broadcast removal from old position
 	nearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
 	for _, other := range nearby {
 		sendRemoveObject(other.Session, player.CharID)
-		SendEntityUnblock(other.Session, player.X, player.Y)
 	}
 
 	// Move to respawn point
@@ -67,23 +67,17 @@ func HandleRestart(sess *net.Session, _ *packet.Reader, deps *Deps) {
 	// Send status update
 	sendPlayerStatus(sess, player)
 
-	// Send to nearby players at new location + entity collision
+	// Send to nearby players at new location
 	newNearby := deps.World.GetNearbyPlayers(rx, ry, rmap, sess.ID)
 	for _, other := range newNearby {
 		sendPutObject(other.Session, player)
 		sendPutObject(sess, other)
-		// Mutual entity collision
-		SendEntityBlock(other.Session, rx, ry, rmap, deps.World)
-		SendEntityBlock(sess, other.X, other.Y, rmap, deps.World)
 	}
 
-	// Send nearby NPCs + entity collision
+	// Send nearby NPCs
 	nearbyNpcs := deps.World.GetNearbyNpcs(rx, ry, rmap)
 	for _, npc := range nearbyNpcs {
 		sendNpcPack(sess, npc)
-		if !npc.Dead {
-			SendEntityBlock(sess, npc.X, npc.Y, rmap, deps.World)
-		}
 	}
 
 	// Send nearby ground items
@@ -92,8 +86,8 @@ func HandleRestart(sess *net.Session, _ *packet.Reader, deps *Deps) {
 		sendDropItem(sess, g)
 	}
 
-	// Send weather
-	sendWeather(sess, 0)
+	// Send weather (Java: sends current world weather, not hardcoded 0)
+	sendWeather(sess, deps.World.Weather)
 
 	deps.Log.Info(fmt.Sprintf("玩家重新開始  角色=%s  x=%d  y=%d  地圖=%d", player.Name, rx, ry, rmap))
 }
@@ -110,13 +104,10 @@ func KillPlayer(player *world.PlayerInfo, deps *Deps) {
 	// Dead player no longer occupies the tile
 	deps.World.VacateEntity(player.MapID, player.X, player.Y, player.CharID)
 
-	// Broadcast death animation to self + nearby, unblock entity collision (dead = passable)
+	// Broadcast death animation to self + nearby
 	nearby := deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
 	for _, viewer := range nearby {
 		sendActionGfx(viewer.Session, player.CharID, 8) // ACTION_Die = 8
-		if viewer.CharID != player.CharID {
-			SendEntityUnblock(viewer.Session, player.X, player.Y)
-		}
 	}
 	sendActionGfx(player.Session, player.CharID, 8)
 
@@ -129,6 +120,16 @@ func KillPlayer(player *world.PlayerInfo, deps *Deps) {
 	// Exp penalty via Lua (scripts/core/levelup.lua): 5% of level exp range
 	applyDeathExpPenalty(player, deps)
 	sendExpUpdate(player.Session, player.Level, player.Exp)
+
+	// Emit PlayerDied event (readable next tick by subscribers)
+	if deps.Bus != nil {
+		event.Emit(deps.Bus, event.PlayerDied{
+			CharID: player.CharID,
+			MapID:  player.MapID,
+			X:      player.X,
+			Y:      player.Y,
+		})
+	}
 
 	deps.Log.Info(fmt.Sprintf("玩家死亡  角色=%s  x=%d  y=%d", player.Name, player.X, player.Y))
 }
@@ -150,7 +151,7 @@ func clearAllBuffsOnDeath(player *world.PlayerInfo, deps *Deps) {
 	for skillID, buff := range player.ActiveBuffs {
 		revertBuffStats(player, buff)
 		delete(player.ActiveBuffs, skillID)
-		cancelBuffIcon(player, skillID)
+		cancelBuffIcon(player, skillID, deps)
 
 		if skillID == SkillShapeChange {
 			UndoPoly(player, deps)
@@ -162,7 +163,7 @@ func clearAllBuffsOnDeath(player *world.PlayerInfo, deps *Deps) {
 		}
 		if buff.SetBraveSpeed > 0 {
 			player.BraveSpeed = 0
-			sendSpeedToAll(player, deps, 0, 0)
+			sendBraveToAll(player, deps, 0, 0)
 		}
 	}
 	sendPlayerStatus(player.Session, player)

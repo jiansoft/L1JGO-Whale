@@ -4,384 +4,1573 @@ armor_sets:
     items: [20009, 20099, 20165, 20197]
     poly_id: 3889
     ac: -2
+    hp: 0
+    mp: 0
     hpr: 5
-
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 2
     name: 死亡騎士套裝
     items: [20010, 20100, 20166, 20198]
     poly_id: 6137
     ac: -4
+    hp: 0
+    mp: 0
     hpr: -7
-
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 3
     name: 反王套裝
     items: [20024, 20118, 20170, 20203]
     poly_id: 3903
     ac: -3
+    hp: 0
+    mp: 0
     hpr: 12
-
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 4
     name: 克特套裝
     items: [20041, 20150, 20184, 20214]
     poly_id: 3101
     ac: -4
+    hp: 0
+    mp: 0
     hpr: -7
-
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 5
     name: 賽尼斯套裝
     items: [20042, 20151, 20185, 20215]
     poly_id: 3902
     ac: -2
+    hp: 0
     mp: 100
+    hpr: 0
     mpr: 12
-
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 6
     name: 南瓜頭套
     items: [20047]
     poly_id: 2501
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 7
     name: 吸血鬼斗篷
     items: [20079]
     poly_id: 3952
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 8
     name: 死神披肩
     items: [20342]
     poly_id: 2388
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 9
     name: 曼波兔帽
     items: [20343]
     poly_id: 4767
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 10
     name: 曼波兔帽(蘿蔔)
     items: [20344]
     poly_id: 4769
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 11
     name: 變形怪首領之戒(左)
     items: [20278]
     poly_id: 2374
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 12
     name: 變形怪首領之戒(右)
     items: [20277]
     poly_id: 3864
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 13
     name: 變形怪首領項練
     items: [20250]
     poly_id: 3865
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 14
     name: 柯利的項練
     items: [20345]
     poly_id: 4928
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 15
     name: 浣熊的項練
     items: [20346]
     poly_id: 4929
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 16
     name: 韓服
     items: [20347]
     poly_id: 4227
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 17
     name: 和服
     items: [20348]
     poly_id: 3750
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 18
     name: 獵犬項練
     items: [20349]
     poly_id: 938
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 19
     name: 雪人的項練
     items: [20350]
     poly_id: 2064
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 20
     name: 雪人套裝
     items: [20351, 20352]
     poly_id: 2064
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 21
     name: 招財貓頭巾
     items: [20420]
     poly_id: 5719
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 22
     name: 紅色面具
     items: [20382]
     poly_id: 6010
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 23
     name: 德雷克頭巾
     items: [20452]
     poly_id: 6089
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 24
     name: 艾莉斯變身頭巾
     items: [20453]
     poly_id: 4001
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 25
     name: 騎士范德頭巾
     items: [20454]
     poly_id: 4000
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 26
     name: 思克巴女皇變身頭巾
     items: [20455]
     poly_id: 4004
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 27
     name: 紅色足球衣
     items: [20456]
     poly_id: 5184
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 28
     name: 藍色足球衣
     items: [20457]
     poly_id: 5186
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 29
     name: 紅色妖魔面具
     items: [20458]
     poly_id: 6010
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 30
     name: 軍馬頭盔
     items: [20383]
     poly_id: 6080
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 31
     name: 南瓜魔法帽
     items: [20380]
     poly_id: 6400
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 32
     name: 高等熊項練
     items: [20419]
     poly_id: 5976
-
-  # --- Stat-only sets (poly_id: 0 = no transform) ---
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 33
     name: 皮製套裝
     items: [20001, 20090, 20193, 20219]
-    poly_id: 0
+    poly_id: -1
     ac: -3
-
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 34
     name: 歐西斯套裝
     items: [20034, 20072, 20135, 20237]
-    poly_id: 0
+    poly_id: -1
     ac: -3
-
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 35
     name: 侏儒套裝
     items: [20007, 20052, 20223]
-    poly_id: 0
+    poly_id: -1
     ac: -1
     hp: 5
-
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 36
     name: 銀釘皮製套裝
     items: [20038, 20148, 20241, 20212]
-    poly_id: 0
+    poly_id: -1
     ac: -3
-
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 37
     name: 骷髏套裝
     items: [20045, 20124, 20221]
-    poly_id: 0
+    poly_id: -1
     ac: -2
     hp: 10
-
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 38
     name: 妖精套裝
     items: [20389, 20393, 20401, 20409, 20406]
-    poly_id: 0
+    poly_id: -1
     ac: -2
     hp: 15
     mp: 10
+    hpr: 0
+    mpr: 0
     mr: 10
-
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 39
     name: 法師套裝
     items: [20012, 20111]
-    poly_id: 0
+    poly_id: -1
+    ac: 0
+    hp: 0
     mp: 50
-
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 40
     name: 鋼鐵套裝
     items: [20003, 20091, 20163, 20194, 20220]
-    poly_id: 0
+    poly_id: -1
     ac: -3
-
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 41
     name: 藍海賊套裝
     items: [20044, 20155, 20188, 20217]
-    poly_id: 0
+    poly_id: -1
     ac: -1
     hp: 10
-    hit: 1
-
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 1
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 42
     name: 火焰之影套裝
     items: [20031, 20069, 20083, 20131, 20179, 20209, 20290, 20261]
-    poly_id: 0
+    poly_id: -1
     ac: -88
     hp: 100
     mp: 100
     hpr: 15
     mpr: 15
+    mr: 0
     str: 1
     dex: 1
     con: 1
     wis: 1
     cha: 1
     intl: 1
-
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 43
     name: 四大軍王套裝
     items: [20057, 20109, 20178, 20200]
-    poly_id: 0
+    poly_id: -1
+    ac: 0
     hp: 30
     mp: 30
     hpr: 10
     mpr: 10
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
     cha: 3
-
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 44
-    name: 真冥皇套裝
+    name: '真?冥皇套裝'
     items: [20390, 20395, 20402, 20410, 20408]
-    poly_id: 0
+    poly_id: -1
     ac: -20
     hp: 100
     mp: 20
     hpr: 10
-
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 45
     name: 泡水套裝(頭具)
     items: [21051, 21052, 21053, 21054, 21055]
-    poly_id: 0
+    poly_id: -1
     ac: -10
     hp: 100
-    def_earth: 10
-
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 10
+    def_earth: 0
   - id: 46
     name: 希望套裝
     items: [20413, 20428]
-    poly_id: 0
+    poly_id: -1
+    ac: 0
+    hp: 0
     mp: 5
-
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 47
     name: 幸運套裝
     items: [20414, 20430]
-    poly_id: 0
+    poly_id: -1
+    ac: 0
+    hp: 0
     mp: 10
-
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 48
     name: 熱情套裝
     items: [20415, 20429]
-    poly_id: 0
+    poly_id: -1
+    ac: 0
     hp: 10
-
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 49
     name: 真實套裝
     items: [20416, 20431]
-    poly_id: 0
+    poly_id: -1
+    ac: 0
     hp: 15
-
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 50
     name: 奇跡套裝
     items: [20417, 20432]
-    poly_id: 0
+    poly_id: -1
+    ac: 0
     hp: 15
     mp: 10
-
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 51
-    name: 慈愛勇氣套裝
+    name: '慈愛?勇氣套裝'
     items: [20418, 20433]
-    poly_id: 0
+    poly_id: -1
+    ac: 0
+    hp: 0
+    mp: 0
     hpr: 2
     mpr: 2
-
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 52
     name: 紅色詛咒飾品
     items: [20423, 21019]
-    poly_id: 0
+    poly_id: -1
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
     str: 2
+    dex: 0
     con: -2
-
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 53
     name: 藍色詛咒飾品
     items: [20424, 21019]
-    poly_id: 0
+    poly_id: -1
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
     wis: -2
+    cha: 0
     intl: 2
-
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 54
     name: 綠色詛咒飾品
     items: [20425, 21019]
-    poly_id: 0
+    poly_id: -1
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
     dex: 2
+    con: 0
+    wis: 0
     cha: -2
-
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 55
-    name: 男幽靈假裝套裝
+    name: 男幽靈假裝セット
     items: [21061]
     poly_id: 5484
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 56
-    name: 女幽靈假裝套裝
+    name: 女幽靈假裝セット
     items: [21062]
     poly_id: 5412
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 57
-    name: 男性泳裝(三角)
+    name: 男性水著：ブリ—フ
     items: [21063]
     poly_id: 6746
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 58
-    name: 男性泳裝(四角)
+    name: 男性水著：トランクス
     items: [21064]
     poly_id: 6747
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 59
-    name: 女性泳裝(連身)
+    name: 女性水著：ワンピ—ス
     items: [21065]
     poly_id: 6749
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 60
-    name: 女性泳裝(比基尼)
+    name: 女性水著：ビキニ
     items: [21066]
     poly_id: 6750
-
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 61
     name: 泡水套裝(帽子)
     items: [21140, 21052, 21053, 21054, 21055]
-    poly_id: 0
+    poly_id: -1
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
     dex: 1
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
     hit: 2
+    dmg: 0
+    bow_hit: 0
     bow_dmg: 1
-
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 62
     name: 泡水套裝(頭巾)
     items: [21141, 21052, 21053, 21054, 21055]
-    poly_id: 0
+    poly_id: -1
+    ac: 0
+    hp: 0
     mp: 50
+    hpr: 0
+    mpr: 0
     mr: 5
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
     sp: 1
-
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0
   - id: 63
     name: 柑橘變身帽
     items: [21142]
     poly_id: 8719
+    ac: 0
+    hp: 0
+    mp: 0
+    hpr: 0
+    mpr: 0
+    mr: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    cha: 0
+    intl: 0
+    hit: 0
+    dmg: 0
+    bow_hit: 0
+    bow_dmg: 0
+    sp: 0
+    def_water: 0
+    def_wind: 0
+    def_fire: 0
+    def_earth: 0

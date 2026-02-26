@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"math/rand"
 	"strconv"
 
 	"github.com/l1jgo/server/internal/data"
@@ -22,12 +23,17 @@ const (
 // These are NOT real spell IDs — they are virtual IDs used by setSkillEffect to track
 // potion durations in the same system as spell buffs.
 const (
-	SkillStatusBrave        int32 = 1000 // 勇敢藥水 (brave type 1, atk speed 1.33x)
-	SkillStatusHaste        int32 = 1001 // 自我加速藥水 (move speed 1.33x)
-	SkillStatusBluePotion   int32 = 1002 // 藍色藥水 (MP regen boost)
-	SkillStatusWisdomPotion int32 = 1004 // 慎重藥水 (SP +2)
-	SkillStatusElfBrave     int32 = 1016 // 精靈餅乾 (brave type 3, atk speed 1.15x)
-	SkillStatusThirdSpeed   int32 = 1027 // 三段加速 (char speed 1.15x)
+	SkillStatusBrave            int32 = 1000 // 勇敢藥水 (brave type 1, atk speed 1.33x)
+	SkillStatusHaste            int32 = 1001 // 自我加速藥水 (move speed 1.33x)
+	SkillStatusBluePotion       int32 = 1002 // 藍色藥水 (MP regen boost)
+	SkillStatusUnderwaterBreath int32 = 1003 // 伊娃的祝福 (underwater breathing)
+	SkillStatusWisdomPotion     int32 = 1004 // 慎重藥水 (SP +2)
+	SkillStatusElfBrave         int32 = 1016 // 精靈餅乾 (brave type 3, atk speed 1.15x)
+	SkillStatusRiBrave          int32 = 1017 // 生命之樹果實 (DK/IL brave)
+	SkillStatusThirdSpeed       int32 = 1027 // 三段加速 (char speed 1.15x)
+
+	SkillDecayPotion int32 = 71 // 腐敗藥水 debuff — blocks all potion use
+	SkillCurseBlind  int32 = 10 // CURSE_BLIND — blind curse effect
 )
 
 // canClassUse checks if a player's class can use the given item.
@@ -831,6 +837,13 @@ func CalcEquipStats(player *world.PlayerInfo, items *data.ItemTable, armorSets *
 			stats.HitMod += int(invItem.EnchantLvl) / 2
 			stats.DmgMod += int(invItem.EnchantLvl)
 		}
+		// NPC magic enchant bonuses (item-level temporary)
+		if invItem.DmgByMagic > 0 && invItem.DmgMagicExpiry > 0 {
+			stats.DmgMod += int(invItem.DmgByMagic)
+		}
+		if invItem.AcByMagic > 0 && invItem.AcMagicExpiry > 0 {
+			stats.AC -= int(invItem.AcByMagic) // lower AC = better defense
+		}
 		stats.BowHitMod += info.BowHitMod
 		stats.BowDmgMod += info.BowDmgMod
 		stats.AddStr += info.AddStr
@@ -1008,30 +1021,74 @@ func handleUseEtcItem(sess *net.Session, r *packet.Reader, player *world.PlayerI
 		return
 	}
 
+	// Pet collar items: summon/collect pet
+	if isPetCollar(invItem.ItemID) {
+		handleUsePetCollar(sess, player, invItem, deps)
+		return
+	}
+
+	// Magic doll items: check doll table before potions/consumables
+	if deps.Dolls != nil {
+		if dd := deps.Dolls.Get(invItem.ItemID); dd != nil {
+			handleUseDoll(sess, player, invItem, dd, deps)
+			return
+		}
+	}
+
 	consumed := false
 
 	// Check Lua potion definitions first
 	pot := deps.Scripting.GetPotionEffect(int(invItem.ItemID))
 	if pot != nil {
+		// DECAY_POTION check (Java: skill 71) — blocks ALL drinkable potions.
+		// Message 698: "喉嚨灼熱，無法喝東西"
+		if player.HasBuff(SkillDecayPotion) {
+			sendServerMessage(sess, 698)
+			return
+		}
+
 		switch pot.Type {
 		case "heal":
-			if pot.Amount > 0 && player.HP < player.MaxHP {
-				player.HP += int16(pot.Amount)
-				if player.HP > player.MaxHP {
-					player.HP = player.MaxHP
+			// Java ref: Potion.UseHeallingPotion — always consumes, always plays sound/msg.
+			// Apply Gaussian random ±20%: healHp *= (gaussian/5 + 1)
+			if pot.Amount > 0 {
+				healAmt := float64(pot.Amount) * (rand.NormFloat64()/5.0 + 1.0)
+				if healAmt < 1 {
+					healAmt = 1
 				}
-				sendHpUpdate(sess, player)
-				sendEffectOnPlayer(sess, player.CharID, 189) // blue potion effect
+				if player.HP < player.MaxHP {
+					player.HP += int16(healAmt)
+					if player.HP > player.MaxHP {
+						player.HP = player.MaxHP
+					}
+					sendHpUpdate(sess, player)
+				}
+				gfx := int32(pot.GfxID)
+				if gfx == 0 {
+					gfx = 189 // fallback to small blue sparkle
+				}
+				broadcastEffect(sess, player, gfx, deps)
+				sendServerMessage(sess, 77) // "你覺得舒服多了"
 				consumed = true
 			}
 
 		case "mana":
-			if pot.Amount > 0 && player.MP < player.MaxMP {
-				player.MP += int16(pot.Amount)
-				if player.MP > player.MaxMP {
-					player.MP = player.MaxMP
+			// Java ref: Potion.UseMpPotion — always consumes, always plays sound/msg.
+			// If range > 0: mpAmount = base + rand(range); else fixed amount.
+			if pot.Amount > 0 {
+				mpAmt := pot.Amount
+				if pot.Range > 0 {
+					mpAmt = pot.Amount + rand.Intn(pot.Range)
 				}
-				sendMpUpdate(sess, player)
+				if player.MP < player.MaxMP {
+					player.MP += int16(mpAmt)
+					if player.MP > player.MaxMP {
+						player.MP = player.MaxMP
+					}
+					sendMpUpdate(sess, player)
+				}
+				broadcastEffect(sess, player, 190, deps)
+				sendServerMessage(sess, 338) // "你的 魔力 漸漸恢復"
 				consumed = true
 			}
 
@@ -1042,15 +1099,30 @@ func handleUseEtcItem(sess *net.Session, r *packet.Reader, player *world.PlayerI
 			}
 
 		case "brave":
+			// Class restrictions from Lua: "knight","elf","crown","notDKIL","DKIL"
+			// Non-matching class: send message 79 "沒有任何事情發生" + consume item.
 			if pot.Duration > 0 {
-				applyBrave(sess, player, pot.Duration, byte(pot.BraveType), int32(pot.GfxID), deps)
-				consumed = true
+				braveType := byte(pot.BraveType)
+				classOK := checkBraveClassRestrict(player.ClassType, pot.ClassRestrict)
+				if classOK {
+					applyBrave(sess, player, pot.Duration, braveType, int32(pot.GfxID), deps)
+				} else {
+					sendServerMessage(sess, 79) // "沒有任何事情發生"
+				}
+				consumed = true // always consumed regardless of class
 			}
 
 		case "wisdom":
+			// Java: wisdom potion is wizard-only.
+			// Non-wizard: send message 79, item NOT consumed.
 			if pot.Duration > 0 {
-				applyWisdom(sess, player, pot.Duration, int16(pot.SP), int32(pot.GfxID), deps)
-				consumed = true
+				if player.ClassType == 3 { // Wizard only
+					applyWisdom(sess, player, pot.Duration, int16(pot.SP), int32(pot.GfxID), deps)
+					consumed = true
+				} else {
+					sendServerMessage(sess, 79) // "沒有任何事情發生"
+					// intentionally not consumed (matches Java behavior)
+				}
 			}
 
 		case "blue_potion":
@@ -1059,17 +1131,37 @@ func handleUseEtcItem(sess *net.Session, r *packet.Reader, player *world.PlayerI
 				consumed = true
 			}
 
+		case "eva_breath":
+			// Java: Potion.useBlessOfEva — duration STACKS (existing + new), capped at 7200s.
+			if pot.Duration > 0 {
+				applyEvaBreath(sess, player, pot.Duration, int32(pot.GfxID), deps)
+				consumed = true
+			}
+
+		case "third_speed":
+			// Java: Potion.ThirdSpeed — STATUS_THIRD_SPEED (1027)
+			// gfx 7976, sends S_Liquor(8), msg 1065
+			if pot.Duration > 0 {
+				applyThirdSpeed(sess, player, pot.Duration, int32(pot.GfxID), deps)
+				consumed = true
+			}
+
+		case "blind":
+			// Java: Potion.useBlindPotion — self-inflicted CURSE_BLIND, fixed duration.
+			if pot.Duration > 0 {
+				applyBlindPotion(sess, player, pot.Duration, deps)
+				consumed = true
+			}
+
 		case "cure_poison":
 			// Remove any active poison debuff.
-			// Poison status system is not yet fully implemented;
-			// for now we consume the item and play a cure effect.
 			removeBuffAndRevert(player, 35, deps) // skill 35 = POISON in L1J
 			consumed = true
-			sendEffectOnPlayer(sess, player.CharID, 177) // green cure sparkle
-			nearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
-			for _, other := range nearby {
-				sendEffectOnPlayer(other.Session, player.CharID, 177)
+			gfx := int32(pot.GfxID)
+			if gfx == 0 {
+				gfx = 192
 			}
+			broadcastEffect(sess, player, gfx, deps)
 		}
 	} else if itemInfo.FoodVolume > 0 {
 		// Java: foodvolume1 = item.getFoodVolume() / 10; if <= 0 then 5
@@ -1077,13 +1169,14 @@ func handleUseEtcItem(sess *net.Session, r *packet.Reader, player *world.PlayerI
 		if addFood <= 0 {
 			addFood = 5
 		}
-		if player.Food >= 225 {
+		maxFood := int16(deps.Config.Gameplay.MaxFoodSatiety)
+		if player.Food >= maxFood {
 			// Already full — send packet but don't increase (matches Java)
 			sendFoodUpdate(sess, player.Food)
 		} else {
 			player.Food += addFood
-			if player.Food > 225 {
-				player.Food = 225
+			if player.Food > maxFood {
+				player.Food = maxFood
 			}
 			sendFoodUpdate(sess, player.Food)
 		}
@@ -1566,175 +1659,8 @@ func extractSkillName(itemName string) string {
 	return ""
 }
 
-// spellBookLevelReq returns the required character level to use a spellbook,
-// based on class and item ID range. Matches Java C_ItemUSe.useSpellBook.
-// Returns 0 if this class cannot use this book.
-func spellBookLevelReq(classType int16, itemID int32) int {
-	// Common magic books (45000-45022, 40170-40225) — class-specific level gates
-	if itemID >= 45000 && itemID <= 45022 || itemID >= 40170 && itemID <= 40225 {
-		return commonBookLevelReq(classType, itemID)
-	}
-
-	switch classType {
-	case 0: // Royal (Prince/Princess) — 魔法書(精準目標) etc.
-		if itemID >= 40226 && itemID <= 40231 {
-			return 15
-		}
-	case 1: // Knight — 技術書
-		if itemID >= 40164 && itemID <= 40166 || itemID >= 41147 && itemID <= 41148 {
-			return 50
-		}
-	case 2: // Elf — 精靈水晶
-		return elfCrystalLevelReq(itemID)
-	case 4: // Dark Elf — 黑暗精靈水晶
-		switch {
-		case itemID >= 40265 && itemID <= 40269:
-			return 15
-		case itemID >= 40270 && itemID <= 40274:
-			return 30
-		case itemID >= 40275 && itemID <= 40279:
-			return 45
-		}
-	case 5: // Dragon Knight — 龍騎士書板
-		switch {
-		case itemID >= 49102 && itemID <= 49106:
-			return 15
-		case itemID >= 49107 && itemID <= 49111:
-			return 30
-		case itemID >= 49112 && itemID <= 49116:
-			return 45
-		}
-	case 6: // Illusionist — 記憶水晶
-		switch {
-		case itemID >= 49117 && itemID <= 49121:
-			return 10
-		case itemID >= 49122 && itemID <= 49126:
-			return 20
-		case itemID >= 49127 && itemID <= 49131:
-			return 30
-		case itemID >= 49132 && itemID <= 49136:
-			return 40
-		}
-	}
-	return 0
-}
-
-// commonBookLevelReq returns level requirement for common magic books (45000-45022, 40170-40225).
-func commonBookLevelReq(classType int16, itemID int32) int {
-	switch classType {
-	case 3: // Wizard
-		switch {
-		case itemID >= 45000 && itemID <= 45007:
-			return 4
-		case itemID >= 45008 && itemID <= 45015:
-			return 8
-		case itemID >= 45016 && itemID <= 45022:
-			return 12
-		case itemID >= 40170 && itemID <= 40177:
-			return 16
-		case itemID >= 40178 && itemID <= 40185:
-			return 20
-		case itemID >= 40186 && itemID <= 40193:
-			return 24
-		case itemID >= 40194 && itemID <= 40201:
-			return 28
-		case itemID >= 40202 && itemID <= 40209:
-			return 32
-		case itemID >= 40210 && itemID <= 40217:
-			return 36
-		case itemID >= 40218 && itemID <= 40225:
-			return 40
-		}
-	case 0: // Royal
-		switch {
-		case itemID >= 45000 && itemID <= 45007:
-			return 10
-		case itemID >= 45008 && itemID <= 45015:
-			return 20
-		}
-	case 1: // Knight
-		if itemID >= 45000 && itemID <= 45007 {
-			return 50
-		}
-	case 2: // Elf
-		switch {
-		case itemID >= 45000 && itemID <= 45007:
-			return 8
-		case itemID >= 45008 && itemID <= 45015:
-			return 16
-		case itemID >= 45016 && itemID <= 45022:
-			return 24
-		case itemID >= 40170 && itemID <= 40177:
-			return 32
-		case itemID >= 40178 && itemID <= 40185:
-			return 40
-		case itemID >= 40186 && itemID <= 40193:
-			return 48
-		}
-	case 4: // Dark Elf
-		switch {
-		case itemID >= 45000 && itemID <= 45007:
-			return 10
-		case itemID >= 45008 && itemID <= 45015:
-			return 20
-		}
-	}
-	return 0
-}
-
-// elfCrystalLevelReq returns level requirement for Elf 精靈水晶 (40232-40264, 41149-41153).
-// Each sub-range maps to a different element tier with different level requirements.
-func elfCrystalLevelReq(itemID int32) int {
-	switch {
-	// Earth spells
-	case itemID >= 40232 && itemID <= 40234:
-		return 10
-	case itemID >= 40235 && itemID <= 40236:
-		return 20
-	case itemID >= 40237 && itemID <= 40240:
-		return 30
-	case itemID >= 40241 && itemID <= 40243:
-		return 40
-	case itemID >= 40244 && itemID <= 40246:
-		return 50
-	// Water spells
-	case itemID >= 40247 && itemID <= 40248:
-		return 30
-	case itemID >= 40249 && itemID <= 40250:
-		return 40
-	case itemID >= 40251 && itemID <= 40252:
-		return 50
-	// Water (single)
-	case itemID == 40253:
-		return 30
-	case itemID == 40254:
-		return 40
-	case itemID == 40255:
-		return 50
-	// Fire spells
-	case itemID == 40256:
-		return 30
-	case itemID == 40257:
-		return 40
-	case itemID >= 40258 && itemID <= 40259:
-		return 50
-	// Wind spells
-	case itemID >= 40260 && itemID <= 40261:
-		return 30
-	case itemID == 40262:
-		return 40
-	case itemID >= 40263 && itemID <= 40264:
-		return 50
-	// Extended elf crystals
-	case itemID >= 41149 && itemID <= 41150:
-		return 50
-	case itemID == 41151:
-		return 40
-	case itemID >= 41152 && itemID <= 41153:
-		return 50
-	}
-	return 0
-}
+// spellBookLevelReq — REMOVED: migrated to data/yaml/spellbook_level_req.yaml + data.SpellbookReqTable.
+// Use deps.SpellbookReqs.GetLevelReq(classType, itemID) instead.
 
 // handleUseSpellBook processes a spellbook item use.
 // Extracts skill name from item name, validates class/level, learns skill.
@@ -1755,8 +1681,8 @@ func handleUseSpellBook(sess *net.Session, player *world.PlayerInfo, invItem *wo
 		return
 	}
 
-	// Check class/level requirement
-	reqLevel := spellBookLevelReq(player.ClassType, invItem.ItemID)
+	// Check class/level requirement (data-driven from YAML)
+	reqLevel := deps.SpellbookReqs.GetLevelReq(player.ClassType, invItem.ItemID)
 	if reqLevel == 0 {
 		// This class cannot use this book
 		sendServerMessage(sess, msgClassCannotUse) // 264: 你的職業無法使用此道具。
@@ -1864,10 +1790,10 @@ func applyBrave(sess *net.Session, player *world.PlayerInfo, durationSec int, br
 	player.BraveSpeed = braveType
 	player.BraveTicks = buff.TicksLeft
 
-	sendSpeedPacket(sess, player.CharID, braveType, uint16(durationSec))
+	sendBravePacket(sess, player.CharID, braveType, uint16(durationSec))
 	nearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
 	for _, other := range nearby {
-		sendSpeedPacket(other.Session, player.CharID, braveType, 0)
+		sendBravePacket(other.Session, player.CharID, braveType, 0)
 	}
 	broadcastVisualUpdate(sess, player, deps)
 	broadcastEffect(sess, player, gfxID, deps)
@@ -1922,6 +1848,113 @@ func applyBluePotion(sess *net.Session, player *world.PlayerInfo, durationSec in
 	broadcastEffect(sess, player, gfxID, deps)
 }
 
+// applyEvaBreath applies underwater breathing buff.
+// Java ref: Potion.useBlessOfEva → STATUS_UNDERWATER_BREATH (1003)
+// Duration STACKS with existing buff, capped at 7200 seconds.
+func applyEvaBreath(sess *net.Session, player *world.PlayerInfo, durationSec int, gfxID int32, deps *Deps) {
+	totalSec := durationSec
+	// Stack with existing duration
+	existing := player.GetBuff(SkillStatusUnderwaterBreath)
+	if existing != nil {
+		remainingSec := existing.TicksLeft / 5
+		totalSec += remainingSec
+		if totalSec > 7200 {
+			totalSec = 7200
+		}
+		removeBuffAndRevert(player, SkillStatusUnderwaterBreath, deps)
+	}
+
+	buff := &world.ActiveBuff{
+		SkillID:   SkillStatusUnderwaterBreath,
+		TicksLeft: totalSec * 5, // 200ms per tick
+	}
+	player.AddBuff(buff)
+
+	// S_SkillIconBlessOfEva: S_PacketBox sub 44, duration in seconds
+	sendEvaBreathIcon(sess, player.CharID, uint16(totalSec))
+	broadcastEffect(sess, player, gfxID, deps)
+}
+
+// applyThirdSpeed applies third-speed buff (3段加速).
+// Java ref: Potion.ThirdSpeed → STATUS_THIRD_SPEED (1027)
+// Sends S_Liquor(8) for visual + gfx 7976 + msg 1065.
+func applyThirdSpeed(sess *net.Session, player *world.PlayerInfo, durationSec int, gfxID int32, deps *Deps) {
+	// Remove conflicting third speed buff
+	removeBuffAndRevert(player, SkillStatusThirdSpeed, deps)
+
+	buff := &world.ActiveBuff{
+		SkillID:   SkillStatusThirdSpeed,
+		TicksLeft: durationSec * 5, // 200ms per tick
+	}
+	player.AddBuff(buff)
+
+	// S_Liquor(8) = 1.15x character size visual
+	sendLiquorPacket(sess, 8)
+	sendServerMessage(sess, 1065) // "將發生神秘的奇蹟力量"
+	broadcastEffect(sess, player, gfxID, deps)
+}
+
+// applyBlindPotion applies self-inflicted blind curse.
+// Java ref: Potion.useBlindPotion → CURSE_BLIND, fixed duration.
+func applyBlindPotion(sess *net.Session, player *world.PlayerInfo, durationSec int, deps *Deps) {
+	// Remove existing CURSE_BLIND or DARKNESS before applying
+	removeBuffAndRevert(player, SkillCurseBlind, deps)
+
+	buff := &world.ActiveBuff{
+		SkillID:   SkillCurseBlind,
+		TicksLeft: durationSec * 5, // 200ms per tick
+	}
+	player.AddBuff(buff)
+
+	// Send S_CurseBlind packet (1 = normal blind)
+	sendCurseBlindPacket(sess, 1)
+}
+
+// checkBraveClassRestrict checks if the player's class matches the brave potion restriction.
+// ClassType: 0=Prince, 1=Knight, 2=Elf, 3=Wizard, 4=DarkElf, 5=DragonKnight, 6=Illusionist
+func checkBraveClassRestrict(classType int16, restrict string) bool {
+	switch restrict {
+	case "knight":
+		return classType == 1
+	case "elf":
+		return classType == 2
+	case "crown":
+		return classType == 0
+	case "notDKIL":
+		return classType != 5 && classType != 6 // everyone except DK and IL
+	case "DKIL":
+		return classType == 5 || classType == 6 // DragonKnight or Illusionist only
+	default:
+		return true // no restriction
+	}
+}
+
+// sendEvaBreathIcon sends S_SkillIconBlessOfEva (S_PacketBox sub 44).
+func sendEvaBreathIcon(sess *net.Session, charID int32, timeSec uint16) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_EVENT) // 250
+	w.WriteC(44)                                           // sub opcode for Eva breath icon
+	w.WriteD(charID)
+	w.WriteH(timeSec)
+	sess.Send(w.Bytes())
+}
+
+// sendLiquorPacket sends S_DRUNKEN (opcode 103) — visual character size change.
+// type 1 = drunk, 8 = third speed (1.15x size).
+func sendLiquorPacket(sess *net.Session, liquorType byte) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_DRUNKEN)
+	w.WriteC(liquorType)
+	sess.Send(w.Bytes())
+}
+
+// sendCurseBlindPacket sends S_CurseBlind (S_PacketBox sub 45).
+// type 1 = normal blind, 2 = floating eye blind.
+func sendCurseBlindPacket(sess *net.Session, blindType byte) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_EVENT) // 250
+	w.WriteC(45)                                           // sub opcode for curse blind
+	w.WriteC(blindType)
+	sess.Send(w.Bytes())
+}
+
 // broadcastEffect sends S_EFFECT to self and nearby players.
 func broadcastEffect(sess *net.Session, player *world.PlayerInfo, gfxID int32, deps *Deps) {
 	sendEffectOnPlayer(sess, player.CharID, gfxID)
@@ -1931,15 +1964,22 @@ func broadcastEffect(sess *net.Session, player *world.PlayerInfo, gfxID int32, d
 	}
 }
 
-// sendSpeedPacket sends S_SPEED (opcode 255) — speed buff/debuff.
-// In V381, this single opcode handles both haste and brave:
-//   type 0 = cancel speed effect
-//   type 1 = haste (green potion — movement + attack speed)
-//   type 3 = brave (brave potion — movement + attack speed, slightly faster)
+// sendSpeedPacket sends S_SkillHaste (opcode 255) — haste/一段加速 buff.
+// type 0 = cancel, type 1 = haste (移動+攻擊加速).
 func sendSpeedPacket(sess *net.Session, charID int32, speedType byte, duration uint16) {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_SPEED)
 	w.WriteD(charID)
 	w.WriteC(speedType)
+	w.WriteH(duration)
+	sess.Send(w.Bytes())
+}
+
+// sendBravePacket sends S_SkillBrave (opcode 67) — brave/二段加速 buff.
+// type 0 = cancel, type 1 = brave (勇敢藥水), type 3 = elf brave (精靈餅乾).
+func sendBravePacket(sess *net.Session, charID int32, braveType byte, duration uint16) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_SKILLBRAVE)
+	w.WriteD(charID)
+	w.WriteC(braveType)
 	w.WriteH(duration)
 	sess.Send(w.Bytes())
 }

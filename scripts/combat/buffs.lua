@@ -217,11 +217,13 @@ end
 -- Non-cancellable skill IDs (used by Cancellation/Dispel)
 ---------------------------------------------------------------------
 NON_CANCELLABLE = {
-    [12] = true,  -- Enchant Weapon
-    [21] = true,  -- Blessed Armor
-    [78] = true,  -- Absolute Barrier
-    [79] = true,  -- Advance Spirit
-    [87] = true,  -- Shock Stun
+    [12] = true,   -- Enchant Weapon
+    [21] = true,   -- Blessed Armor
+    [33] = true,   -- Curse Paralyze（木乃伊詛咒，不可被解除魔法消除）
+    [78] = true,   -- Absolute Barrier
+    [79] = true,   -- Advance Spirit
+    [87] = true,   -- Shock Stun（衝擊之暈，不可被解除魔法消除）
+    [157] = true,  -- Earth Bind（大地屏障，不可被解除魔法消除）
 }
 
 function is_non_cancellable(skill_id)

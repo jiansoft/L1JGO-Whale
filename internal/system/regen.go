@@ -1,12 +1,12 @@
 package system
 
 import (
-	"math/rand"
 	"time"
 
 	coresys "github.com/l1jgo/server/internal/core/system"
 	"github.com/l1jgo/server/internal/net"
 	"github.com/l1jgo/server/internal/net/packet"
+	"github.com/l1jgo/server/internal/scripting"
 	"github.com/l1jgo/server/internal/world"
 )
 
@@ -27,11 +27,12 @@ import (
 // MP regen triggers every mpInterval ticks (fixed ~16 seconds = 80 ticks).
 type RegenSystem struct {
 	world     *world.State
+	lua       *scripting.Engine
 	tickCount int
 }
 
-func NewRegenSystem(ws *world.State) *RegenSystem {
-	return &RegenSystem{world: ws}
+func NewRegenSystem(ws *world.State, lua *scripting.Engine) *RegenSystem {
+	return &RegenSystem{world: ws, lua: lua}
 }
 
 func (s *RegenSystem) Phase() coresys.Phase { return coresys.PhasePostUpdate }
@@ -43,44 +44,20 @@ func (s *RegenSystem) Update(_ time.Duration) {
 	// Each player has their own accumulator via RegenHPAcc.
 	if s.tickCount%5 == 0 {
 		s.world.AllPlayers(func(p *world.PlayerInfo) {
-			tickHPRegen(p)
+			s.tickHPRegen(p)
 		})
 	}
 
 	// MP regen: fixed 16-second interval = 80 ticks.
 	if s.tickCount%80 == 0 {
 		s.world.AllPlayers(func(p *world.PlayerInfo) {
-			tickMPRegen(p)
+			s.tickMPRegen(p)
 		})
 	}
 }
 
-// ---------- HP Level Table ----------
-// Java HpRegeneration.java: lvlTable determines regen threshold.
-// Lower value = faster regen. Unit: seconds between regen ticks.
-// Index 0=Lv1, ..., 9=Lv18+, 10=Knight Lv30+.
-var hpRegenIntervalTable = [11]int{30, 25, 20, 16, 14, 12, 11, 10, 9, 3, 2}
-
-// hpRegenSeconds returns the number of seconds between HP regen events.
-// Java: regenMax = lvlTable[regenLvl-1] * 4, with _curPoint=4 added per second.
-// So threshold / 4 = seconds to regen.
-func hpRegenSeconds(level int16, classType int16) int {
-	idx := int(level)
-	if idx < 1 {
-		idx = 1
-	}
-	if idx > 10 {
-		idx = 10
-	}
-	// Knight Lv30+ gets index 11 (value=2)
-	if level >= 30 && classType == 1 { // 1=Knight
-		return hpRegenIntervalTable[10] // 2 seconds
-	}
-	return hpRegenIntervalTable[idx-1]
-}
-
 // tickHPRegen runs once per second. Uses accumulator to determine when to actually regen.
-func tickHPRegen(p *world.PlayerInfo) {
+func (s *RegenSystem) tickHPRegen(p *world.PlayerInfo) {
 	if p.Dead || p.HP <= 0 || p.HP >= p.MaxHP {
 		return
 	}
@@ -88,44 +65,32 @@ func tickHPRegen(p *world.PlayerInfo) {
 	// Increment 1-second accumulator
 	p.RegenHPAcc++
 
-	threshold := hpRegenSeconds(p.Level, p.ClassType)
+	// Regen interval from Lua (level + class based)
+	threshold := s.lua.GetHPRegenInterval(int(p.Level), int(p.ClassType))
+	if threshold < 1 {
+		threshold = 1
+	}
 	if p.RegenHPAcc < threshold {
 		return
 	}
 	p.RegenHPAcc = 0
 
-	// --- Calculate HP regen amount ---
-
-	// CON bonus: only Lv12+, CON >= 14. Java: random(CON-12)+1, cap 14.
-	maxBonus := 1
-	if p.Level > 11 && p.Con >= 14 {
-		maxBonus = int(p.Con) - 12
-		if maxBonus > 14 {
-			maxBonus = 14
-		}
-	}
-	bonus := rand.Intn(maxBonus) + 1
-
-	// Equipment HPR (from buffs and items)
-	equipHPR := int(p.HPR)
-
-	// Skill bonuses (future: NATURES_TOUCH +15, cooking, house, inn, elf forest)
-	// TODO: add when skill/location systems are implemented
-
-	// --- Penalty checks: food < 3 OR overweight → zero base regen ---
-	if isHPRegenBlocked(p) {
-		bonus = 0
-		if equipHPR > 0 {
-			equipHPR = 0 // positive equipment bonus also blocked
-		}
-		// Negative equipment HPR still applies (cursed items)
-	}
-
-	total := int16(bonus + equipHPR)
-	if total == 0 {
+	// Calculate HP regen amount via Lua
+	maxW := world.MaxWeight(p.Str, p.Con)
+	amount := s.lua.CalcHPRegenAmount(scripting.HPRegenContext{
+		Level:             int(p.Level),
+		Con:               int(p.Con),
+		HPR:               int(p.HPR),
+		Food:              int(p.Food),
+		WeightPct:         int(p.Inv.Weight242(maxW)),
+		HasExoticVitalize: p.HasBuff(226),
+		HasAdditionalFire: p.HasBuff(238),
+	})
+	if amount == 0 {
 		return
 	}
 
+	total := int16(amount)
 	newHP := p.HP + total
 	if newHP < 1 {
 		newHP = 1
@@ -137,54 +102,32 @@ func tickHPRegen(p *world.PlayerInfo) {
 		return
 	}
 	p.HP = newHP
+	p.Dirty = true
 	sendHPUpdatePacket(p.Session, p.HP, p.MaxHP)
 }
 
 // tickMPRegen runs every 16 seconds (80 ticks). Matches Java's fixed 64-point threshold.
-func tickMPRegen(p *world.PlayerInfo) {
+func (s *RegenSystem) tickMPRegen(p *world.PlayerInfo) {
 	if p.Dead || p.MP >= p.MaxMP {
 		return
 	}
 
-	// --- WIS-based MP regen ---
-	// Java: WIS 15-16 → 2, WIS >= 17 → 3, else 1
-	baseMPR := 1
-	wis := int(p.Wis)
-	if wis == 15 || wis == 16 {
-		baseMPR = 2
-	} else if wis >= 17 {
-		baseMPR = 3
-	}
-
-	// Blue Potion bonus: WIS min 11, +WIS-10
-	// STATUS_BLUE_POTION = 1002 in Java (virtual SkillID)
-	if p.HasBuff(1002) {
-		effWis := wis
-		if effWis < 11 {
-			effWis = 11
-		}
-		baseMPR += effWis - 10
-	}
-
-	// Equipment MPR (from buffs and items)
-	equipMPR := int(p.MPR)
-
-	// Skill bonuses (future: cooking, house, inn, elf forest)
-	// TODO: add when skill/location systems are implemented
-
-	// --- Penalty checks: food < 3 OR overweight → zero base regen ---
-	if isMPRegenBlocked(p) {
-		baseMPR = 0
-		if equipMPR > 0 {
-			equipMPR = 0
-		}
-	}
-
-	total := int16(baseMPR + equipMPR)
-	if total == 0 {
+	// Calculate MP regen amount via Lua
+	maxW := world.MaxWeight(p.Str, p.Con)
+	amount := s.lua.CalcMPRegenAmount(scripting.MPRegenContext{
+		Wis:               int(p.Wis),
+		MPR:               int(p.MPR),
+		Food:              int(p.Food),
+		WeightPct:         int(p.Inv.Weight242(maxW)),
+		HasExoticVitalize: p.HasBuff(226),
+		HasAdditionalFire: p.HasBuff(238),
+		HasBluePotion:     p.HasBuff(1002),
+	})
+	if amount == 0 {
 		return
 	}
 
+	total := int16(amount)
 	newMP := p.MP + total
 	if newMP < 0 {
 		newMP = 0
@@ -196,50 +139,8 @@ func tickMPRegen(p *world.PlayerInfo) {
 		return
 	}
 	p.MP = newMP
+	p.Dirty = true
 	sendMPUpdatePacket(p.Session, p.MP, p.MaxMP)
-}
-
-// ---------- Penalty checks ----------
-
-// isHPRegenBlocked returns true if HP regen should be suppressed.
-// Java HpRegeneration: food < 3 OR Weight242 >= 121 (unless EXOTIC_VITALIZE / ADDITIONAL_FIRE).
-func isHPRegenBlocked(p *world.PlayerInfo) bool {
-	// Food check
-	if p.Food < 3 {
-		return true
-	}
-	// Weight check
-	if isOverWeight(p, 121) {
-		return true
-	}
-	return false
-}
-
-// isMPRegenBlocked returns true if MP regen should be suppressed.
-// Java MpRegeneration: food < 3 OR Weight242 >= 120 (unless EXOTIC_VITALIZE / ADDITIONAL_FIRE).
-func isMPRegenBlocked(p *world.PlayerInfo) bool {
-	if p.Food < 3 {
-		return true
-	}
-	if isOverWeight(p, 120) {
-		return true
-	}
-	return false
-}
-
-// isOverWeight returns true if the player's Weight242 >= threshold.
-// Java: checks EXOTIC_VITALIZE and ADDITIONAL_FIRE skills to override.
-func isOverWeight(p *world.PlayerInfo, threshold int) bool {
-	maxW := world.MaxWeight(p.Str, p.Con)
-	w242 := int(p.Inv.Weight242(maxW))
-	if w242 < threshold {
-		return false
-	}
-	// EXOTIC_VITALIZE (skill 226) and ADDITIONAL_FIRE (skill 238) negate overweight
-	if p.HasBuff(226) || p.HasBuff(238) {
-		return false
-	}
-	return true
 }
 
 // ---------- Packet helpers ----------

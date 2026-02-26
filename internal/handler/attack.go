@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 
+	"github.com/l1jgo/server/internal/core/event"
 	"github.com/l1jgo/server/internal/net"
 	"github.com/l1jgo/server/internal/net/packet"
 	"github.com/l1jgo/server/internal/scripting"
@@ -10,16 +11,53 @@ import (
 )
 
 // HandleAttack processes C_ATTACK (opcode 229).
+// Thin handler: parse packet → queue to CombatSystem (Phase 2).
 // Format: [D targetID][H x][H y]
 func HandleAttack(sess *net.Session, r *packet.Reader, deps *Deps) {
 	targetID := r.ReadD()
 	_ = r.ReadH() // target x (unused, we use server position)
 	_ = r.ReadH() // target y (unused)
 
-	ws := deps.World
-	player := ws.GetBySession(sess.ID)
-	if player == nil || player.Dead {
+	if deps.Combat == nil {
 		return
+	}
+	deps.Combat.QueueAttack(AttackRequest{
+		AttackerSessionID: sess.ID,
+		TargetID:          targetID,
+		IsMelee:           true,
+	})
+}
+
+// HandleFarAttack processes C_FAR_ATTACK (opcode 123) — bow/ranged attacks.
+// Thin handler: parse packet → queue to CombatSystem (Phase 2).
+// Format: [D targetID][H x][H y]
+func HandleFarAttack(sess *net.Session, r *packet.Reader, deps *Deps) {
+	targetID := r.ReadD()
+	_ = r.ReadH()
+	_ = r.ReadH()
+
+	if deps.Combat == nil {
+		return
+	}
+	deps.Combat.QueueAttack(AttackRequest{
+		AttackerSessionID: sess.ID,
+		TargetID:          targetID,
+		IsMelee:           false,
+	})
+}
+
+// ProcessMeleeAttack applies a melee attack from the given session to the target.
+// Called by CombatSystem in Phase 2. Returns NpcKillResult if an NPC was killed.
+func ProcessMeleeAttack(sessID uint64, targetID int32, deps *Deps) *NpcKillResult {
+	ws := deps.World
+	player := ws.GetBySession(sessID)
+	if player == nil || player.Dead {
+		return nil
+	}
+
+	// 麻痺/暈眩/凍結/睡眠時無法攻擊
+	if player.Paralyzed || player.Sleeped {
+		return nil
 	}
 
 	// Look up target — could be NPC or player
@@ -30,7 +68,7 @@ func HandleAttack(sess *net.Session, r *packet.Reader, deps *Deps) {
 		if targetPlayer != nil && !targetPlayer.Dead && targetPlayer.CharID != player.CharID {
 			handlePvPAttack(player, targetPlayer, deps)
 		}
-		return
+		return nil
 	}
 
 	// Range check (Chebyshev <= 2 for melee + tolerance)
@@ -47,7 +85,7 @@ func HandleAttack(sess *net.Session, r *packet.Reader, deps *Deps) {
 		dist = dy
 	}
 	if dist > 2 {
-		return
+		return nil
 	}
 
 	// Face the target
@@ -91,6 +129,14 @@ func HandleAttack(sess *net.Session, r *packet.Reader, deps *Deps) {
 	// Get nearby players for broadcasting
 	nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 
+	// 武器技能觸發（命中時機率觸發額外傷害 + GFX）
+	if damage > 0 {
+		if wpn := player.Equip.Weapon(); wpn != nil {
+			procDmg := ProcessWeaponSkillProc(player, npc, wpn.ItemID, nearby, deps)
+			damage += procDmg
+		}
+	}
+
 	// Send attack animation to all nearby
 	for _, viewer := range nearby {
 		sendAttackPacket(viewer.Session, player.CharID, npc.ID, damage, player.Heading)
@@ -103,9 +149,17 @@ func HandleAttack(sess *net.Session, r *packet.Reader, deps *Deps) {
 			npc.HP = 0
 		}
 
+		// 受傷時解除睡眠（Java: NPC 被攻擊時 sleep 解除）
+		if npc.Sleeped {
+			BreakNpcSleep(npc, ws)
+		}
+
+		// Weapon durability damage (Java: L1Attack.damageNpcWeaponDurability)
+		DamageWeaponDurability(player.Session, player, deps)
+
 		// Set aggro on hit (so even non-agro mobs fight back)
 		if npc.AggroTarget == 0 {
-			npc.AggroTarget = sess.ID
+			npc.AggroTarget = sessID
 		}
 
 		// Send HP meter update
@@ -119,22 +173,24 @@ func HandleAttack(sess *net.Session, r *packet.Reader, deps *Deps) {
 
 		// Check death
 		if npc.HP <= 0 {
-			handleNpcDeath(npc, player, nearby, deps)
+			return handleNpcDeath(npc, player, nearby, deps)
 		}
 	}
+	return nil
 }
 
-// HandleFarAttack processes C_FAR_ATTACK (opcode 123) — bow/ranged attacks.
-// Format: [D targetID][H x][H y]
-func HandleFarAttack(sess *net.Session, r *packet.Reader, deps *Deps) {
-	targetID := r.ReadD()
-	_ = r.ReadH()
-	_ = r.ReadH()
-
+// ProcessRangedAttack applies a ranged attack from the given session to the target.
+// Called by CombatSystem in Phase 2. Returns NpcKillResult if an NPC was killed.
+func ProcessRangedAttack(sessID uint64, targetID int32, deps *Deps) *NpcKillResult {
 	ws := deps.World
-	player := ws.GetBySession(sess.ID)
+	player := ws.GetBySession(sessID)
 	if player == nil || player.Dead {
-		return
+		return nil
+	}
+
+	// 麻痺/暈眩/凍結/睡眠時無法攻擊
+	if player.Paralyzed || player.Sleeped {
+		return nil
 	}
 
 	npc := ws.GetNpc(targetID)
@@ -144,7 +200,7 @@ func HandleFarAttack(sess *net.Session, r *packet.Reader, deps *Deps) {
 		if targetPlayer != nil && !targetPlayer.Dead && targetPlayer.CharID != player.CharID {
 			handlePvPFarAttack(player, targetPlayer, deps)
 		}
-		return
+		return nil
 	}
 
 	// Range check (Chebyshev <= 10 for ranged)
@@ -161,7 +217,7 @@ func HandleFarAttack(sess *net.Session, r *packet.Reader, deps *Deps) {
 		dist = dy
 	}
 	if dist > 10 {
-		return
+		return nil
 	}
 
 	player.Heading = calcHeading(player.X, player.Y, npc.X, npc.Y)
@@ -170,16 +226,16 @@ func HandleFarAttack(sess *net.Session, r *packet.Reader, deps *Deps) {
 	arrow := findArrow(player, deps)
 	if arrow == nil {
 		// No arrows — notify player
-		sendGlobalChat(sess, 9, "\\f3沒有箭矢。")
-		return
+		sendGlobalChat(player.Session, 9, "\\f3沒有箭矢。")
+		return nil
 	}
 
 	// Consume 1 arrow
 	arrowRemoved := player.Inv.RemoveItem(arrow.ObjectID, 1)
 	if arrowRemoved {
-		sendRemoveInventoryItem(sess, arrow.ObjectID)
+		sendRemoveInventoryItem(player.Session, arrow.ObjectID)
 	} else {
-		sendItemCountUpdate(sess, arrow)
+		sendItemCountUpdate(player.Session, arrow)
 	}
 
 	// Arrow damage bonus
@@ -226,12 +282,20 @@ func HandleFarAttack(sess *net.Session, r *packet.Reader, deps *Deps) {
 
 	nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 
+	// 武器技能觸發（命中時機率觸發額外傷害 + GFX）
+	if damage > 0 {
+		if wpn := player.Equip.Weapon(); wpn != nil {
+			procDmg := ProcessWeaponSkillProc(player, npc, wpn.ItemID, nearby, deps)
+			damage += procDmg
+		}
+	}
+
 	// Send ranged attack animation with arrow projectile visual
 	// Java: sendPackets(self) + broadcastPacket(others)
-	sendArrowAttackPacket(sess, player.CharID, npc.ID, damage, player.Heading,
+	sendArrowAttackPacket(player.Session, player.CharID, npc.ID, damage, player.Heading,
 		player.X, player.Y, npc.X, npc.Y)
 	for _, viewer := range nearby {
-		if viewer.SessionID == sess.ID {
+		if viewer.SessionID == sessID {
 			continue // already sent to self
 		}
 		sendArrowAttackPacket(viewer.Session, player.CharID, npc.ID, damage, player.Heading,
@@ -244,8 +308,16 @@ func HandleFarAttack(sess *net.Session, r *packet.Reader, deps *Deps) {
 			npc.HP = 0
 		}
 
+		// 受傷時解除睡眠
+		if npc.Sleeped {
+			BreakNpcSleep(npc, ws)
+		}
+
+		// Weapon durability damage (ranged also degrades weapon)
+		DamageWeaponDurability(player.Session, player, deps)
+
 		if npc.AggroTarget == 0 {
-			npc.AggroTarget = sess.ID
+			npc.AggroTarget = sessID
 		}
 
 		hpRatio := int16(0)
@@ -257,13 +329,15 @@ func HandleFarAttack(sess *net.Session, r *packet.Reader, deps *Deps) {
 		}
 
 		if npc.HP <= 0 {
-			handleNpcDeath(npc, player, nearby, deps)
+			return handleNpcDeath(npc, player, nearby, deps)
 		}
 	}
+	return nil
 }
 
 // handleNpcDeath processes NPC death: animation, exp, respawn timer.
-func handleNpcDeath(npc *world.NpcInfo, killer *world.PlayerInfo, nearby []*world.PlayerInfo, deps *Deps) {
+// Returns NpcKillResult for the CombatSystem to emit as an event.
+func handleNpcDeath(npc *world.NpcInfo, killer *world.PlayerInfo, nearby []*world.PlayerInfo, deps *Deps) *NpcKillResult {
 	npc.Dead = true
 
 	// Remove from NPC AOI grid + entity grid (dead NPC doesn't block)
@@ -274,10 +348,9 @@ func handleNpcDeath(npc *world.NpcInfo, killer *world.PlayerInfo, nearby []*worl
 		deps.MapData.SetImpassable(npc.MapID, npc.X, npc.Y, false)
 	}
 
-	// Broadcast death animation + unblock entity collision
+	// Broadcast death animation
 	for _, viewer := range nearby {
 		sendActionGfx(viewer.Session, npc.ID, 8) // ACTION_Die = 8
-		SendEntityUnblock(viewer.Session, npc.X, npc.Y)
 	}
 
 	// Schedule removal after delay (Java: NPC_DELETION_TIME = 10 seconds = 50 ticks)
@@ -297,6 +370,20 @@ func handleNpcDeath(npc *world.NpcInfo, killer *world.PlayerInfo, nearby []*worl
 			addExp(killer, expGain, deps)
 		}
 
+		// Give EXP to master's pets on same map
+		for _, pet := range deps.World.GetPetsByOwner(killer.CharID) {
+			if !pet.Dead && pet.MapID == killer.MapID {
+				petExp := npc.Exp
+				if deps.Config.Rates.PetExpRate > 0 {
+					petExp = int32(float64(petExp) * deps.Config.Rates.PetExpRate)
+				}
+				if petExp > 0 {
+					AddPetExp(pet, petExp, deps)
+					sendPetHpMeter(killer.Session, pet.ID, pet.HP, pet.MaxHP)
+				}
+			}
+		}
+
 		// Give lawful from kill
 		addLawfulFromNpc(killer, npc.Lawful, deps)
 
@@ -310,6 +397,34 @@ func handleNpcDeath(npc *world.NpcInfo, killer *world.PlayerInfo, nearby []*worl
 	}
 
 	deps.Log.Info(fmt.Sprintf("NPC 被擊殺  擊殺者=%s  NPC=%s  經驗=%d", killer.Name, npc.Name, expGain))
+
+	killResult := &NpcKillResult{
+		KillerSessionID: killer.SessionID,
+		KillerCharID:    killer.CharID,
+		NpcID:           npc.ID,
+		NpcTemplateID:   npc.NpcID,
+		ExpGained:       expGain,
+		MapID:           npc.MapID,
+		X:               npc.X,
+		Y:               npc.Y,
+	}
+
+	// Emit EntityKilled event (readable next tick by subscribers).
+	// Emitted here so both CombatSystem (melee/ranged) and skill kills generate events.
+	if deps.Bus != nil {
+		event.Emit(deps.Bus, event.EntityKilled{
+			KillerSessionID: killResult.KillerSessionID,
+			KillerCharID:    killResult.KillerCharID,
+			NpcID:           killResult.NpcID,
+			NpcTemplateID:   killResult.NpcTemplateID,
+			ExpGained:       killResult.ExpGained,
+			MapID:           killResult.MapID,
+			X:               killResult.X,
+			Y:               killResult.Y,
+		})
+	}
+
+	return killResult
 }
 
 // addExp adds experience to a player and checks for level up.
@@ -361,6 +476,14 @@ func findArrow(player *world.PlayerInfo, deps *Deps) *world.InvItem {
 		}
 	}
 	return nil
+}
+
+// BreakNpcSleep 受傷時解除 NPC 睡眠（Java: NPC 受到傷害時 sleep 被打斷）。
+func BreakNpcSleep(npc *world.NpcInfo, ws *world.State) {
+	npc.Sleeped = false
+	npc.RemoveDebuff(62)  // 沉睡之霧
+	npc.RemoveDebuff(66)  // 沉睡之霧（內部 ID）
+	npc.RemoveDebuff(103) // 暗黑盲咒
 }
 
 // calcHeading returns the heading direction from (sx,sy) to (tx,ty).

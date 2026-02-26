@@ -34,6 +34,11 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 		return
 	}
 
+	// 麻痺/暈眩/凍結/睡眠時無法移動（客戶端已鎖定，這裡做伺服器端防護）
+	if player.Paralyzed || player.Sleeped {
+		return
+	}
+
 	// --- Move speed validation (anti speed-hack) ---
 	// Normal walk ~200ms, haste ~133ms. Apply 80% tolerance.
 	now := time.Now().UnixNano()
@@ -55,13 +60,17 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 	destX := curX + headingDX[heading]
 	destY := curY + headingDY[heading]
 
-	// Entity collision: S_CHANGE_ATTR blocks 4 cardinal directions client-side,
-	// but diagonal movement (NE/NW/SE/SW) bypasses edge checks.
-	// Server-side IsOccupied catches diagonal bypass attempts.
-	// No rubber-band packet (sendOwnCharPackPlayer causes NPC render suppression).
-	// Instead, silently reject the move — server keeps old position, client auto-corrects
-	// on next move since we always use server-tracked position.
+	// Passability check (matching Java C_MoveChar: isPassable(oleLocx, oleLocy, heading)).
+	// The map tile's dynamic tileImpassable flag (0x80) is set by NPCs/players, so this
+	// covers both terrain and entity collision in one check.
+	// On rejection, Java sends L1PcUnlock.Pc_Unlock(pc) to resync the client position.
+	if deps.MapData != nil && !deps.MapData.IsPassable(player.MapID, curX, curY, int(heading)) {
+		sendOwnCharPackPlayer(sess, player) // resync client position (Java: Pc_Unlock)
+		return
+	}
+	// Fallback entity grid check (safety net when map data unavailable)
 	if ws.IsOccupied(destX, destY, player.MapID, player.CharID) {
+		sendOwnCharPackPlayer(sess, player)
 		return
 	}
 
@@ -173,7 +182,7 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 		newNpcSet[n.ID] = struct{}{}
 	}
 
-	// NPCs newly visible — send appearance (no blocking yet, proximity triggers it)
+	// NPCs newly visible
 	for _, n := range newNpcs {
 		if _, wasOld := oldNpcSet[n.ID]; !wasOld {
 			sendNpcPack(sess, n)
@@ -197,6 +206,105 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 			SendEntityBlock(sess, n.X, n.Y, player.MapID, ws)
 		} else {
 			SendEntityUnblock(sess, n.X, n.Y)
+		}
+	}
+
+	// --- Companion AOI: show/hide summons/dolls/followers as player moves ---
+	oldSummons := ws.GetNearbySummons(curX, curY, player.MapID)
+	newSummons := ws.GetNearbySummons(destX, destY, player.MapID)
+	oldSumSet := make(map[int32]struct{}, len(oldSummons))
+	for _, s := range oldSummons {
+		oldSumSet[s.ID] = struct{}{}
+	}
+	for _, s := range newSummons {
+		if _, wasOld := oldSumSet[s.ID]; !wasOld {
+			isOwner := s.OwnerCharID == player.CharID
+			masterName := ""
+			if m := ws.GetByCharID(s.OwnerCharID); m != nil {
+				masterName = m.Name
+			}
+			sendSummonPack(sess, s, isOwner, masterName)
+		}
+	}
+	newSumSet := make(map[int32]struct{}, len(newSummons))
+	for _, s := range newSummons {
+		newSumSet[s.ID] = struct{}{}
+	}
+	for _, s := range oldSummons {
+		if _, isNew := newSumSet[s.ID]; !isNew {
+			sendRemoveObject(sess, s.ID)
+		}
+	}
+
+	oldDolls := ws.GetNearbyDolls(curX, curY, player.MapID)
+	newDolls := ws.GetNearbyDolls(destX, destY, player.MapID)
+	oldDollSet := make(map[int32]struct{}, len(oldDolls))
+	for _, d := range oldDolls {
+		oldDollSet[d.ID] = struct{}{}
+	}
+	for _, d := range newDolls {
+		if _, wasOld := oldDollSet[d.ID]; !wasOld {
+			masterName := ""
+			if m := ws.GetByCharID(d.OwnerCharID); m != nil {
+				masterName = m.Name
+			}
+			sendDollPack(sess, d, masterName)
+		}
+	}
+	newDollSet := make(map[int32]struct{}, len(newDolls))
+	for _, d := range newDolls {
+		newDollSet[d.ID] = struct{}{}
+	}
+	for _, d := range oldDolls {
+		if _, isNew := newDollSet[d.ID]; !isNew {
+			sendRemoveObject(sess, d.ID)
+		}
+	}
+
+	oldFollow := ws.GetNearbyFollowers(curX, curY, player.MapID)
+	newFollow := ws.GetNearbyFollowers(destX, destY, player.MapID)
+	oldFollowSet := make(map[int32]struct{}, len(oldFollow))
+	for _, f := range oldFollow {
+		oldFollowSet[f.ID] = struct{}{}
+	}
+	for _, f := range newFollow {
+		if _, wasOld := oldFollowSet[f.ID]; !wasOld {
+			sendFollowerPack(sess, f)
+		}
+	}
+	newFollowSet := make(map[int32]struct{}, len(newFollow))
+	for _, f := range newFollow {
+		newFollowSet[f.ID] = struct{}{}
+	}
+	for _, f := range oldFollow {
+		if _, isNew := newFollowSet[f.ID]; !isNew {
+			sendRemoveObject(sess, f.ID)
+		}
+	}
+
+	oldPets := ws.GetNearbyPets(curX, curY, player.MapID)
+	newPets := ws.GetNearbyPets(destX, destY, player.MapID)
+	oldPetSet := make(map[int32]struct{}, len(oldPets))
+	for _, p := range oldPets {
+		oldPetSet[p.ID] = struct{}{}
+	}
+	for _, p := range newPets {
+		if _, wasOld := oldPetSet[p.ID]; !wasOld {
+			isOwner := p.OwnerCharID == player.CharID
+			masterName := ""
+			if m := ws.GetByCharID(p.OwnerCharID); m != nil {
+				masterName = m.Name
+			}
+			sendPetPack(sess, p, isOwner, masterName)
+		}
+	}
+	newPetSet := make(map[int32]struct{}, len(newPets))
+	for _, p := range newPets {
+		newPetSet[p.ID] = struct{}{}
+	}
+	for _, p := range oldPets {
+		if _, isNew := newPetSet[p.ID]; !isNew {
+			sendRemoveObject(sess, p.ID)
 		}
 	}
 

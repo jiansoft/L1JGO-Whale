@@ -68,4 +68,33 @@ type NpcInfo struct {
 	WanderDist   int   // remaining tiles to walk in current wander direction
 	WanderDir    int16 // current wander heading (0-7)
 	WanderTimer  int   // ticks until next wander step
+
+	// 負面狀態（debuff）
+	Paralyzed     bool           // 麻痺/凍結/暈眩 — 跳過所有 AI 行為
+	Sleeped       bool           // 睡眠 — 跳過所有 AI 行為，受傷時解除
+	ActiveDebuffs map[int32]int  // skillID → 剩餘 ticks（NPC 不需 stat delta，只需計時）
+}
+
+// HasDebuff 檢查 NPC 是否有指定 debuff。
+func (n *NpcInfo) HasDebuff(skillID int32) bool {
+	if n.ActiveDebuffs == nil {
+		return false
+	}
+	_, ok := n.ActiveDebuffs[skillID]
+	return ok
+}
+
+// AddDebuff 對 NPC 施加 debuff（skillID → ticks）。
+func (n *NpcInfo) AddDebuff(skillID int32, ticks int) {
+	if n.ActiveDebuffs == nil {
+		n.ActiveDebuffs = make(map[int32]int)
+	}
+	n.ActiveDebuffs[skillID] = ticks
+}
+
+// RemoveDebuff 移除 NPC 的指定 debuff。
+func (n *NpcInfo) RemoveDebuff(skillID int32) {
+	if n.ActiveDebuffs != nil {
+		delete(n.ActiveDebuffs, skillID)
+	}
 }

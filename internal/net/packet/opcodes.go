@@ -22,7 +22,8 @@ const (
 	S_OPCODE_REMOVE_INVENTORY       byte = 57
 	S_OPCODE_VOICE_CHAT             byte = 64  // Also CharSynAck
 	S_OPCODE_SHOP_SELL_LIST         byte = 65  // Items NPC buys from player
-	S_OPCODE_TELL                   byte = 67
+	S_OPCODE_SKILLBRAVE             byte = 67  // S_SkillBrave — brave/elf brave buff (2段加速效果)
+	S_OPCODE_TELL                   byte = 73  // S_WhisperChat — whisper message
 	S_OPCODE_SELL_LIST              byte = 70  // Items NPC sells to player
 	S_OPCODE_MESSAGE_CODE           byte = 71  // S_ServerMsg
 	S_OPCODE_SAY                    byte = 81
@@ -53,6 +54,7 @@ const (
 	S_OPCODE_MESSAGE                byte = 243 // S_GlobalChat
 	S_OPCODE_EVENT                  byte = 250 // S_PacketBox
 	S_OPCODE_HP_METER               byte = 237 // S_HPMeter (NPC HP bar)
+	S_OPCODE_SELECT_TARGET          byte = 236 // S_SelectTarget (pet attack targeting)
 	S_OPCODE_STRUP                  byte = 166 // S_Strup (STR buff icon)
 	S_OPCODE_DEXUP                  byte = 188 // S_Dexup (DEX buff icon)
 	S_OPCODE_SKILLICONSHIELD        byte = 216 // S_SkillIconShield (AC buff icon)
@@ -73,7 +75,14 @@ const (
 	S_OPCODE_CHARTITLE              byte = 183 // S_CharTitle (player title update)
 	S_OPCODE_CLANATTENTION          byte = 200 // S_ClanAttention (clan status change notify)
 	S_OPCODE_POLY                   byte = 76  // S_ChangeShape (polymorph visual change)
-	S_OPCODE_PARALYSIS              byte = 202 // S_Paralysis (paralysis/teleport unlock)
+	S_OPCODE_CURSEBLIND             byte = 47  // S_CurseBlind (致盲螢幕遮罩)
+	S_OPCODE_POISON                 byte = 165 // S_Poison (中毒/凍結色調)
+	S_OPCODE_PARALYSIS              byte = 202 // S_Paralysis (麻痺/暈眩/凍結/睡眠/傳送鎖定)
+	S_OPCODE_SELECTLIST             byte = 83  // S_FixWeaponList (repair weapon list)
+	S_OPCODE_INPUTAMOUNT            byte = 136 // S_HowManyMake (crafting quantity dialog)
+	S_OPCODE_BOARD                  byte = 68  // S_Board (bulletin board post list)
+	S_OPCODE_BOARDREAD              byte = 148 // S_BoardRead (bulletin board post content)
+	S_OPCODE_MAIL                   byte = 186 // S_Mail (mail system)
 )
 
 // ---------- Client Opcodes (V381) ----------

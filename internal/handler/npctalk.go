@@ -11,8 +11,35 @@ import (
 func HandleNpcTalk(sess *net.Session, r *packet.Reader, deps *Deps) {
 	objID := r.ReadD()
 
+	// Check if target is a summon — show summon control menu
+	if sum := deps.World.GetSummon(objID); sum != nil {
+		player := deps.World.GetBySession(sess.ID)
+		if player != nil && sum.OwnerCharID == player.CharID {
+			sendSummonMenu(sess, sum)
+		}
+		return
+	}
+
+	// Check if target is a pet — show pet control menu ("anicom")
+	if pet := deps.World.GetPet(objID); pet != nil {
+		player := deps.World.GetBySession(sess.ID)
+		if player != nil && pet.OwnerCharID == player.CharID {
+			sendPetMenu(sess, pet, petExpPercent(pet, deps))
+		}
+		return
+	}
+
 	npc := deps.World.GetNpc(objID)
 	if npc == nil {
+		return
+	}
+
+	// Check if this is a paginated teleporter NPC (e.g., NPC 91053)
+	if deps.TeleportPages != nil && deps.TeleportPages.IsPageTeleportNpc(npc.NpcID) {
+		player := deps.World.GetBySession(sess.ID)
+		if player != nil {
+			handlePagedTeleportTalk(sess, player, objID, deps)
+		}
 		return
 	}
 

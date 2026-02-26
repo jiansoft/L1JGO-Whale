@@ -46,11 +46,10 @@ func HandleChangeChar(sess *net.Session, _ *packet.Reader, deps *Deps) {
 			partyLeaveMember(player, deps)
 		}
 
-		// Broadcast removal + entity collision unblock to nearby players
+		// Broadcast removal to nearby players
 		nearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
 		for _, other := range nearby {
 			sendRemoveObject(other.Session, player.CharID)
-			SendEntityUnblock(other.Session, player.X, player.Y)
 		}
 
 		// Save full character state

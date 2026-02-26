@@ -16,6 +16,11 @@ max_open_conns = 20           # 最大連線數
 max_idle_conns = 5            # 閒置連線數
 conn_max_lifetime = "30m"     # 連線最大存活時間
 
+# ── 持久化設定 ────────────────────────────────────────────
+[persistence]
+batch_interval_ticks = 1500    # 自動存檔間隔（1500 ticks = 5 分鐘）
+wal_sync_mode = "sync"         # WAL 寫入模式："sync"（同步）或 "async"（非同步）
+
 # ── 網路與遊戲迴圈設定 ────────────────────────────────────
 [network]
 bind_address = "0.0.0.0:7001" # 監聽位址與埠號
@@ -32,6 +37,13 @@ exp_rate = 1                   # 經驗值倍率（1=正常）
 drop_rate = 1                  # 掉寶倍率
 gold_rate = 1                  # 金幣倍率
 lawful_rate = 1.0              # 正義值倍率
+pet_exp_rate = 1.0             # 寵物經驗倍率
+
+# ── 世界設定 ────────────────────────────────────────────────
+[world]
+weather_enabled = true         # 啟用天氣系統
+weather_interval_ticks = 100   # 天氣變化間隔（ticks）
+ground_item_expiry = 300       # 地面物品過期時間（ticks, 300=60秒）
 
 # ── 衝裝設定 ────────────────────────────────────────────────
 [enchant]
@@ -46,6 +58,34 @@ delete_7_days = true           # 啟用 7 天刪除等待期
 delete_7_days_min_level = 5    # 需等待 7 天才能刪除的最低等級
 client_language_code = "MS950" # 客戶端文字編碼（繁體中文 Big5）
 change_title_by_oneself = true # 非盟主的血盟成員是否可自行設定稱號
+
+# ── 遊戲常數設定 ──────────────────────────────────────────────
+[gameplay]
+board_post_cost = 300              # 佈告欄發文費用（金幣）
+board_page_size = 8                # 佈告欄每頁顯示數
+mail_send_cost = 50                # 寄信費用（金幣）
+mail_max_per_box = 40              # 每類信箱上限
+warehouse_personal_fee = 30        # 個人倉庫提領費（金幣）
+warehouse_elf_fee = 2              # 精靈倉庫提領費（秘銀數量）
+repair_cost_per_durability = 200   # 修理費用（每點耐久金幣）
+world_chat_min_food = 6            # 世界頻道最低飽食度
+world_chat_food_cost = 5           # 世界頻道消耗飽食度
+max_exclude_list = 16              # 黑名單上限
+initial_food = 40                  # 建角/重生初始飽食度
+base_ac = 10                       # 基礎防禦等級
+max_food_satiety = 225             # 飽食度上限
+
+# ── Lua 腳本引擎設定 ──────────────────────────────────────
+[lua]
+tick_budget_pct = 0.50         # Lua 執行時間上限（佔 tick 時間百分比）
+timeout = "100ms"              # 單次 Lua 呼叫逾時
+memory_limit_mb = 64           # Lua VM 記憶體限制（MB）
+
+# ── 反作弊設定 ────────────────────────────────────────────
+[anti_cheat]
+speed_threshold = 15.0         # 最大移動速度（格/秒，正常約5，加速約8）
+teleport_validation = true     # 驗證傳送目的地
+duplicate_item_check = true    # 偵測複製物品
 
 # ── 日誌設定 ────────────────────────────────────────────────
 [logging]

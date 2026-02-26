@@ -52,6 +52,18 @@ type InvItem struct {
 	Weight     int32  // per-unit weight
 	UseType    byte
 	Equipped   bool   // true if currently worn/wielded
+
+	// Weapon durability: 0 = perfect, higher = more damaged (range 0-127).
+	// Effective enchant = EnchantLvl - Durability (Java: L1Attack line 328).
+	// Repair NPC sets to 0; combat damage increments by 1 with probability check.
+	Durability int8
+
+	// NPC enchant spell temporary bonuses (item-level, not character-level).
+	// Java: L1ItemInstance.setSkillWeaponEnchant / setSkillArmorEnchant
+	DmgByMagic     int16 // +damage from ENCHANT_WEAPON (skill 12), typically +2
+	DmgMagicExpiry int   // ticks remaining (0 = no effect)
+	AcByMagic      int16 // AC bonus from BLESSED_ARMOR (skill 21), typically 3 (applied as -3 AC)
+	AcMagicExpiry  int   // ticks remaining (0 = no effect)
 }
 
 // Inventory holds a player's in-memory item list.
@@ -212,6 +224,29 @@ func (inv *Inventory) IsOverWeight(addWeight int32, maxWeight int32) bool {
 		extra = 1
 	}
 	return inv.TotalWeight()+extra >= maxWeight
+}
+
+// ItemDescID returns the descId value for S_AddItem / S_AddInventoryBatch packets.
+// Java S_AddItem.java: hardcoded switch(itemId) for specific material items.
+// The 3.80C client uses this field for local spell material validation —
+// without it, the client blocks casting (e.g. summon spell) before sending the packet.
+func ItemDescID(itemID int32) uint16 {
+	switch itemID {
+	case 40318: // 魔法寶石 (Magic Gem) — summon spell material
+		return 166
+	case 40319: // 黑色血痕
+		return 569
+	case 40321: // 創造怪物的卷軸
+		return 837
+	case 49158:
+		return 3674
+	case 49157:
+		return 3605
+	case 49156:
+		return 3606
+	default:
+		return 0
+	}
 }
 
 // EffectiveBless returns the bless byte for inventory packets.

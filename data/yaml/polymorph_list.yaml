@@ -1,2081 +1,2078 @@
-# Polymorph form definitions - converted from L1JTW polymorphs.sql
-# poly_id = GFX sprite ID, weapon_equip/armor_equip = bitmask, cause = trigger bitmask
-
 polymorphs:
   - poly_id: 29
-    name: "floating eye"
+    name: floating eye
     min_level: 1
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: true
     cause: 7
   - poly_id: 95
-    name: "shelob"
+    name: shelob
     min_level: 10
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 7
   - poly_id: 146
-    name: "re ungoliant"
+    name: re ungoliant
     min_level: 1
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 7
   - poly_id: 938
-    name: "beagle"
+    name: beagle
     min_level: 1
     weapon_equip: 0
     armor_equip: 2
     can_use_skill: true
     cause: 7
   - poly_id: 945
-    name: "milkcow"
+    name: milkcow
     min_level: 1
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 7
   - poly_id: 947
-    name: "deer"
+    name: deer
     min_level: 1
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 7
   - poly_id: 951
-    name: "cerberus"
+    name: cerberus
     min_level: 15
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 7
   - poly_id: 979
-    name: "wild boar"
+    name: wild boar
     min_level: 1
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: true
     cause: 7
   - poly_id: 1037
-    name: "giant ant"
+    name: giant ant
     min_level: 1
     weapon_equip: 0
     armor_equip: 136
     can_use_skill: false
     cause: 7
   - poly_id: 1039
-    name: "giant ant soldier"
+    name: giant ant soldier
     min_level: 1
     weapon_equip: 0
     armor_equip: 136
     can_use_skill: false
     cause: 7
   - poly_id: 1047
-    name: "scorpion"
+    name: scorpion
     min_level: 15
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 7
   - poly_id: 2064
-    name: "snowman"
+    name: snowman
     min_level: 1
     weapon_equip: 0
     armor_equip: 1027
     can_use_skill: true
     cause: 7
   - poly_id: 2284
-    name: "dark elf polymorph"
+    name: dark elf polymorph
     min_level: 52
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 2323
-    name: "orc scout polymorph"
+    name: orc scout polymorph
     min_level: 15
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 2374
-    name: "re skeleton"
+    name: re skeleton
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 2376
-    name: "skeleton axeman polymorph"
+    name: skeleton axeman polymorph
     min_level: 10
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 2377
-    name: "skeleton pike polymorph"
+    name: skeleton pike polymorph
     min_level: 10
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 2378
-    name: "spartoi polymorph"
+    name: spartoi polymorph
     min_level: 10
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 2384
-    name: "succubus morph"
+    name: succubus morph
     min_level: 40
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 2385
-    name: "yeti morph"
+    name: yeti morph
     min_level: 15
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 2386
-    name: "minotaur i morph"
+    name: minotaur i morph
     min_level: 15
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 2387
-    name: "giant a morph"
+    name: giant a morph
     min_level: 15
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 2388
-    name: "death"
+    name: death
     min_level: 1
     weapon_equip: 0
     armor_equip: 32
     can_use_skill: false
     cause: 7
   - poly_id: 2501
-    name: "jack o lantern"
+    name: jack o lantern
     min_level: 1
     weapon_equip: 751
     armor_equip: 417
     can_use_skill: false
     cause: 7
   - poly_id: 3101
-    name: "black knight chief morph"
+    name: black knight chief morph
     min_level: 51
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3102
-    name: "great minotaur morph"
+    name: great minotaur morph
     min_level: 50
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3103
-    name: "barlog morph"
+    name: barlog morph
     min_level: 52
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3126
-    name: "fire bowman morph"
+    name: fire bowman morph
     min_level: 51
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3630
-    name: "cyclops"
+    name: cyclops
     min_level: 40
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3631
-    name: "griffon"
+    name: griffon
     min_level: 40
     weapon_equip: 0
     armor_equip: 32
     can_use_skill: true
     cause: 7
   - poly_id: 3632
-    name: "re cockatrice"
+    name: re cockatrice
     min_level: 1
     weapon_equip: 0
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3633
-    name: "ettin"
+    name: ettin
     min_level: 40
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3634
-    name: "assassin"
+    name: assassin
     min_level: 45
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3664
-    name: "baranka"
+    name: baranka
     min_level: 1
     weapon_equip: 704
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3750
-    name: "haregi"
+    name: haregi
     min_level: 1
     weapon_equip: 0
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3784
-    name: "death knight"
+    name: death knight
     min_level: 52
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3860
-    name: "bow orc"
+    name: bow orc
     min_level: 1
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3861
-    name: "goblin"
+    name: goblin
     min_level: 1
     weapon_equip: 751
     armor_equip: 913
     can_use_skill: false
     cause: 7
   - poly_id: 3862
-    name: "kobolds"
+    name: kobolds
     min_level: 1
     weapon_equip: 751
     armor_equip: 913
     can_use_skill: true
     cause: 7
   - poly_id: 3863
-    name: "re dwarf"
+    name: re dwarf
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3864
-    name: "orc fighter"
+    name: orc fighter
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3865
-    name: "re werewolf"
+    name: re werewolf
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3866
-    name: "gandi orc"
+    name: gandi orc
     min_level: 10
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3867
-    name: "rova orc"
+    name: rova orc
     min_level: 10
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3868
-    name: "atuba orc"
+    name: atuba orc
     min_level: 10
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3869
-    name: "dudamara orc"
+    name: dudamara orc
     min_level: 10
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3870
-    name: "neruga orc"
+    name: neruga orc
     min_level: 10
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3871
-    name: "re skeleton archer"
+    name: re skeleton archer
     min_level: 1
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3872
-    name: "zombie"
+    name: zombie
     min_level: 10
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3873
-    name: "re ghoul"
+    name: re ghoul
     min_level: 10
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3874
-    name: "re lycanthrope"
+    name: re lycanthrope
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3875
-    name: "ghast"
+    name: ghast
     min_level: 10
     weapon_equip: 751
     armor_equip: 945
     can_use_skill: true
     cause: 7
   - poly_id: 3876
-    name: "bugbear"
+    name: bugbear
     min_level: 10
     weapon_equip: 751
     armor_equip: 945
     can_use_skill: true
     cause: 7
   - poly_id: 3877
-    name: "ogre"
+    name: ogre
     min_level: 15
     weapon_equip: 1791
     armor_equip: 913
     can_use_skill: true
     cause: 7
   - poly_id: 3878
-    name: "troll"
+    name: troll
     min_level: 15
     weapon_equip: 751
     armor_equip: 545
     can_use_skill: true
     cause: 7
   - poly_id: 3879
-    name: "elder"
+    name: elder
     min_level: 15
     weapon_equip: 751
     armor_equip: 0
     can_use_skill: true
     cause: 7
   - poly_id: 3880
-    name: "king bugbear"
+    name: king bugbear
     min_level: 15
     weapon_equip: 751
     armor_equip: 945
     can_use_skill: true
     cause: 7
   - poly_id: 3881
-    name: "dark elder"
+    name: dark elder
     min_level: 45
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3882
-    name: "necromancer1"
+    name: necromancer1
     min_level: 45
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3883
-    name: "necromancer2"
+    name: necromancer2
     min_level: 45
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3884
-    name: "necromancer3"
+    name: necromancer3
     min_level: 45
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3885
-    name: "necromancer4"
+    name: necromancer4
     min_level: 45
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3886
-    name: "lesser demon"
+    name: lesser demon
     min_level: 45
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: false
     cause: 7
   - poly_id: 3887
-    name: "darkelf carrier"
+    name: darkelf carrier
     min_level: 45
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: false
     cause: 7
   - poly_id: 3888
-    name: "baphomet"
+    name: baphomet
     min_level: 50
     weapon_equip: 751
     armor_equip: 954
     can_use_skill: true
     cause: 7
   - poly_id: 3889
-    name: "demon"
+    name: demon
     min_level: 51
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3890
-    name: "ancient black knight morph"
+    name: ancient black knight morph
     min_level: 55
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3891
-    name: "ancient black mage morph"
+    name: ancient black mage morph
     min_level: 55
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3892
-    name: "ancient black scouter morph"
+    name: ancient black scouter morph
     min_level: 55
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3893
-    name: "ancient silver knight morph"
+    name: ancient silver knight morph
     min_level: 60
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3894
-    name: "ancient silver mage morph"
+    name: ancient silver mage morph
     min_level: 60
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3895
-    name: "ancient silver scouter morph"
+    name: ancient silver scouter morph
     min_level: 60
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3896
-    name: "ancient gold knight morph"
+    name: ancient gold knight morph
     min_level: 65
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3897
-    name: "ancient gold mage morph"
+    name: ancient gold mage morph
     min_level: 65
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3898
-    name: "ancient gold scouter morph"
+    name: ancient gold scouter morph
     min_level: 65
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3899
-    name: "ancient platinum knight morph"
+    name: ancient platinum knight morph
     min_level: 70
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3900
-    name: "ancient platinum mage morph"
+    name: ancient platinum mage morph
     min_level: 70
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3901
-    name: "ancient platinum scouter morph"
+    name: ancient platinum scouter morph
     min_level: 70
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3902
-    name: "Kelenis Morph"
+    name: Kelenis Morph
     min_level: 1
     weapon_equip: 43
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3903
-    name: "Ken Lauhel Morph"
+    name: Ken Lauhel Morph
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3904
-    name: "stone golem"
+    name: stone golem
     min_level: 1
     weapon_equip: 751
     armor_equip: 145
     can_use_skill: true
     cause: 7
   - poly_id: 3905
-    name: "beleth"
+    name: beleth
     min_level: 50
     weapon_equip: 751
     armor_equip: 954
     can_use_skill: true
     cause: 7
   - poly_id: 3906
-    name: "re orc"
+    name: re orc
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3945
-    name: "re gelatincube"
+    name: re gelatincube
     min_level: 1
     weapon_equip: 751
     armor_equip: 0
     can_use_skill: true
     cause: 7
   - poly_id: 3950
-    name: "re middle oum"
+    name: re middle oum
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 3952
-    name: "vampire"
+    name: vampire
     min_level: 1
     weapon_equip: 0
     armor_equip: 32
     can_use_skill: false
     cause: 7
   - poly_id: 4000
-    name: "knight vald morph"
+    name: knight vald morph
     min_level: 1
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 4001
-    name: "iris morph"
+    name: iris morph
     min_level: 1
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 4002
-    name: "paperman morph"
+    name: paperman morph
     min_level: 1
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 4004
-    name: "succubus queen morph"
+    name: succubus queen morph
     min_level: 1
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 4186
-    name: "robber bone"
+    name: robber bone
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: false
     cause: 7
   - poly_id: 4188
-    name: "robber bone head"
+    name: robber bone head
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: false
     cause: 7
   - poly_id: 4190
-    name: "robber bone soldier"
+    name: robber bone soldier
     min_level: 1
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: false
     cause: 7
   - poly_id: 4227
-    name: "hakama"
+    name: hakama
     min_level: 1
     weapon_equip: 0
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 4767
-    name: "rabbit"
+    name: rabbit
     min_level: 1
     weapon_equip: 0
     armor_equip: 4095
     can_use_skill: false
     cause: 7
   - poly_id: 4769
-    name: "carrot rabbit"
+    name: carrot rabbit
     min_level: 1
     weapon_equip: 0
     armor_equip: 4095
     can_use_skill: false
     cause: 7
   - poly_id: 4917
-    name: "darkelf ranger morph"
+    name: darkelf ranger morph
     min_level: 45
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 4918
-    name: "bandit bow morph"
+    name: bandit bow morph
     min_level: 40
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 4919
-    name: "darkelf guard morph"
+    name: darkelf guard morph
     min_level: 50
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 4920
-    name: "elmor general morph"
+    name: elmor general morph
     min_level: 45
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 4921
-    name: "darkelf general morph"
+    name: darkelf general morph
     min_level: 52
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 4922
-    name: "guardian armor morph"
+    name: guardian armor morph
     min_level: 50
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 4923
-    name: "black knight morph"
+    name: black knight morph
     min_level: 51
     weapon_equip: 1080
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 4924
-    name: "darkelf spear morph"
+    name: darkelf spear morph
     min_level: 50
     weapon_equip: 1080
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 4925
-    name: "elmor soldier morph"
+    name: elmor soldier morph
     min_level: 40
     weapon_equip: 1080
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 4926
-    name: "darkelf wizard morph"
+    name: darkelf wizard morph
     min_level: 50
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 4928
-    name: "high collie"
+    name: high collie
     min_level: 1
     weapon_equip: 0
     armor_equip: 2
     can_use_skill: true
     cause: 7
   - poly_id: 4929
-    name: "high raccoon"
+    name: high raccoon
     min_level: 1
     weapon_equip: 0
     armor_equip: 2
     can_use_skill: true
     cause: 7
   - poly_id: 4932
-    name: "assassin master morph"
+    name: assassin master morph
     min_level: 52
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 5184
-    name: "red uniform"
+    name: red uniform
     min_level: 1
     weapon_equip: 0
     armor_equip: 8
     can_use_skill: true
     cause: 7
   - poly_id: 5186
-    name: "blue uniform"
+    name: blue uniform
     min_level: 1
     weapon_equip: 0
     armor_equip: 8
     can_use_skill: true
     cause: 7
   - poly_id: 5645
-    name: "Halloween Pumpkin"
+    name: Halloween Pumpkin
     min_level: 1
     weapon_equip: 2047
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 5719
-    name: "manekineko"
+    name: manekineko
     min_level: 1
     weapon_equip: 2047
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 5727
-    name: "ancient black assassin morph"
+    name: ancient black assassin morph
     min_level: 55
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 5730
-    name: "ancient silver assassin morph"
+    name: ancient silver assassin morph
     min_level: 60
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 5733
-    name: "ancient gold assassin morph"
+    name: ancient gold assassin morph
     min_level: 65
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 5736
-    name: "ancient platinum assassin morph"
+    name: ancient platinum assassin morph
     min_level: 70
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 5976
-    name: "high bear"
+    name: high bear
     min_level: 1
     weapon_equip: 751
     armor_equip: 2
     can_use_skill: false
     cause: 7
   - poly_id: 6002
-    name: "spirit of earth boss"
+    name: spirit of earth boss
     min_level: 1
     weapon_equip: 8
     armor_equip: 0
     can_use_skill: true
     cause: 7
   - poly_id: 6010
-    name: "red orc"
+    name: red orc
     min_level: 1
     weapon_equip: 0
     armor_equip: 1
     can_use_skill: false
     cause: 7
   - poly_id: 6034
-    name: "priest of corruption"
+    name: priest of corruption
     min_level: 45
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6035
-    name: "quest lesser demon"
+    name: quest lesser demon
     min_level: 45
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6080
-    name: "princess horse"
+    name: princess horse
     min_level: 1
     weapon_equip: 16
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6086
-    name: "Rabor Born Head"
+    name: Rabor Born Head
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6087
-    name: "Rabor Born archer"
+    name: Rabor Born archer
     min_level: 1
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6088
-    name: "Rabor Born knife"
+    name: Rabor Born knife
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6089
-    name: "drake morph"
+    name: drake morph
     min_level: 1
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6094
-    name: "prince horse"
+    name: prince horse
     min_level: 1
     weapon_equip: 16
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6136
-    name: "barlog 52"
+    name: barlog 52
     min_level: 52
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6137
-    name: "death 52"
+    name: death 52
     min_level: 52
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6138
-    name: "assassin 52"
+    name: assassin 52
     min_level: 52
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6139
-    name: "general 52"
+    name: general 52
     min_level: 52
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6140
-    name: "darkelf 52"
+    name: darkelf 52
     min_level: 52
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6141
-    name: "barlog 55"
+    name: barlog 55
     min_level: 55
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6142
-    name: "death 55"
+    name: death 55
     min_level: 55
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6143
-    name: "assassin 55"
+    name: assassin 55
     min_level: 55
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6144
-    name: "general 55"
+    name: general 55
     min_level: 55
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6145
-    name: "darkelf 55"
+    name: darkelf 55
     min_level: 55
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6146
-    name: "barlog 60"
+    name: barlog 60
     min_level: 60
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6147
-    name: "death 60"
+    name: death 60
     min_level: 60
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6148
-    name: "assassin 60"
+    name: assassin 60
     min_level: 60
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6149
-    name: "general 60"
+    name: general 60
     min_level: 60
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6150
-    name: "darkelf 60"
+    name: darkelf 60
     min_level: 60
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6151
-    name: "barlog 65"
+    name: barlog 65
     min_level: 65
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6152
-    name: "death 65"
+    name: death 65
     min_level: 65
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6153
-    name: "assassin 65"
+    name: assassin 65
     min_level: 65
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6154
-    name: "general 65"
+    name: general 65
     min_level: 65
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6155
-    name: "darkelf 65"
+    name: darkelf 65
     min_level: 65
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6156
-    name: "barlog 70"
+    name: barlog 70
     min_level: 70
     weapon_equip: 1791
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6157
-    name: "death 70"
+    name: death 70
     min_level: 70
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6158
-    name: "assassin 70"
+    name: assassin 70
     min_level: 70
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6159
-    name: "general 70"
+    name: general 70
     min_level: 70
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6160
-    name: "darkelf 70"
+    name: darkelf 70
     min_level: 70
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6180
-    name: "unicorn A"
+    name: unicorn A
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6181
-    name: "unicorn B"
+    name: unicorn B
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6182
-    name: "unicorn C"
+    name: unicorn C
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6183
-    name: "unicorn D"
+    name: unicorn D
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6184
-    name: "bear A"
+    name: bear A
     min_level: 0
     weapon_equip: 749
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6185
-    name: "bear B"
+    name: bear B
     min_level: 0
     weapon_equip: 749
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6186
-    name: "bear C"
+    name: bear C
     min_level: 0
     weapon_equip: 749
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6187
-    name: "bear D"
+    name: bear D
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6188
-    name: "mini white dog A"
+    name: mini white dog A
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6189
-    name: "mini white dog B"
+    name: mini white dog B
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6190
-    name: "mini white dog C"
+    name: mini white dog C
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6191
-    name: "mini white dog D"
+    name: mini white dog D
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6192
-    name: "ratman A"
+    name: ratman A
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6193
-    name: "ratman B"
+    name: ratman B
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6194
-    name: "ratman C"
+    name: ratman C
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6195
-    name: "ratman D"
+    name: ratman D
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6196
-    name: "pet tiger A"
+    name: pet tiger A
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6197
-    name: "pet tiger B"
+    name: pet tiger B
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6198
-    name: "pet tiger C"
+    name: pet tiger C
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6199
-    name: "pet tiger D"
+    name: pet tiger D
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6200
-    name: "dillo A"
+    name: dillo A
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6201
-    name: "dillo B"
+    name: dillo B
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6202
-    name: "dillo C"
+    name: dillo C
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6203
-    name: "dillo D"
+    name: dillo D
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6204
-    name: "mole A"
+    name: mole A
     min_level: 0
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6205
-    name: "mole B"
+    name: mole B
     min_level: 0
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6206
-    name: "mole C"
+    name: mole C
     min_level: 0
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6207
-    name: "mole D"
+    name: mole D
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6208
-    name: "darkelf thief A"
+    name: darkelf thief A
     min_level: 0
     weapon_equip: 1007
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6209
-    name: "darkelf thief B"
+    name: darkelf thief B
     min_level: 0
     weapon_equip: 1007
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6210
-    name: "darkelf thief C"
+    name: darkelf thief C
     min_level: 0
     weapon_equip: 1007
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6211
-    name: "darkelf thief D"
+    name: darkelf thief D
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6212
-    name: "ken lauhel A"
+    name: ken lauhel A
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6213
-    name: "ken lauhel B"
+    name: ken lauhel B
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6214
-    name: "ken lauhel C"
+    name: ken lauhel C
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6215
-    name: "ken lauhel D"
+    name: ken lauhel D
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6216
-    name: "kelenis A"
+    name: kelenis A
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6217
-    name: "kelenis B"
+    name: kelenis B
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6218
-    name: "kelenis C"
+    name: kelenis C
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6219
-    name: "kelenis D"
+    name: kelenis D
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6220
-    name: "slave A"
+    name: slave A
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6221
-    name: "slave B"
+    name: slave B
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6222
-    name: "slave C"
+    name: slave C
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6223
-    name: "slave D"
+    name: slave D
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6224
-    name: "dofleganger boss A"
+    name: dofleganger boss A
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6225
-    name: "dofleganger boss B"
+    name: dofleganger boss B
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6226
-    name: "dofleganger boss C"
+    name: dofleganger boss C
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6227
-    name: "dofleganger boss D"
+    name: dofleganger boss D
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6228
-    name: "lich A"
+    name: lich A
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6229
-    name: "lich B"
+    name: lich B
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6230
-    name: "lich C"
+    name: lich C
     min_level: 0
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 10
   - poly_id: 6231
-    name: "lich D"
+    name: lich D
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6232
-    name: "woman1 A"
+    name: woman1 A
     min_level: 0
     weapon_equip: 0
     armor_equip: 4095
     can_use_skill: false
     cause: 10
   - poly_id: 6233
-    name: "woman1 B"
+    name: woman1 B
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6234
-    name: "woman2 A"
+    name: woman2 A
     min_level: 0
     weapon_equip: 0
     armor_equip: 4095
     can_use_skill: false
     cause: 10
   - poly_id: 6235
-    name: "woman2 B"
+    name: woman2 B
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6236
-    name: "woman3 A"
+    name: woman3 A
     min_level: 0
     weapon_equip: 0
     armor_equip: 4095
     can_use_skill: false
     cause: 10
   - poly_id: 6237
-    name: "woman3 B"
+    name: woman3 B
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6238
-    name: "woman4 A"
+    name: woman4 A
     min_level: 0
     weapon_equip: 0
     armor_equip: 4095
     can_use_skill: false
     cause: 10
   - poly_id: 6239
-    name: "woman4 B"
+    name: woman4 B
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6240
-    name: "woman5 A"
+    name: woman5 A
     min_level: 0
     weapon_equip: 0
     armor_equip: 4095
     can_use_skill: false
     cause: 10
   - poly_id: 6241
-    name: "woman5 B"
+    name: woman5 B
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6242
-    name: "noblewoman A"
+    name: noblewoman A
     min_level: 0
     weapon_equip: 0
     armor_equip: 4095
     can_use_skill: false
     cause: 10
   - poly_id: 6243
-    name: "noblewoman B"
+    name: noblewoman B
     min_level: 0
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 10
   - poly_id: 6267
-    name: "neo black knight"
+    name: neo black knight
     min_level: 55
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6268
-    name: "neo black mage"
+    name: neo black mage
     min_level: 55
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6269
-    name: "neo black scouter"
+    name: neo black scouter
     min_level: 55
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6270
-    name: "neo silver knight"
+    name: neo silver knight
     min_level: 60
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6271
-    name: "neo silver mage"
+    name: neo silver mage
     min_level: 60
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6272
-    name: "neo silver scouter"
+    name: neo silver scouter
     min_level: 60
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6273
-    name: "neo gold knight"
+    name: neo gold knight
     min_level: 65
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6274
-    name: "neo gold mage"
+    name: neo gold mage
     min_level: 65
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6275
-    name: "neo gold scouter"
+    name: neo gold scouter
     min_level: 65
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6276
-    name: "neo platinum knight"
+    name: neo platinum knight
     min_level: 70
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6277
-    name: "neo platinum mage"
+    name: neo platinum mage
     min_level: 70
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6278
-    name: "neo platinum scouter"
+    name: neo platinum scouter
     min_level: 70
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6279
-    name: "neo black assassin"
+    name: neo black assassin
     min_level: 55
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6280
-    name: "neo silver assassin"
+    name: neo silver assassin
     min_level: 60
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6281
-    name: "neo gold assassin"
+    name: neo gold assassin
     min_level: 65
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6282
-    name: "neo platinum assassin"
+    name: neo platinum assassin
     min_level: 70
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6284
-    name: "Haunted House jack o lantern"
+    name: Haunted House jack o lantern
     min_level: 1
     weapon_equip: 0
     armor_equip: 0
     can_use_skill: false
     cause: 7
   - poly_id: 6400
-    name: "Halloween jack o lantern"
+    name: Halloween jack o lantern
     min_level: 1
     weapon_equip: 2047
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 6894
-    name: "awake"
+    name: awake
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 7332
-    name: "spearm 52"
+    name: spearm 52
     min_level: 52
     weapon_equip: 1080
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 7338
-    name: "spearm 55"
+    name: spearm 55
     min_level: 55
     weapon_equip: 1080
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 7339
-    name: "spearm 60"
+    name: spearm 60
     min_level: 60
     weapon_equip: 1080
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 7340
-    name: "spearm 65"
+    name: spearm 65
     min_level: 65
     weapon_equip: 1080
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 7341
-    name: "spearm 70"
+    name: spearm 70
     min_level: 70
     weapon_equip: 1080
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8719
-    name: "柑橘"
+    name: 柑橘
     min_level: 1
     weapon_equip: 2047
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8774
-    name: "young kelenis"
+    name: young kelenis
     min_level: 75
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8812
-    name: "young gunter"
+    name: young gunter
     min_level: 80
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8817
-    name: "young ken lauel"
+    name: young ken lauel
     min_level: 75
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8851
-    name: "young dantes"
+    name: young dantes
     min_level: 75
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8900
-    name: "young helvine"
+    name: young helvine
     min_level: 75
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8913
-    name: "young gilian"
+    name: young gilian
     min_level: 80
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8978
-    name: "young bluedica"
+    name: young bluedica
     min_level: 80
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 9003
-    name: "young joewoo"
+    name: young joewoo
     min_level: 80
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 9011
-    name: "spearm 75"
+    name: spearm 75
     min_level: 75
     weapon_equip: 1080
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 9012
-    name: "spearm 80"
+    name: spearm 80
     min_level: 80
     weapon_equip: 1080
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 9205
-    name: "death 75"
+    name: death 75
     min_level: 75
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 9206
-    name: "death 80"
+    name: death 80
     min_level: 80
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 9225
-    name: "darkelf 75"
+    name: darkelf 75
     min_level: 75
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 9226
-    name: "darkelf 80"
+    name: darkelf 80
     min_level: 80
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8860
-    name: "re orc scout"
+    name: re orc scout
     min_level: 1
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8859
-    name: "re bugbear"
+    name: re bugbear
     min_level: 1
     weapon_equip: 751
     armor_equip: 945
     can_use_skill: true
     cause: 7
   - poly_id: 2437
-    name: "re giant ant"
+    name: re giant ant
     min_level: 1
     weapon_equip: 0
     armor_equip: 136
     can_use_skill: false
     cause: 7
   - poly_id: 2438
-    name: "re giant ant soldier"
+    name: re giant ant soldier
     min_level: 1
     weapon_equip: 0
     armor_equip: 136
     can_use_skill: false
     cause: 7
   - poly_id: 8858
-    name: "re ghast"
+    name: re ghast
     min_level: 1
     weapon_equip: 751
     armor_equip: 945
     can_use_skill: true
     cause: 7
   - poly_id: 8865
-    name: "re lizardman"
+    name: re lizardman
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8866
-    name: "re kiwi parrot"
+    name: re kiwi parrot
     min_level: 1
     weapon_equip: 0
     armor_equip: 954
     can_use_skill: true
     cause: 7
   - poly_id: 8868
-    name: "re wild fang"
+    name: re wild fang
     min_level: 1
     weapon_equip: 0
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8863
-    name: "re raccoon"
+    name: re raccoon
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8864
-    name: "re owlbear"
+    name: re owlbear
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8867
-    name: "re ratman"
+    name: re ratman
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8862
-    name: "re dragon fly"
+    name: re dragon fly
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8861
-    name: "re succubus"
+    name: re succubus
     min_level: 1
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8781
-    name: "re guard sword"
+    name: re guard sword
     min_level: 30
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8782
-    name: "re darkelf carrier"
+    name: re darkelf carrier
     min_level: 30
     weapon_equip: 1080
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8783
-    name: "re darkelf assassin"
+    name: re darkelf assassin
     min_level: 30
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8784
-    name: "re elder"
+    name: re elder
     min_level: 30
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8785
-    name: "re orc axe"
+    name: re orc axe
     min_level: 30
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8786
-    name: "re bandit bow"
+    name: re bandit bow
     min_level: 30
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8787
-    name: "re guard chief"
+    name: re guard chief
     min_level: 40
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8788
-    name: "re guard spear"
+    name: re guard spear
     min_level: 40
     weapon_equip: 1080
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8789
-    name: "re hose"
+    name: re hose
     min_level: 40
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8790
-    name: "re dark elder"
+    name: re dark elder
     min_level: 40
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8791
-    name: "re bandit axe"
+    name: re bandit axe
     min_level: 40
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8792
-    name: "re darkelf ranger"
+    name: re darkelf ranger
     min_level: 40
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8793
-    name: "re cargo"
+    name: re cargo
     min_level: 45
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8794
-    name: "re darkelf spear"
+    name: re darkelf spear
     min_level: 45
     weapon_equip: 1080
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8795
-    name: "re blaze"
+    name: re blaze
     min_level: 45
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8796
-    name: "re black wizard"
+    name: re black wizard
     min_level: 45
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8797
-    name: "re dwarf boss"
+    name: re dwarf boss
     min_level: 45
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8798
-    name: "re darkelf thief"
+    name: re darkelf thief
     min_level: 45
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8799
-    name: "re black knight chief"
+    name: re black knight chief
     min_level: 50
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8800
-    name: "re black knight"
+    name: re black knight
     min_level: 50
     weapon_equip: 1080
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8801
-    name: "re assassin master"
+    name: re assassin master
     min_level: 50
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8802
-    name: "re baphomet"
+    name: re baphomet
     min_level: 50
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8803
-    name: "re minotaur"
+    name: re minotaur
     min_level: 50
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8804
-    name: "re darkelf guard"
+    name: re darkelf guard
     min_level: 50
     weapon_equip: 256
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8805
-    name: "re dreik"
+    name: re dreik
     min_level: 52
     weapon_equip: 192
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8806
-    name: "re xinclair"
+    name: re xinclair
     min_level: 52
     weapon_equip: 751
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8807
-    name: "re great minotaur"
+    name: re great minotaur
     min_level: 52
     weapon_equip: 8
     armor_equip: 4095
     can_use_skill: true
     cause: 7
   - poly_id: 8808
-    name: "re darkelf bow"
+    name: re darkelf bow
     min_level: 52
     weapon_equip: 256
     armor_equip: 4095

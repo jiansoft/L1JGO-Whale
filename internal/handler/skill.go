@@ -20,6 +20,7 @@ const (
 )
 
 // HandleUseSpell processes C_USE_SPELL (opcode 6).
+// Thin handler: parse packet → queue to SkillSystem (Phase 2).
 // Packet format: [C row][C column] then variable data depending on skill:
 //
 //	Most spells: [D targetID][H targetX][H targetY]
@@ -28,23 +29,36 @@ func HandleUseSpell(sess *net.Session, r *packet.Reader, deps *Deps) {
 	column := int32(r.ReadC())
 	skillID := row*8 + column + 1
 
-	player := deps.World.GetBySession(sess.ID)
-	if player == nil || player.Dead {
-		return
-	}
-
-	skill := deps.Skills.Get(skillID)
-	if skill == nil {
-		deps.Log.Debug("unknown skill", zap.Int32("skill_id", skillID))
-		return
-	}
-
-	// Read target info (most spells have this)
 	var targetID int32
 	if r.Remaining() >= 8 {
 		targetID = r.ReadD()
 		_ = r.ReadH() // targetX
 		_ = r.ReadH() // targetY
+	}
+
+	if deps.Skill == nil {
+		return
+	}
+	deps.Skill.QueueSkill(SkillRequest{
+		SessionID: sess.ID,
+		SkillID:   skillID,
+		TargetID:  targetID,
+	})
+}
+
+// ProcessSkill validates and executes a skill request.
+// Called by SkillSystem in Phase 2.
+func ProcessSkill(sessID uint64, skillID, targetID int32, deps *Deps) {
+	player := deps.World.GetBySession(sessID)
+	if player == nil || player.Dead {
+		return
+	}
+	sess := player.Session
+
+	skill := deps.Skills.Get(skillID)
+	if skill == nil {
+		deps.Log.Debug("unknown skill", zap.Int32("skill_id", skillID))
+		return
 	}
 
 	deps.Log.Debug("C_UseSpell",
@@ -56,6 +70,11 @@ func HandleUseSpell(sess *net.Session, r *packet.Reader, deps *Deps) {
 	)
 
 	// --- Validation ---
+
+	// 麻痺/暈眩/凍結/睡眠時無法施法
+	if player.Paralyzed || player.Sleeped {
+		return
+	}
 
 	// Polymorph spell restriction: some forms cannot cast spells
 	if player.PolyID != 0 && deps.Polys != nil {
@@ -90,6 +109,38 @@ func HandleUseSpell(sess *net.Session, r *packet.Reader, deps *Deps) {
 		return
 	}
 
+	// --- Item consumption check (Java: isItemConsume) ---
+	// Must verify BEFORE consuming MP/HP. Java msg 299: "施放魔法所需材料不足。"
+	if skill.ItemConsumeID > 0 && skill.ItemConsumeCount > 0 {
+		needItemID := int32(skill.ItemConsumeID)
+		slot := player.Inv.FindByItemID(needItemID)
+		if slot == nil || slot.Count < int32(skill.ItemConsumeCount) {
+			haveCount := int32(0)
+			if slot != nil {
+				haveCount = slot.Count
+			}
+			// Dump first 10 inventory item IDs for debugging
+			var invIDs []int32
+			for i, it := range player.Inv.Items {
+				if i >= 10 {
+					break
+				}
+				invIDs = append(invIDs, it.ItemID)
+			}
+			deps.Log.Warn("skill blocked: insufficient materials",
+				zap.Int32("skill_id", skillID),
+				zap.String("skill_name", skill.Name),
+				zap.Int32("need_item_id", needItemID),
+				zap.Int("need_count", skill.ItemConsumeCount),
+				zap.Bool("slot_found", slot != nil),
+				zap.Int32("have_count", haveCount),
+				zap.Int("inv_size", player.Inv.Size()),
+				zap.Int32s("inv_first10", invIDs))
+			sendServerMessage(sess, 299) // 施放魔法所需材料不足。
+			return
+		}
+	}
+
 	// --- Teleport spells: special routing BEFORE consuming MP ---
 	// Java: teleport spells do NOT consume MP on failure (map restriction).
 	// executeTeleportSpell handles MP consumption internally after validation.
@@ -98,7 +149,25 @@ func HandleUseSpell(sess *net.Session, r *packet.Reader, deps *Deps) {
 		return
 	}
 
-	// --- Consume resources ---
+	// --- Summon skills: special routing ---
+	// Resource consumption is handled INSIDE each function, AFTER validation passes.
+	// Java: validate → execute → consume. Consuming before validation wastes materials on failure.
+	switch skillID {
+	case 51: // Summon Monster
+		executeSummonMonster(sess, player, skill, targetID, deps)
+		return
+	case 36: // Taming Monster
+		executeTamingMonster(sess, player, skill, targetID, deps)
+		return
+	case 41: // Create Zombie
+		executeCreateZombie(sess, player, skill, targetID, deps)
+		return
+	case 145: // Return to Nature
+		executeReturnToNature(sess, player, skill, deps)
+		return
+	}
+
+	// --- Consume resources (MP, HP, items) ---
 	if skill.MpConsume > 0 {
 		player.MP -= int16(skill.MpConsume)
 		sendMpUpdate(sess, player)
@@ -106,6 +175,18 @@ func HandleUseSpell(sess *net.Session, r *packet.Reader, deps *Deps) {
 	if skill.HpConsume > 0 {
 		player.HP -= int16(skill.HpConsume)
 		sendHpUpdate(sess, player)
+	}
+	if skill.ItemConsumeID > 0 && skill.ItemConsumeCount > 0 {
+		slot := player.Inv.FindByItemID(int32(skill.ItemConsumeID))
+		if slot != nil {
+			removed := player.Inv.RemoveItem(slot.ObjectID, int32(skill.ItemConsumeCount))
+			if removed {
+				sendRemoveInventoryItem(sess, slot.ObjectID)
+			} else {
+				sendItemCountUpdate(sess, slot)
+			}
+			sendWeightUpdate(sess, player)
+		}
 	}
 
 	// --- Set global cooldown (Java: L1SkillDelay) ---
@@ -134,6 +215,37 @@ func HandleUseSpell(sess *net.Session, r *packet.Reader, deps *Deps) {
 	}
 }
 
+// consumeSkillResources deducts MP/HP/items and sets global cooldown.
+// Item availability must be validated BEFORE calling this function (see item check above).
+func consumeSkillResources(sess *net.Session, player *world.PlayerInfo, skill *data.SkillInfo) {
+	if skill.MpConsume > 0 {
+		player.MP -= int16(skill.MpConsume)
+		sendMpUpdate(sess, player)
+	}
+	if skill.HpConsume > 0 {
+		player.HP -= int16(skill.HpConsume)
+		sendHpUpdate(sess, player)
+	}
+	// Consume required items (Java: useConsume)
+	if skill.ItemConsumeID > 0 && skill.ItemConsumeCount > 0 {
+		slot := player.Inv.FindByItemID(int32(skill.ItemConsumeID))
+		if slot != nil {
+			removed := player.Inv.RemoveItem(slot.ObjectID, int32(skill.ItemConsumeCount))
+			if removed {
+				sendRemoveInventoryItem(sess, slot.ObjectID)
+			} else {
+				sendItemCountUpdate(sess, slot)
+			}
+			sendWeightUpdate(sess, player)
+		}
+	}
+	delay := skill.ReuseDelay
+	if delay <= 0 {
+		delay = 1000
+	}
+	player.SkillDelayUntil = time.Now().Add(time.Duration(delay) * time.Millisecond)
+}
+
 // isResurrectionSkill returns true for resurrection-type spells (defined in Lua).
 func isResurrectionSkill(skill *data.SkillInfo, deps *Deps) bool {
 	fn := deps.Scripting
@@ -152,21 +264,7 @@ func executeResurrection(sess *net.Session, player *world.PlayerInfo, skill *dat
 		sendActionGfx(viewer.Session, player.CharID, byte(skill.ActionID))
 	}
 
-	// Item consumption check (skills 75, 165 require specific items)
-	if skill.ItemConsumeID > 0 && skill.ItemConsumeCount > 0 {
-		slot := player.Inv.FindByItemID(int32(skill.ItemConsumeID))
-		if slot == nil || slot.Count < int32(skill.ItemConsumeCount) {
-			sendServerMessage(sess, msgCastFail)
-			return
-		}
-		removed := player.Inv.RemoveItem(slot.ObjectID, int32(skill.ItemConsumeCount))
-		if removed {
-			sendRemoveInventoryItem(sess, slot.ObjectID)
-		} else {
-			sendItemCountUpdate(sess, slot)
-		}
-		sendWeightUpdate(sess, player)
-	}
+	// Item check + consumption now handled by ProcessSkill before reaching here.
 
 	switch skill.SkillID {
 	case 131: // 世界樹的呼喚 — AoE resurrection (nearby dead players)
@@ -415,6 +513,11 @@ func executeAttackSkill(sess *net.Session, player *world.PlayerInfo, skill *data
 				t.npc.HP = 0
 			}
 
+			// 受傷時解除睡眠
+			if t.npc.Sleeped {
+				BreakNpcSleep(t.npc, ws)
+			}
+
 			// Mind Break: drain MP from target
 			if h == 0 && t.drainMP > 0 && t.npc.MP >= t.drainMP {
 				t.npc.MP -= t.drainMP
@@ -442,9 +545,19 @@ func executeAttackSkill(sess *net.Session, player *world.PlayerInfo, skill *data
 
 // executeBuffSkill handles healing and buff spells.
 func executeBuffSkill(sess *net.Session, player *world.PlayerInfo, skill *data.SkillInfo, targetID int32, deps *Deps) {
+	ws := deps.World
+
+	// 檢查目標是否為 NPC（debuff 技能路徑）
+	if targetID != 0 && targetID != player.CharID {
+		if npc := ws.GetNpc(targetID); npc != nil && !npc.Dead {
+			executeNpcDebuffSkill(sess, player, skill, npc, deps)
+			return
+		}
+	}
+
 	target := player
 	if targetID != 0 && targetID != player.CharID {
-		if other := deps.World.GetByCharID(targetID); other != nil {
+		if other := ws.GetByCharID(targetID); other != nil {
 			// Validate: same map and within range
 			if other.MapID != player.MapID || other.Dead {
 				return
@@ -478,9 +591,14 @@ func executeBuffSkill(sess *net.Session, player *world.PlayerInfo, skill *data.S
 	case 23: // 能量感測 Sense — show target info
 		// TODO: send target stats to caster
 
+	case 20, 40: // 闇盲咒術 / 黑闇之影 Curse Blind — 致盲
+		sendCurseBlind(target.Session, 1)
+
 	case 37: // 聖潔之光 Remove Curse — cures poison and paralysis
 		target.Paralyzed = false
 		target.Sleeped = false
+		sendParalysis(target.Session, ParalysisRemove)
+		sendCurseBlind(target.Session, 0)
 
 	case 39: // 魔力奪取 Mana Drain — steal MP from target
 		drain := int16(5 + world.RandInt(10))
@@ -499,7 +617,7 @@ func executeBuffSkill(sess *net.Session, player *world.PlayerInfo, skill *data.S
 			cancelAllBuffs(target, deps)
 		}
 
-	case 145: // 釋放元素 Return to Nature — remove summons (placeholder)
+	// case 145 handled by summon skill routing above (never reaches here)
 
 	case 153: // 魔法消除 Dispel — remove buffs from target
 		cancelAllBuffs(target, deps)
@@ -551,72 +669,35 @@ func executeBuffSkill(sess *net.Session, player *world.PlayerInfo, skill *data.S
 }
 
 // sendBuffIcon sends the appropriate buff icon packet to the client for a given skill.
-// Each buff type has its own icon opcode/format. Duration in seconds; 0 = cancel.
-func sendBuffIcon(target *world.PlayerInfo, skillID int32, durationSec uint16) {
+// Icon mapping is data-driven from buff_icon_map.yaml via deps.BuffIcons.
+// Duration in seconds; 0 = cancel.
+func sendBuffIcon(target *world.PlayerInfo, skillID int32, durationSec uint16, deps *Deps) {
+	icon := deps.BuffIcons.Get(skillID)
+	if icon == nil {
+		return
+	}
 	sess := target.Session
-	switch skillID {
-	// AC buff icons (S_SkillIconShield opcode 216)
-	case 3:
-		sendIconShield(sess, durationSec, 2) // Shield
-	case 21:
-		sendIconShield(sess, durationSec, 3) // Blessed Armor
-	case 24, 99:
-		sendIconShield(sess, durationSec, 3) // Shadow Armor / DE Shadow Armor
-	case 151:
-		sendIconShield(sess, durationSec, 6) // Earth Skin
-	case 159:
-		sendIconShield(sess, durationSec, 7) // Earth Bless
-	case 168:
-		sendIconShield(sess, durationSec, 10) // Iron Skin
-
-	// STR buff icons (S_Strup opcode 166)
-	case 109:
-		sendIconStrup(sess, durationSec, byte(target.Str), 2) // Dress Mighty
-	case 42:
-		sendIconStrup(sess, durationSec, byte(target.Str), 5) // Physical Enchant STR
-
-	// DEX buff icons (S_Dexup opcode 188)
-	case 110:
-		sendIconDexup(sess, durationSec, byte(target.Dex), 2) // Dress Dexterity
-	case 26:
-		sendIconDexup(sess, durationSec, byte(target.Dex), 5) // Physical Enchant DEX
-
-	// Aura/weapon buff icons (S_SkillIconAura opcode 250, sub 0x16)
-	// iconId = skillID - 1 for all aura-type skills
-	case 114: // Glowing Aura → iconId 113
+	switch icon.Type {
+	case "shield":
+		sendIconShield(sess, durationSec, icon.Param)
+	case "strup":
+		sendIconStrup(sess, durationSec, byte(target.Str), icon.Param)
+	case "dexup":
+		sendIconDexup(sess, durationSec, byte(target.Dex), icon.Param)
+	case "aura":
 		sendIconAura(sess, byte(skillID-1), durationSec)
-	case 115: // Shining Aura → iconId 114
-		sendIconAura(sess, byte(skillID-1), durationSec)
-	case 117: // Brave Aura → iconId 116
-		sendIconAura(sess, byte(skillID-1), durationSec)
-	case 148: // Fire Weapon → iconId 147
-		sendIconAura(sess, byte(skillID-1), durationSec)
-	case 149: // Wind Shot → iconId 148
-		sendIconAura(sess, byte(skillID-1), durationSec)
-	case 156: // Storm Eye → iconId 155
-		sendIconAura(sess, byte(skillID-1), durationSec)
-	case 163: // Burning Weapon → iconId 162
-		sendIconAura(sess, byte(skillID-1), durationSec)
-	case 166: // Storm Shot → iconId 165
-		sendIconAura(sess, byte(skillID-1), durationSec)
-
-	// Invisibility (S_Invis opcode 171)
-	case 60, 97:
+	case "invis":
 		sendInvisible(sess, target.CharID, durationSec > 0)
-
-	// Potion buff icons (virtual SkillIDs 1000+)
-	// Haste (1001) and Brave (1000/1016) use S_SPEED packets, NOT icons here.
-	// Their icons are handled by sendSpeedPacket in sendRestoredBuffIcons / applyHaste / applyBrave.
-	case SkillStatusWisdomPotion: // 1004 — wisdom potion icon
+	case "wisdom":
 		sendWisdomPotionIcon(sess, durationSec)
-	case SkillStatusBluePotion: // 1002 — blue potion icon
+	case "blue_potion":
 		sendBluePotionIcon(sess, durationSec)
 	}
 }
 
 // cancelBuffIcon cancels the buff icon for a given skill (sends icon with time=0).
-func cancelBuffIcon(target *world.PlayerInfo, skillID int32) {
-	sendBuffIcon(target, skillID, 0)
+func cancelBuffIcon(target *world.PlayerInfo, skillID int32, deps *Deps) {
+	sendBuffIcon(target, skillID, 0, deps)
 }
 
 // applyBuffEffect applies stat changes and registers the buff timer.
@@ -690,16 +771,32 @@ func applyBuffEffect(target *world.PlayerInfo, skill *data.SkillInfo, deps *Deps
 		target.EarthRes += buff.DeltaEarthRes
 
 		// Special flags
+
+		// 速度互抵邏輯（Java: Haste vs Slow 互相消除）
 		if eff.MoveSpeed > 0 {
-			buff.SetMoveSpeed = byte(eff.MoveSpeed)
-			target.MoveSpeed = byte(eff.MoveSpeed)
-			target.HasteTicks = buff.TicksLeft
-			sendSpeedToAll(target, deps, byte(eff.MoveSpeed), uint16(skill.BuffDuration))
+			if eff.MoveSpeed == 2 && target.MoveSpeed == 1 {
+				// 減速打加速 → 雙方消除，恢復正常速度
+				cancelSpeedBuffs(target, 1)
+				target.MoveSpeed = 0
+				target.HasteTicks = 0
+				sendSpeedToAll(target, deps, 0, 0)
+			} else if eff.MoveSpeed == 1 && target.MoveSpeed == 2 {
+				// 加速打減速 → 雙方消除，恢復正常速度
+				cancelSpeedBuffs(target, 2)
+				target.MoveSpeed = 0
+				target.HasteTicks = 0
+				sendSpeedToAll(target, deps, 0, 0)
+			} else {
+				buff.SetMoveSpeed = byte(eff.MoveSpeed)
+				target.MoveSpeed = byte(eff.MoveSpeed)
+				target.HasteTicks = buff.TicksLeft
+				sendSpeedToAll(target, deps, byte(eff.MoveSpeed), uint16(skill.BuffDuration))
+			}
 		}
 		if eff.BraveSpeed > 0 {
 			buff.SetBraveSpeed = byte(eff.BraveSpeed)
 			target.BraveSpeed = byte(eff.BraveSpeed)
-			sendSpeedToAll(target, deps, byte(eff.BraveSpeed), uint16(skill.BuffDuration))
+			sendBraveToAll(target, deps, byte(eff.BraveSpeed), uint16(skill.BuffDuration))
 		}
 		if eff.Invisible {
 			buff.SetInvisible = true
@@ -708,10 +805,24 @@ func applyBuffEffect(target *world.PlayerInfo, skill *data.SkillInfo, deps *Deps
 		if eff.Paralyzed {
 			buff.SetParalyzed = true
 			target.Paralyzed = true
+			// 發送對應的麻痺視覺封包
+			switch skill.SkillID {
+			case 87:
+				sendParalysis(target.Session, StunApply)
+			case 157:
+				sendParalysis(target.Session, FreezeApply)
+			case 50: // Ice Lance
+				sendParalysis(target.Session, FreezeApply)
+			case 80: // Freezing Blizzard
+				sendParalysis(target.Session, FreezeApply)
+			default:
+				sendParalysis(target.Session, ParalysisApply)
+			}
 		}
 		if eff.Sleeped {
 			buff.SetSleeped = true
 			target.Sleeped = true
+			sendParalysis(target.Session, SleepApply)
 		}
 	}
 	// else: no Lua definition → generic timer-only buff (no stat changes)
@@ -730,7 +841,7 @@ func applyBuffEffect(target *world.PlayerInfo, skill *data.SkillInfo, deps *Deps
 	}
 
 	// Send buff icon to client
-	sendBuffIcon(target, skill.SkillID, uint16(skill.BuffDuration))
+	sendBuffIcon(target, skill.SkillID, uint16(skill.BuffDuration), deps)
 }
 
 // removeBuffAndRevert removes a conflicting buff and reverts its stats.
@@ -738,7 +849,7 @@ func removeBuffAndRevert(target *world.PlayerInfo, skillID int32, deps *Deps) {
 	old := target.RemoveBuff(skillID)
 	if old != nil {
 		revertBuffStats(target, old)
-		cancelBuffIcon(target, skillID)
+		cancelBuffIcon(target, skillID, deps)
 		if deps.Skills != nil {
 			if sk := deps.Skills.Get(skillID); sk != nil && sk.SysMsgStop > 0 {
 				sendServerMessage(target.Session, uint16(sk.SysMsgStop))
@@ -748,6 +859,20 @@ func removeBuffAndRevert(target *world.PlayerInfo, skillID int32, deps *Deps) {
 }
 
 // revertBuffStats undoes all stat deltas from a buff (Java: L1SkillStop.stopSkill).
+// cancelSpeedBuffs 移除指定速度類型的所有 buff（用於加速/減速互抵）。
+// speedType: 1=加速, 2=減速。
+func cancelSpeedBuffs(target *world.PlayerInfo, speedType byte) {
+	if target.ActiveBuffs == nil {
+		return
+	}
+	for skillID, b := range target.ActiveBuffs {
+		if b.SetMoveSpeed == speedType {
+			revertBuffStats(target, b)
+			delete(target.ActiveBuffs, skillID)
+		}
+	}
+}
+
 func revertBuffStats(target *world.PlayerInfo, buff *world.ActiveBuff) {
 	target.AC -= buff.DeltaAC
 	target.Str -= buff.DeltaStr
@@ -789,12 +914,22 @@ func revertBuffStats(target *world.PlayerInfo, buff *world.ActiveBuff) {
 	}
 }
 
-// sendSpeedToAll sends S_SPEED to self and nearby players.
+// sendSpeedToAll sends S_SkillHaste (opcode 255) to self and nearby players.
 func sendSpeedToAll(target *world.PlayerInfo, deps *Deps, speedType byte, duration uint16) {
 	sendSpeedPacket(target.Session, target.CharID, speedType, duration)
 	nearby := deps.World.GetNearbyPlayers(target.X, target.Y, target.MapID, target.SessionID)
 	for _, other := range nearby {
-		sendSpeedPacket(other.Session, target.CharID, speedType, duration)
+		sendSpeedPacket(other.Session, target.CharID, speedType, 0)
+	}
+}
+
+// sendBraveToAll sends S_SkillBrave (opcode 67) to self and nearby players.
+// type 0 = cancel, type 1 = brave, type 3 = elf brave.
+func sendBraveToAll(target *world.PlayerInfo, deps *Deps, braveType byte, duration uint16) {
+	sendBravePacket(target.Session, target.CharID, braveType, duration)
+	nearby := deps.World.GetNearbyPlayers(target.X, target.Y, target.MapID, target.SessionID)
+	for _, other := range nearby {
+		sendBravePacket(other.Session, target.CharID, braveType, 0)
 	}
 }
 
@@ -1117,7 +1252,7 @@ func cancelAllBuffs(target *world.PlayerInfo, deps *Deps) {
 		}
 		revertBuffStats(target, buff)
 		delete(target.ActiveBuffs, skillID)
-		cancelBuffIcon(target, skillID)
+		cancelBuffIcon(target, skillID, deps)
 
 		// Revert polymorph on cancellation
 		if skillID == SkillShapeChange {
@@ -1131,7 +1266,7 @@ func cancelAllBuffs(target *world.PlayerInfo, deps *Deps) {
 		}
 		if buff.SetBraveSpeed > 0 {
 			target.BraveSpeed = 0
-			sendSpeedToAll(target, deps, 0, 0)
+			sendBraveToAll(target, deps, 0, 0)
 		}
 	}
 	sendPlayerStatus(target.Session, target)
@@ -1153,7 +1288,7 @@ func TickPlayerBuffs(p *world.PlayerInfo, deps *Deps) {
 			delete(p.ActiveBuffs, skillID)
 
 			// Cancel buff icon
-			cancelBuffIcon(p, skillID)
+			cancelBuffIcon(p, skillID, deps)
 
 			// Handle polymorph buff expiry
 			if skillID == SkillShapeChange {
@@ -1169,7 +1304,25 @@ func TickPlayerBuffs(p *world.PlayerInfo, deps *Deps) {
 			if buff.SetBraveSpeed > 0 {
 				p.BraveSpeed = 0
 				p.BraveTicks = 0
-				sendSpeedToAll(p, deps, 0, 0) // cancel brave/holy walk
+				sendBraveToAll(p, deps, 0, 0) // cancel brave on opcode 67
+			}
+
+			// 麻痺/睡眠/致盲到期 → 發送解除視覺封包
+			if buff.SetParalyzed {
+				switch skillID {
+				case 87:
+					sendParalysis(p.Session, StunRemove)
+				case 157, 50, 80:
+					sendParalysis(p.Session, FreezeRemove)
+				default:
+					sendParalysis(p.Session, ParalysisRemove)
+				}
+			}
+			if buff.SetSleeped {
+				sendParalysis(p.Session, SleepRemove)
+			}
+			if skillID == 20 || skillID == 40 {
+				sendCurseBlind(p.Session, 0) // 解除致盲
 			}
 
 			// Handle wisdom potion expiry — clear tracking fields
@@ -1230,6 +1383,179 @@ func chebyshevDist(x1, y1, x2, y2 int32) int32 {
 		return dy
 	}
 	return dx
+}
+
+// --- NPC debuff 施加 ---
+
+// executeNpcDebuffSkill 對 NPC 施加 debuff 技能。
+// 包含 MR 抗性檢查、持續時間計算、狀態旗標設定、計時器註冊、視覺封包廣播。
+func executeNpcDebuffSkill(sess *net.Session, player *world.PlayerInfo, skill *data.SkillInfo, npc *world.NpcInfo, deps *Deps) {
+	ws := deps.World
+
+	// 距離檢查
+	maxRange := int32(skill.Ranged)
+	if maxRange <= 0 {
+		maxRange = 10
+	}
+	if chebyshevDist(player.X, player.Y, npc.X, npc.Y) > maxRange+2 {
+		return
+	}
+
+	player.Heading = calcHeading(player.X, player.Y, npc.X, npc.Y)
+
+	nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
+
+	// 廣播施法動畫
+	for _, viewer := range nearby {
+		sendActionGfx(viewer.Session, player.CharID, byte(skill.ActionID))
+	}
+
+	// --- 技能特殊邏輯 ---
+	switch skill.SkillID {
+	case 87: // 衝擊之暈 Shock Stun — 需要雙手劍
+		wpn := player.Equip.Weapon()
+		if wpn == nil {
+			sendServerMessage(sess, msgCastFail)
+			return
+		}
+		if info := deps.Items.Get(wpn.ItemID); info == nil || info.Type != "tohandsword" {
+			sendGlobalChat(sess, 9, "\\f3請使用雙手劍。")
+			return
+		}
+		// MR 抗性檢查
+		if !checkNpcMRResist(player, npc, skill.SkillID) {
+			sendServerMessage(sess, msgCastFail)
+			return
+		}
+		// 持續時間：隨機 1-6 秒
+		dur := 1 + world.RandInt(6)
+		npc.Paralyzed = true
+		npc.AddDebuff(87, dur*5) // 秒 → ticks
+		// GFX
+		if skill.CastGfx > 0 {
+			for _, viewer := range nearby {
+				sendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
+			}
+		}
+		deps.Log.Info(fmt.Sprintf("衝擊之暈  施法者=%s  NPC=%s  持續=%d秒", player.Name, npc.Name, dur))
+
+	case 157: // 大地屏障 Earth Bind — 凍結 + 灰色色調
+		if !checkNpcMRResist(player, npc, skill.SkillID) {
+			sendServerMessage(sess, msgCastFail)
+			return
+		}
+		// 持續時間：隨機 1-12 秒
+		dur := 1 + world.RandInt(12)
+		npc.Paralyzed = true
+		npc.AddDebuff(157, dur*5)
+		// 灰色色調視覺
+		for _, viewer := range nearby {
+			sendPoison(viewer.Session, npc.ID, 2) // 灰色
+		}
+		if skill.CastGfx > 0 {
+			for _, viewer := range nearby {
+				sendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
+			}
+		}
+		deps.Log.Info(fmt.Sprintf("大地屏障  施法者=%s  NPC=%s  持續=%d秒", player.Name, npc.Name, dur))
+
+	case 103: // 暗黑盲咒 Dark Blind — 對 NPC 施加睡眠（Java 內部用 skill 66 效果）
+		if !checkNpcMRResist(player, npc, skill.SkillID) {
+			sendServerMessage(sess, msgCastFail)
+			return
+		}
+		dur := skill.BuffDuration
+		if dur <= 0 {
+			dur = 3
+		}
+		npc.Sleeped = true
+		npc.AddDebuff(103, dur*5)
+		if skill.CastGfx > 0 {
+			for _, viewer := range nearby {
+				sendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
+			}
+		}
+		deps.Log.Info(fmt.Sprintf("暗黑盲咒  施法者=%s  NPC=%s  持續=%d秒", player.Name, npc.Name, dur))
+
+	case 66: // 沉睡之霧 Fog of Sleeping
+		if !checkNpcMRResist(player, npc, skill.SkillID) {
+			sendServerMessage(sess, msgCastFail)
+			return
+		}
+		dur := skill.BuffDuration
+		if dur <= 0 {
+			dur = 10
+		}
+		npc.Sleeped = true
+		npc.AddDebuff(66, dur*5)
+		if skill.CastGfx > 0 {
+			for _, viewer := range nearby {
+				sendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
+			}
+		}
+		deps.Log.Info(fmt.Sprintf("沉睡之霧  施法者=%s  NPC=%s  持續=%d秒", player.Name, npc.Name, dur))
+
+	case 33: // 木乃伊詛咒 Curse Paralyze — 階段一：5 秒灰色延遲
+		if !checkNpcMRResist(player, npc, skill.SkillID) {
+			sendServerMessage(sess, msgCastFail)
+			return
+		}
+		// 已有麻痺/凍結效果則不重複施加
+		if npc.Paralyzed || npc.HasDebuff(33) || npc.HasDebuff(4001) {
+			return
+		}
+		// 階段一：灰色色調 5 秒（不麻痺，只是視覺 + 計時）
+		npc.AddDebuff(33, 25) // 5 秒 = 25 ticks
+		for _, viewer := range nearby {
+			sendPoison(viewer.Session, npc.ID, 2) // 灰色
+		}
+		if skill.CastGfx > 0 {
+			for _, viewer := range nearby {
+				sendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
+			}
+		}
+		deps.Log.Info(fmt.Sprintf("木乃伊詛咒(階段一)  施法者=%s  NPC=%s  延遲=5秒", player.Name, npc.Name))
+
+	case 29, 76, 152: // 緩速系列 Slow / Mass Slow / Entangle
+		if !checkNpcMRResist(player, npc, skill.SkillID) {
+			sendServerMessage(sess, msgCastFail)
+			return
+		}
+		dur := skill.BuffDuration
+		if dur <= 0 {
+			dur = 64
+		}
+		npc.AddDebuff(skill.SkillID, dur*5)
+		// NPC 速度變慢（目前 NPC AI 已有 MoveSpeed 欄位）
+		if skill.CastGfx > 0 {
+			for _, viewer := range nearby {
+				sendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
+			}
+		}
+		deps.Log.Info(fmt.Sprintf("緩速術  施法者=%s  NPC=%s  技能=%d  持續=%d秒", player.Name, npc.Name, skill.SkillID, dur))
+
+	default:
+		// 不支援的 debuff 技能 → 按照一般 buff 處理（僅 GFX）
+		if skill.CastGfx > 0 {
+			for _, viewer := range nearby {
+				sendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
+			}
+		}
+	}
+}
+
+// checkNpcMRResist 檢查 NPC 的魔法抗性，決定 debuff 是否命中。
+// 簡化公式：base = 50 + (施法者等級 - NPC等級) * 5 + 施法者INT * 2 - NPC MR
+// 範圍限制在 5% ~ 95%。
+func checkNpcMRResist(caster *world.PlayerInfo, npc *world.NpcInfo, skillID int32) bool {
+	prob := 50 + (int(caster.Level)-int(npc.Level))*5 + int(caster.Intel)*2 - int(npc.MR)
+	if prob < 5 {
+		prob = 5
+	}
+	if prob > 95 {
+		prob = 95
+	}
+	return world.RandInt(100) < prob
 }
 
 // --- Packet helpers for spell list ---

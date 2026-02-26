@@ -18,7 +18,7 @@ const (
 	WhTypeClan     int16 = 5
 )
 
-// retrieveListType returns the S_RetrieveList type byte for the client.
+// retrieveListType returns the S_RetrieveList type byte for withdraw mode.
 // Personal=3, Clan=5, Elf=9 (elf uses 9 in packet, 4 in DB).
 func retrieveListType(whType int16) byte {
 	switch whType {
@@ -96,8 +96,8 @@ func OpenWarehouse(sess *net.Session, player *world.PlayerInfo, npcObjID int32, 
 		player.WarehouseItems = append(player.WarehouseItems, wc)
 	}
 
-	// Send S_RETRIEVE_LIST (opcode 176) — matches Java S_RetrieveList format
-	sendRetrieveList(sess, npcObjID, whType, player.WarehouseItems)
+	// Send S_RETRIEVE_LIST (opcode 176) — matches Java S_RetrieveList
+	sendWarehouseList(sess, npcObjID, whType, player.WarehouseItems, int32(deps.Config.Gameplay.WarehousePersonalFee))
 
 	deps.Log.Debug("warehouse opened",
 		zap.String("player", player.Name),
@@ -106,61 +106,33 @@ func OpenWarehouse(sess *net.Session, player *world.PlayerInfo, npcObjID int32, 
 	)
 }
 
-// OpenWarehouseDeposit loads warehouse items (for stack-merge checking) and opens the deposit window.
+// OpenWarehouseDeposit opens the warehouse window for deposit operations.
 // Called from NPC action "deposit", "deposit-elven", "deposit-pledge".
+//
+// In Java, there is NO separate "deposit" NPC action — the 3.80C client's warehouse
+// window has both withdraw and deposit tabs built in. The server sends the same
+// S_OPCODE_RETRIEVE_LIST (type 3) regardless, and the client handles mode switching.
+// S_OPCODE_DEPOSIT (opcode 4) is castle treasury only — must NOT be used for warehouse.
 func OpenWarehouseDeposit(sess *net.Session, player *world.PlayerInfo, npcObjID int32, whType int16, deps *Deps) {
-	ctx := context.Background()
-
-	items, err := deps.WarehouseRepo.Load(ctx, sess.AccountName, whType)
-	if err != nil {
-		deps.Log.Error("倉庫載入失敗", zap.Error(err))
-		return
-	}
-
-	// Build minimal cache — only fields needed for deposit stack-merge checking
-	player.WarehouseItems = make([]*world.WarehouseCache, 0, len(items))
-	player.WarehouseType = whType
-
-	for _, it := range items {
-		itemInfo := deps.Items.Get(it.ItemID)
-		stackable := false
-		if itemInfo != nil {
-			stackable = itemInfo.Stackable || it.ItemID == world.AdenaItemID
-		}
-
-		wc := &world.WarehouseCache{
-			TempObjID: world.NextItemObjID(),
-			DbID:      it.ID,
-			ItemID:    it.ItemID,
-			Count:     it.Count,
-			Stackable: stackable,
-		}
-		player.WarehouseItems = append(player.WarehouseItems, wc)
-	}
-
-	sendDepositWindow(sess, npcObjID)
-
-	deps.Log.Debug("warehouse deposit opened",
-		zap.String("player", player.Name),
-		zap.Int16("type", whType),
-		zap.Int("cached", len(player.WarehouseItems)),
-	)
+	OpenWarehouse(sess, player, npcObjID, whType, deps)
 }
 
-// sendRetrieveList sends S_RETRIEVE_LIST (opcode 176) — warehouse item list.
+// sendWarehouseList sends S_RETRIEVE_LIST (opcode 176) — warehouse item list.
 // Format matches Java S_RetrieveList / S_RetrieveElfList / S_RetrievePledgeList:
 //
 //	[C opcode=176][D npcObjID][H itemCount][C warehouseType]
 //	Per item: [D objID][C useType][H invGfx][C bless][D count][C identified][S viewName]
-//	Trailing: [D playerGold] (personal/clan only, omitted for elf)
-//	          Client displays this as "全部: X" and updates it locally on withdraw/fee.
-func sendRetrieveList(sess *net.Session, npcObjID int32, whType int16, items []*world.WarehouseCache) {
-	rlType := retrieveListType(whType)
+//	Trailing: [D fee] (personal/clan only, omitted for elf)
+//
+// Type byte: 3=personal, 5=clan, 9=elf.
+// The 3.80C client warehouse window has both withdraw and deposit tabs built in.
+func sendWarehouseList(sess *net.Session, npcObjID int32, whType int16, items []*world.WarehouseCache, fee int32) {
+	typeCode := retrieveListType(whType)
 
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_RETRIEVE_LIST)
 	w.WriteD(npcObjID)
 	w.WriteH(uint16(len(items)))
-	w.WriteC(rlType) // warehouse type: 3=personal, 5=clan, 9=elf
+	w.WriteC(typeCode)
 
 	for _, it := range items {
 		viewName := it.Name
@@ -189,16 +161,9 @@ func sendRetrieveList(sess *net.Session, npcObjID int32, whType int16, items []*
 
 	// Trailing: per-item withdrawal fee (30 adena). Client displays at top-left.
 	if whType != WhTypeElf {
-		w.WriteD(0x1e) // 30 adena per item
+		w.WriteD(fee)
 	}
 
-	sess.Send(w.Bytes())
-}
-
-// sendDepositWindow sends S_DEPOSIT (opcode 4) — tells client to show deposit window.
-func sendDepositWindow(sess *net.Session, npcObjID int32) {
-	w := packet.NewWriterWithOpcode(packet.S_OPCODE_DEPOSIT)
-	w.WriteD(npcObjID)
 	sess.Send(w.Bytes())
 }
 
@@ -402,14 +367,16 @@ func handleWarehouseWithdraw(sess *net.Session, r *packet.Reader, count int, pla
 
 	// Check withdrawal fee before processing
 	const mithrilItemID = 40494
+	elfFee := int32(deps.Config.Gameplay.WarehouseElfFee)
+	personalFee := int32(deps.Config.Gameplay.WarehousePersonalFee)
 	if whType == WhTypeElf {
 		mithril := player.Inv.FindByItemID(mithrilItemID)
-		if mithril == nil || mithril.Count < 2 {
+		if mithril == nil || mithril.Count < elfFee {
 			sendServerMessage(sess, 189) // insufficient
 			return
 		}
 	} else {
-		if player.Inv.GetAdena() < 30 {
+		if player.Inv.GetAdena() < personalFee {
 			sendServerMessage(sess, 189) // insufficient adena
 			return
 		}
@@ -489,7 +456,7 @@ func handleWarehouseWithdraw(sess *net.Session, r *packet.Reader, count int, pla
 		if whType == WhTypeElf {
 			mithril := player.Inv.FindByItemID(mithrilItemID)
 			if mithril != nil {
-				removed := player.Inv.RemoveItem(mithril.ObjectID, 2)
+				removed := player.Inv.RemoveItem(mithril.ObjectID, elfFee)
 				if removed {
 					sendRemoveInventoryItem(sess, mithril.ObjectID)
 				} else {
@@ -499,7 +466,7 @@ func handleWarehouseWithdraw(sess *net.Session, r *packet.Reader, count int, pla
 		} else {
 			adena := player.Inv.FindByItemID(world.AdenaItemID)
 			if adena != nil {
-				adena.Count -= 30
+				adena.Count -= personalFee
 				if adena.Count <= 0 {
 					player.Inv.RemoveItem(adena.ObjectID, 0)
 					sendRemoveInventoryItem(sess, adena.ObjectID)

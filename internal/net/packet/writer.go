@@ -7,7 +7,7 @@ import (
 )
 
 // Writer builds an L1J server packet. All multi-byte writes are little-endian.
-// The final Bytes() output is padded to a 4-byte boundary (matching ServerBasePacket.java).
+// The final Bytes() output is padded to an 8-byte boundary (matching ServerBasePacket.java).
 type Writer struct {
 	buf []byte
 }
@@ -69,13 +69,14 @@ func (w *Writer) WriteBytes(b []byte) {
 	w.buf = append(w.buf, b...)
 }
 
-// Bytes returns the packet content padded to a 4-byte boundary.
-// This matches ServerBasePacket.getBytes() in Java.
+// Bytes returns the packet content padded to an 8-byte boundary.
+// This matches ServerBasePacket.getBytes() in Java:
+//   "不足8組 補滿8組BYTE" — pad to 8-byte groups.
 func (w *Writer) Bytes() []byte {
 	size := len(w.buf)
-	padding := size % 4
+	padding := size % 8
 	if padding != 0 {
-		for i := padding; i < 4; i++ {
+		for i := padding; i < 8; i++ {
 			w.buf = append(w.buf, 0)
 		}
 	}

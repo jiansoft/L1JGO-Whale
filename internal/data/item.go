@@ -60,6 +60,8 @@ var useTypeMap = map[string]byte{
 	"del":         46,
 	"normal":      51,
 	"ring":        57,
+	"food":        38,
+	"other":       0xF5, // Java: -11 (signed byte). Used for magic dolls.
 }
 
 // UseTypeToID converts a YAML use_type string to the client integer byte.

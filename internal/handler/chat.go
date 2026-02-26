@@ -49,10 +49,11 @@ func HandleChat(sess *net.Session, r *packet.Reader, deps *Deps) {
 		// Normal chat: broadcast to nearby players via S_SAY (opcode 81)
 		msg := fmt.Sprintf("%s: %s", player.Name, text)
 		sendNormalChat(sess, player.CharID, msg)
-		// Broadcast to nearby
 		nearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
 		for _, other := range nearby {
-			sendNormalChat(other.Session, player.CharID, msg)
+			if !IsExcluded(other, player.Name) {
+				sendNormalChat(other.Session, player.CharID, msg)
+			}
 		}
 
 	case ChatShout:
@@ -61,22 +62,24 @@ func HandleChat(sess *net.Session, r *packet.Reader, deps *Deps) {
 		sendShoutChat(sess, player.CharID, msg, player.X, player.Y)
 		nearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
 		for _, other := range nearby {
-			sendShoutChat(other.Session, player.CharID, msg, player.X, player.Y)
+			if !IsExcluded(other, player.Name) {
+				sendShoutChat(other.Session, player.CharID, msg, player.X, player.Y)
+			}
 		}
 
 	case ChatWorld:
-		// World/Global chat requires food >= 6, costs 5 food (Java C_Chat.java)
-		if player.Food < 6 {
+		// World/Global chat requires food and costs food (configurable)
+		if player.Food < int16(deps.Config.Gameplay.WorldChatMinFood) {
 			return
 		}
-		player.Food -= 5
+		player.Food -= int16(deps.Config.Gameplay.WorldChatFoodCost)
 		sendPlayerStatus(sess, player)
 
 		// World/Global chat: all players via S_MESSAGE (opcode 243)
 		msg := fmt.Sprintf("[%s] %s", player.Name, text)
 		sendGlobalChat(sess, ChatWorld, msg)
 		deps.World.AllPlayers(func(other *world.PlayerInfo) {
-			if other.SessionID != sess.ID {
+			if other.SessionID != sess.ID && !IsExcluded(other, player.Name) {
 				sendGlobalChat(other.Session, ChatWorld, msg)
 			}
 		})
@@ -86,7 +89,7 @@ func HandleChat(sess *net.Session, r *packet.Reader, deps *Deps) {
 		msg := fmt.Sprintf("[%s] %s", player.Name, text)
 		sendGlobalChat(sess, ChatTrade, msg)
 		deps.World.AllPlayers(func(other *world.PlayerInfo) {
-			if other.SessionID != sess.ID {
+			if other.SessionID != sess.ID && !IsExcluded(other, player.Name) {
 				sendGlobalChat(other.Session, ChatTrade, msg)
 			}
 		})
@@ -103,7 +106,7 @@ func HandleChat(sess *net.Session, r *packet.Reader, deps *Deps) {
 		msg := fmt.Sprintf("{%s} %s", player.Name, text)
 		for charID := range clan.Members {
 			member := deps.World.GetByCharID(charID)
-			if member != nil {
+			if member != nil && !IsExcluded(member, player.Name) {
 				sendGlobalChat(member.Session, ChatClan, msg)
 			}
 		}
@@ -117,7 +120,7 @@ func HandleChat(sess *net.Session, r *packet.Reader, deps *Deps) {
 		msg := fmt.Sprintf("((%s)) %s", player.Name, text)
 		for _, memberID := range party.Members {
 			member := deps.World.GetByCharID(memberID)
-			if member != nil {
+			if member != nil && !IsExcluded(member, player.Name) {
 				sendGlobalChat(member.Session, ChatParty, msg)
 			}
 		}
@@ -152,6 +155,12 @@ func HandleWhisper(sess *net.Session, r *packet.Reader, deps *Deps) {
 	target := deps.World.GetByName(targetName)
 	if target == nil {
 		sendServerMessage(sess, 73) // "Character not found"
+		return
+	}
+
+	// Exclude check: target has blocked sender
+	if IsExcluded(target, player.Name) {
+		sendServerMessageStr(sess, 117, target.Name) // "%0 斷絕你的密語。"
 		return
 	}
 

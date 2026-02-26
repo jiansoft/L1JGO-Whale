@@ -18,6 +18,7 @@ type ItemRow struct {
 	Identified bool
 	EquipSlot  int16
 	ObjID      int32 // persisted ObjectID for shortcut bar stability
+	Durability int16 // weapon durability (0=perfect, higher=more damaged, range 0-127)
 }
 
 type ItemRepo struct {
@@ -31,7 +32,8 @@ func NewItemRepo(db *DB) *ItemRepo {
 // LoadByCharID returns all items belonging to a character.
 func (r *ItemRepo) LoadByCharID(ctx context.Context, charID int32) ([]ItemRow, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		`SELECT id, char_id, item_id, count, enchant_lvl, bless, equipped, identified, equip_slot, obj_id
+		`SELECT id, char_id, item_id, count, enchant_lvl, bless, equipped, identified, equip_slot, obj_id,
+		        COALESCE(durability, 0)
 		 FROM character_items WHERE char_id = $1`, charID,
 	)
 	if err != nil {
@@ -45,7 +47,7 @@ func (r *ItemRepo) LoadByCharID(ctx context.Context, charID int32) ([]ItemRow, e
 		if err := rows.Scan(
 			&it.ID, &it.CharID, &it.ItemID, &it.Count,
 			&it.EnchantLvl, &it.Bless, &it.Equipped, &it.Identified, &it.EquipSlot,
-			&it.ObjID,
+			&it.ObjID, &it.Durability,
 		); err != nil {
 			return nil, err
 		}
@@ -91,10 +93,10 @@ func (r *ItemRepo) SaveInventory(ctx context.Context, charID int32, inv *world.I
 			}
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO character_items (char_id, item_id, count, enchant_lvl, bless, equipped, identified, equip_slot, obj_id)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			`INSERT INTO character_items (char_id, item_id, count, enchant_lvl, bless, equipped, identified, equip_slot, obj_id, durability)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 			charID, item.ItemID, item.Count, int16(item.EnchantLvl), int16(item.Bless),
-			item.Equipped, item.Identified, equipSlot, item.ObjectID,
+			item.Equipped, item.Identified, equipSlot, item.ObjectID, int16(item.Durability),
 		); err != nil {
 			return err
 		}

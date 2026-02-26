@@ -80,6 +80,8 @@ func HandleGMCommand(sess *net.Session, player *world.PlayerInfo, text string, d
 		gmShowInfo(sess, player)
 	case "poly":
 		gmPoly(sess, player, args, deps)
+	case "polygfx":
+		gmPolyGfx(sess, player, args, deps)
 	case "undopoly":
 		gmUndoPoly(sess, player, args, deps)
 	case "loc", "pos", "coord":
@@ -88,6 +90,8 @@ func HandleGMCommand(sess *net.Session, player *world.PlayerInfo, text string, d
 		gmWall(sess, player, args, deps)
 	case "clearwall":
 		gmClearWall(sess, player, deps)
+	case "weather":
+		gmWeather(sess, player, args, deps)
 	default:
 		gmMsg(sess, "\\f3未知的GM指令: ."+cmd+"  輸入 .help 查看指令列表")
 	}
@@ -1005,6 +1009,46 @@ func gmPoly(sess *net.Session, player *world.PlayerInfo, args []string, deps *De
 	gmMsgf(sess, "已將 %s 變身為 %s (GFX:%d)", target.Name, poly.Name, polyID)
 }
 
+// gmPolyGfx directly changes the player's sprite to any GFX ID, bypassing
+// the polymorph data table. Usage: .polygfx <gfxID> [玩家名]
+// Revert with .undopoly.
+func gmPolyGfx(sess *net.Session, player *world.PlayerInfo, args []string, deps *Deps) {
+	if len(args) < 1 {
+		gmMsg(sess, "\\f3用法: .polygfx <gfxID> [玩家名]")
+		return
+	}
+	gfxID, err := strconv.Atoi(args[0])
+	if err != nil || gfxID <= 0 || gfxID > 65535 {
+		gmMsg(sess, "\\f3無效的圖檔ID (1-65535)")
+		return
+	}
+
+	target := player
+	if len(args) >= 2 {
+		target = deps.World.GetByName(args[1])
+		if target == nil {
+			gmMsgf(sess, "\\f3找不到玩家: %s", args[1])
+			return
+		}
+	}
+
+	// If already polymorphed, revert first
+	if target.TempCharGfx > 0 {
+		UndoPoly(target, deps)
+	}
+
+	target.TempCharGfx = int32(gfxID)
+	target.PolyID = 0 // no equip restrictions for raw GFX change
+
+	// Broadcast S_ChangeShape to self + nearby
+	nearby := deps.World.GetNearbyPlayersAt(target.X, target.Y, target.MapID)
+	for _, viewer := range nearby {
+		sendChangeShape(viewer.Session, target.CharID, int32(gfxID), target.CurrentWeapon)
+	}
+
+	gmMsgf(sess, "已將 %s 變身為 GFX:%d", target.Name, gfxID)
+}
+
 func gmUndoPoly(sess *net.Session, player *world.PlayerInfo, args []string, deps *Deps) {
 	target := player
 	if len(args) >= 1 {
@@ -1169,4 +1213,33 @@ func gmClearWall(sess *net.Session, player *world.PlayerInfo, deps *Deps) {
 		}
 	}
 	gmMsgf(sess, "已清除 %d 個測試牆壁", removed)
+}
+
+func gmWeather(sess *net.Session, _ *world.PlayerInfo, args []string, deps *Deps) {
+	if len(args) < 1 {
+		gmMsg(sess, ".weather <0-3, 17-19>  (0=clear, 1-3=snow, 17-19=rain)")
+		return
+	}
+	val, err := strconv.Atoi(args[0])
+	if err != nil {
+		gmMsg(sess, ".weather <0-3, 17-19>")
+		return
+	}
+	// Validate weather type (Java: 0=clear, 1-3=snow, 17-19=rain)
+	valid := false
+	for _, t := range []int{0, 1, 2, 3, 17, 18, 19} {
+		if val == t {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		gmMsg(sess, "有效值: 0,1,2,3,17,18,19")
+		return
+	}
+	deps.World.Weather = byte(val)
+	deps.World.AllPlayers(func(p *world.PlayerInfo) {
+		sendWeather(p.Session, byte(val))
+	})
+	gmMsgf(sess, "天氣已變更為 %d", val)
 }

@@ -15,25 +15,27 @@ type Server struct {
 	nextID   atomic.Uint64
 	newConns chan *Session
 	deadCh   chan uint64 // session IDs of dead sessions
-	inSize   int
-	outSize  int
-	log      *zap.Logger
-	closeCh  chan struct{}
+	inSize    int
+	outSize   int
+	pktPerSec int
+	log       *zap.Logger
+	closeCh   chan struct{}
 }
 
-func NewServer(bindAddr string, inSize, outSize int, log *zap.Logger) (*Server, error) {
+func NewServer(bindAddr string, inSize, outSize, pktPerSec int, log *zap.Logger) (*Server, error) {
 	ln, err := net.Listen("tcp", bindAddr)
 	if err != nil {
 		return nil, err
 	}
 	s := &Server{
-		listener: ln,
-		newConns: make(chan *Session, 64),
-		deadCh:   make(chan uint64, 64),
-		inSize:   inSize,
-		outSize:  outSize,
-		log:      log,
-		closeCh:  make(chan struct{}),
+		listener:  ln,
+		newConns:  make(chan *Session, 64),
+		deadCh:    make(chan uint64, 64),
+		inSize:    inSize,
+		outSize:   outSize,
+		pktPerSec: pktPerSec,
+		log:       log,
+		closeCh:   make(chan struct{}),
 	}
 	return s, nil
 }
@@ -60,7 +62,7 @@ func (s *Server) AcceptLoop() {
 		}
 
 		id := s.nextID.Add(1)
-		sess := NewSession(conn, id, s.inSize, s.outSize, s.log)
+		sess := NewSession(conn, id, s.inSize, s.outSize, s.pktPerSec, s.log)
 		sess.Start()
 
 		s.log.Info(fmt.Sprintf("玩家連線  session=%d  ip=%s", id, sess.IP))

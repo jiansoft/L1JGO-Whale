@@ -273,8 +273,8 @@ func sendAddItem(sess *net.Session, item *world.InvItem, optInfo ...*data.ItemIn
 	}
 
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_ADD_ITEM)
-	w.WriteD(item.ObjectID)                // item object ID
-	w.WriteH(0)                            // descId (0 = use groundGfxId)
+	w.WriteD(item.ObjectID)                     // item object ID
+	w.WriteH(world.ItemDescID(item.ItemID))     // descId — Java: switch(itemId) for material items
 	w.WriteC(item.UseType)                 // use type
 	w.WriteC(0)                            // charge count
 	w.WriteH(uint16(item.InvGfx))         // inventory graphic ID
@@ -364,7 +364,7 @@ func sendInvList(sess *net.Session, inv *world.Inventory, items *data.ItemTable)
 		}
 
 		w.WriteD(item.ObjectID)
-		w.WriteH(0)                              // descId
+		w.WriteH(world.ItemDescID(item.ItemID))      // descId — Java: switch(itemId) for material items
 		w.WriteC(item.UseType)                   // use type
 		w.WriteC(0)                              // charge count
 		w.WriteH(uint16(item.InvGfx))           // inv gfx
