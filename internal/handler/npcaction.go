@@ -382,45 +382,44 @@ func teleportPlayer(sess *net.Session, player *world.PlayerInfo, x, y int32, map
 		deps.MapData.SetImpassable(player.MapID, player.X, player.Y, false)
 	}
 
-	// 1. Remove from old location for nearby players
+	// 1. 舊位置附近玩家：移除我 + 解鎖我的格子
 	oldNearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
 	for _, other := range oldNearby {
 		sendRemoveObject(other.Session, player.CharID)
+		SendEntityTileUnblock(other.Session, player.X, player.Y)
 	}
 
-	// 2. Update position in world state (Java: moveVisibleObject + setLocation)
+	// 2. 更新世界狀態位置（Java: moveVisibleObject + setLocation）
 	deps.World.UpdatePosition(sess.ID, x, y, mapID, heading)
 
-	// Mark new tile as impassable (for NPC pathfinding)
+	// 標記新格子不可通行（NPC 尋路用）
 	if deps.MapData != nil {
 		deps.MapData.SetImpassable(mapID, x, y, true)
 	}
 
-	// 3. S_MapID (always — even if same map, client needs it for teleport)
+	// 3. S_MapID（即使同地圖也要發——客戶端傳送需要）
 	sendMapID(sess, uint16(mapID), false)
 
-	// 4. Broadcast appearance to players at destination + entity collision
+	// 4. 目的地附近玩家：顯示我 + 封鎖我的格子
 	newNearby := deps.World.GetNearbyPlayers(x, y, mapID, sess.ID)
 	for _, other := range newNearby {
-		sendPutObject(other.Session, player) // they see us
-		SendEntityBlock(other.Session, x, y, mapID, deps.World) // block our tile for them
+		sendPutObject(other.Session, player)
+		SendEntityTileBlock(other.Session, x, y)
 	}
 
-	// 5. S_OwnCharPack — Java uses live player data (new S_OwnCharPack(pc))
+	// 5. S_OwnCharPack
 	sendOwnCharPackPlayer(sess, player)
 
-	// 6. updateObject equivalent — send nearby entities to self + entity collision
+	// 6. 發送附近實體給自己 + 封鎖格子
 	for _, other := range newNearby {
-		sendPutObject(sess, other) // we see them
-		SendEntityBlock(sess, other.X, other.Y, mapID, deps.World) // block their tile for us
+		sendPutObject(sess, other)
+		SendEntityTileBlock(sess, other.X, other.Y)
 	}
 
 	nearbyNpcs := deps.World.GetNearbyNpcs(x, y, mapID)
 	for _, npc := range nearbyNpcs {
 		sendNpcPack(sess, npc)
-		if !npc.Dead {
-			SendEntityBlock(sess, npc.X, npc.Y, mapID, deps.World) // block NPC tile for us
-		}
+		SendEntityTileBlock(sess, npc.X, npc.Y)
 	}
 
 	nearbyGnd := deps.World.GetNearbyGroundItems(x, y, mapID)
@@ -428,13 +427,13 @@ func teleportPlayer(sess *net.Session, player *world.PlayerInfo, x, y int32, map
 		sendDropItem(sess, g)
 	}
 
-	// Send nearby doors at destination
+	// 發送目的地附近的門
 	nearbyDoors := deps.World.GetNearbyDoors(x, y, mapID)
 	for _, d := range nearbyDoors {
 		SendDoorPerceive(sess, d)
 	}
 
-	// Send nearby companions at destination
+	// 發送目的地附近寵伴 + 封鎖格子
 	nearbySum := deps.World.GetNearbySummons(x, y, mapID)
 	for _, sum := range nearbySum {
 		isOwner := sum.OwnerCharID == player.CharID
@@ -443,6 +442,7 @@ func teleportPlayer(sess *net.Session, player *world.PlayerInfo, x, y int32, map
 			masterName = m.Name
 		}
 		sendSummonPack(sess, sum, isOwner, masterName)
+		SendEntityTileBlock(sess, sum.X, sum.Y)
 	}
 	nearbyDolls := deps.World.GetNearbyDolls(x, y, mapID)
 	for _, doll := range nearbyDolls {
@@ -451,10 +451,12 @@ func teleportPlayer(sess *net.Session, player *world.PlayerInfo, x, y int32, map
 			masterName = m.Name
 		}
 		sendDollPack(sess, doll, masterName)
+		SendEntityTileBlock(sess, doll.X, doll.Y)
 	}
 	nearbyFollowers := deps.World.GetNearbyFollowers(x, y, mapID)
 	for _, f := range nearbyFollowers {
 		sendFollowerPack(sess, f)
+		SendEntityTileBlock(sess, f.X, f.Y)
 	}
 	nearbyPets := deps.World.GetNearbyPets(x, y, mapID)
 	for _, pet := range nearbyPets {
@@ -464,6 +466,7 @@ func teleportPlayer(sess *net.Session, player *world.PlayerInfo, x, y int32, map
 			masterName = m.Name
 		}
 		sendPetPack(sess, pet, isOwner, masterName)
+		SendEntityTileBlock(sess, pet.X, pet.Y)
 	}
 
 	// Release client teleport lock (Java: S_Paralysis always sent in finally block).

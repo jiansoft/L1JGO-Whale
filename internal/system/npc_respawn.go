@@ -5,6 +5,7 @@ import (
 
 	coresys "github.com/l1jgo/server/internal/core/system"
 	"github.com/l1jgo/server/internal/data"
+	"github.com/l1jgo/server/internal/handler"
 	"github.com/l1jgo/server/internal/world"
 )
 
@@ -89,9 +90,10 @@ func (s *NpcRespawnSystem) respawnNpc(npc *world.NpcInfo) {
 	// Re-add to NPC AOI grid + entity grid
 	s.world.NpcRespawn(npc)
 
-	// Notify nearby players
+	// 通知附近玩家：顯示 NPC + 封鎖格子
 	nearby := s.world.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 	for _, viewer := range nearby {
 		sendNpcPack(viewer.Session, npc)
+		handler.SendEntityTileBlock(viewer.Session, npc.X, npc.Y)
 	}
 }

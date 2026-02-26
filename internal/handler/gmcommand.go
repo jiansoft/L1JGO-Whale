@@ -642,6 +642,7 @@ func gmKill(sess *net.Session, player *world.PlayerInfo, args []string, deps *De
 			viewers := deps.World.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 			for _, v := range viewers {
 				sendActionGfx(v.Session, npc.ID, 8)
+				SendEntityTileUnblock(v.Session, npc.X, npc.Y)
 			}
 			npc.DeleteTimer = 50 // 10 seconds for death animation
 			if npc.RespawnDelay > 0 {
@@ -666,6 +667,7 @@ func gmKillAll(sess *net.Session, player *world.PlayerInfo, deps *Deps) {
 		viewers := deps.World.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 		for _, v := range viewers {
 			sendActionGfx(v.Session, npc.ID, 8)
+			SendEntityTileUnblock(v.Session, npc.X, npc.Y)
 		}
 		npc.DeleteTimer = 50 // 10 seconds for death animation
 		if npc.RespawnDelay > 0 {

@@ -394,12 +394,13 @@ func executeTamingMonster(sess *net.Session, player *world.PlayerInfo, skill *da
 		TimerTicks:  0, // permanent (no timer for tamed)
 	}
 
-	// Remove original NPC from world
+	// 移除原始 NPC + 解鎖格子
 	npc.Dead = true
 	ws.NpcDied(npc)
 	nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 	for _, viewer := range nearby {
 		sendRemoveObject(viewer.Session, npc.ID)
+		SendEntityTileUnblock(viewer.Session, npc.X, npc.Y)
 	}
 
 	// Add summon to world

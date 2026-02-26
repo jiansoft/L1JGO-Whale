@@ -323,11 +323,11 @@ func (s *NpcAISystem) tickGuardAI(npc *world.NpcInfo) {
 func (s *NpcAISystem) guardTeleportHome(npc *world.NpcInfo) {
 	oldX, oldY := npc.X, npc.Y
 
-	// Notify old-position viewers: remove NPC + unblock
+	// 通知舊位置附近玩家：移除 NPC + 解鎖格子
 	oldNearby := s.world.GetNearbyPlayersAt(oldX, oldY, npc.MapID)
 	for _, viewer := range oldNearby {
 		sendRemoveObject(viewer.Session, npc.ID)
-		handler.SendEntityUnblock(viewer.Session, oldX, oldY)
+		handler.SendEntityTileUnblock(viewer.Session, oldX, oldY)
 	}
 
 	// Update map passability
@@ -340,11 +340,11 @@ func (s *NpcAISystem) guardTeleportHome(npc *world.NpcInfo) {
 	s.world.UpdateNpcPosition(npc.ID, npc.SpawnX, npc.SpawnY, 0)
 	npc.MapID = npc.SpawnMapID
 
-	// Notify new-position viewers: show NPC + block
+	// 通知新位置附近玩家：顯示 NPC + 封鎖格子
 	newNearby := s.world.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 	for _, viewer := range newNearby {
 		sendNpcPack(viewer.Session, npc)
-		handler.SendEntityBlock(viewer.Session, npc.X, npc.Y, npc.MapID, s.world)
+		handler.SendEntityTileBlock(viewer.Session, npc.X, npc.Y)
 	}
 }
 
@@ -578,8 +578,8 @@ func npcExecuteMove(ws *world.State, npc *world.NpcInfo, moveX, moveY int32, hea
 	nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 	for _, viewer := range nearby {
 		sendNpcMove(viewer.Session, npc.ID, oldX, oldY, npc.Heading)
-		handler.SendEntityUnblock(viewer.Session, oldX, oldY)
-		handler.SendEntityBlock(viewer.Session, npc.X, npc.Y, npc.MapID, ws)
+		handler.SendEntityTileUnblock(viewer.Session, oldX, oldY)
+		handler.SendEntityTileBlock(viewer.Session, moveX, moveY)
 	}
 }
 
@@ -629,8 +629,8 @@ func npcWander(ws *world.State, npc *world.NpcInfo, dir int, maps *data.MapDataT
 	nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 	for _, viewer := range nearby {
 		sendNpcMove(viewer.Session, npc.ID, oldX, oldY, npc.Heading)
-		handler.SendEntityUnblock(viewer.Session, oldX, oldY)
-		handler.SendEntityBlock(viewer.Session, npc.X, npc.Y, npc.MapID, ws)
+		handler.SendEntityTileUnblock(viewer.Session, oldX, oldY)
+		handler.SendEntityTileBlock(viewer.Session, moveX, moveY)
 	}
 }
 

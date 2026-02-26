@@ -276,15 +276,13 @@ func (s *InputSystem) handleDisconnect(sess *net.Session) {
 		// Clean up all companion entities (summons, dolls, followers)
 		s.cleanupCompanions(player)
 
-		// Broadcast S_REMOVE_OBJECT to nearby players
+		// 廣播移除 + 解鎖格子給附近玩家
 		nearby := s.worldState.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
 		removePacket := buildRemoveObjectPacket(player.CharID)
 		for _, other := range nearby {
 			other.Session.Send(removePacket)
+			handler.SendEntityTileUnblock(other.Session, player.X, player.Y)
 		}
-
-		// Clean up entity door tracking for this viewer (no packets — client is gone)
-		handler.CleanupViewerEntityDoors(sess.ID)
 
 		// Save full character state to DB
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/l1jgo/server/internal/net"
 	"github.com/l1jgo/server/internal/net/packet"
+	"github.com/l1jgo/server/internal/world"
 )
 
 // Direction deltas indexed by heading (0-7).
@@ -39,38 +40,35 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 		return
 	}
 
-	// --- Move speed validation (anti speed-hack) ---
-	// Normal walk ~200ms, haste ~133ms. Apply 80% tolerance.
+	// --- 移動速度驗證（反加速外掛） ---
+	// 一般走路 ~200ms，加速 ~133ms。套用 80% 容許值。
 	now := time.Now().UnixNano()
 	minInterval := int64(160_000_000) // 200ms * 80% = 160ms
 	if player.MoveSpeed == 1 {
 		minInterval = 106_000_000 // 133ms * 80% = 106ms
 	}
 	if player.LastMoveTime > 0 && (now-player.LastMoveTime) < minInterval {
-		sendOwnCharPackPlayer(sess, player) // rubber-band speed hacker
+		rejectMove(sess, player, ws, deps)
 		return
 	}
 	player.LastMoveTime = now
 
-	// Always use server-tracked position (matching Java Taiwan behavior).
+	// 永遠使用伺服器端座標（與 Java 台版行為一致）
 	curX := player.X
 	curY := player.Y
 
-	// Calculate destination from base position + heading
+	// 從目前位置 + 朝向計算目的地
 	destX := curX + headingDX[heading]
 	destY := curY + headingDY[heading]
 
-	// Passability check (matching Java C_MoveChar: isPassable(oleLocx, oleLocy, heading)).
-	// The map tile's dynamic tileImpassable flag (0x80) is set by NPCs/players, so this
-	// covers both terrain and entity collision in one check.
-	// On rejection, Java sends L1PcUnlock.Pc_Unlock(pc) to resync the client position.
+	// 地形通行性檢查（含 tileImpassable 0x80 動態標記）
 	if deps.MapData != nil && !deps.MapData.IsPassable(player.MapID, curX, curY, int(heading)) {
-		sendOwnCharPackPlayer(sess, player) // resync client position (Java: Pc_Unlock)
+		rejectMove(sess, player, ws, deps)
 		return
 	}
-	// Fallback entity grid check (safety net when map data unavailable)
+	// EntityGrid 備援檢查（地圖資料不可用時的安全網）
 	if ws.IsOccupied(destX, destY, player.MapID, player.CharID) {
-		sendOwnCharPackPlayer(sess, player)
+		rejectMove(sess, player, ws, deps)
 		return
 	}
 
@@ -128,48 +126,38 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 		newSet[p.SessionID] = struct{}{}
 	}
 
-	// 1. Players in BOTH old and new: send movement
+	// 1. 雙方都在視野內：發送移動封包 + 更新格子封鎖
 	for _, other := range newNearby {
 		if _, wasOld := oldSet[other.SessionID]; wasOld {
 			sendMoveObject(other.Session, player.CharID, curX, curY, heading)
-			// Proximity-based: unblock old, conditionally block new
-			SendEntityUnblock(other.Session, curX, curY)
-			if ChebyshevDist(destX, destY, other.X, other.Y) <= entityBlockRange {
-				SendEntityBlock(other.Session, destX, destY, player.MapID, ws)
-			}
-			// Update their blocking for us based on proximity
-			if ChebyshevDist(destX, destY, other.X, other.Y) <= entityBlockRange {
-				SendEntityBlock(sess, other.X, other.Y, player.MapID, ws)
-			} else {
-				SendEntityUnblock(sess, other.X, other.Y)
-			}
+			// 對方看我：解鎖舊格 + 封鎖新格
+			SendEntityTileUnblock(other.Session, curX, curY)
+			SendEntityTileBlock(other.Session, destX, destY)
+			// 我看對方：對方位置沒變，進入視野時已封鎖 → 不需處理
 		}
 	}
 
-	// 2. Players in NEW but not OLD: they just entered our view
+	// 2. 新進入視野：互相出現 + 封鎖格子
 	for _, other := range newNearby {
 		if _, wasOld := oldSet[other.SessionID]; !wasOld {
-			sendPutObject(sess, other)          // We see them appear
-			sendPutObject(other.Session, player) // They see us appear
-			// Only block if within proximity
-			if ChebyshevDist(destX, destY, other.X, other.Y) <= entityBlockRange {
-				SendEntityBlock(sess, other.X, other.Y, player.MapID, ws)
-				SendEntityBlock(other.Session, destX, destY, player.MapID, ws)
-			}
+			sendPutObject(sess, other)
+			SendEntityTileBlock(sess, other.X, other.Y)
+			sendPutObject(other.Session, player)
+			SendEntityTileBlock(other.Session, destX, destY)
 		}
 	}
 
-	// 3. Players in OLD but not NEW: they left our view
+	// 3. 離開視野：互相移除 + 解鎖格子
 	for _, other := range oldNearby {
 		if _, isNew := newSet[other.SessionID]; !isNew {
 			sendRemoveObject(sess, other.CharID)
+			SendEntityTileUnblock(sess, other.X, other.Y)
 			sendRemoveObject(other.Session, player.CharID)
-			SendEntityUnblock(sess, other.X, other.Y)
-			SendEntityUnblock(other.Session, curX, curY)
+			SendEntityTileUnblock(other.Session, curX, curY)
 		}
 	}
 
-	// --- NPC AOI: show/hide NPCs as player moves ---
+	// --- NPC AOI ---
 	oldNpcs := ws.GetNearbyNpcs(curX, curY, player.MapID)
 	newNpcs := ws.GetNearbyNpcs(destX, destY, player.MapID)
 
@@ -182,34 +170,22 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 		newNpcSet[n.ID] = struct{}{}
 	}
 
-	// NPCs newly visible
 	for _, n := range newNpcs {
 		if _, wasOld := oldNpcSet[n.ID]; !wasOld {
+			// 新進入視野：顯示 + 封鎖格子
 			sendNpcPack(sess, n)
+			SendEntityTileBlock(sess, n.X, n.Y)
 		}
+		// 持續在視野內：進入視野時已封鎖 → 不需處理
 	}
-	// NPCs no longer visible — remove + unblock
 	for _, n := range oldNpcs {
 		if _, isNew := newNpcSet[n.ID]; !isNew {
 			sendRemoveObject(sess, n.ID)
-			SendEntityUnblock(sess, n.X, n.Y)
+			SendEntityTileUnblock(sess, n.X, n.Y)
 		}
 	}
 
-	// Proximity-based entity collision: block/unblock NPCs based on distance
-	for _, n := range newNpcs {
-		if n.Dead {
-			continue
-		}
-		dist := ChebyshevDist(destX, destY, n.X, n.Y)
-		if dist <= entityBlockRange {
-			SendEntityBlock(sess, n.X, n.Y, player.MapID, ws)
-		} else {
-			SendEntityUnblock(sess, n.X, n.Y)
-		}
-	}
-
-	// --- Companion AOI: show/hide summons/dolls/followers as player moves ---
+	// --- 召喚獸 AOI ---
 	oldSummons := ws.GetNearbySummons(curX, curY, player.MapID)
 	newSummons := ws.GetNearbySummons(destX, destY, player.MapID)
 	oldSumSet := make(map[int32]struct{}, len(oldSummons))
@@ -224,7 +200,9 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 				masterName = m.Name
 			}
 			sendSummonPack(sess, s, isOwner, masterName)
+			SendEntityTileBlock(sess, s.X, s.Y)
 		}
+		// 持續在視野內：進入視野時已封鎖 → 不需處理
 	}
 	newSumSet := make(map[int32]struct{}, len(newSummons))
 	for _, s := range newSummons {
@@ -233,9 +211,11 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 	for _, s := range oldSummons {
 		if _, isNew := newSumSet[s.ID]; !isNew {
 			sendRemoveObject(sess, s.ID)
+			SendEntityTileUnblock(sess, s.X, s.Y)
 		}
 	}
 
+	// --- 魔法娃娃 AOI ---
 	oldDolls := ws.GetNearbyDolls(curX, curY, player.MapID)
 	newDolls := ws.GetNearbyDolls(destX, destY, player.MapID)
 	oldDollSet := make(map[int32]struct{}, len(oldDolls))
@@ -249,7 +229,9 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 				masterName = m.Name
 			}
 			sendDollPack(sess, d, masterName)
+			SendEntityTileBlock(sess, d.X, d.Y)
 		}
+		// 持續在視野內：進入視野時已封鎖 → 不需處理
 	}
 	newDollSet := make(map[int32]struct{}, len(newDolls))
 	for _, d := range newDolls {
@@ -258,9 +240,11 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 	for _, d := range oldDolls {
 		if _, isNew := newDollSet[d.ID]; !isNew {
 			sendRemoveObject(sess, d.ID)
+			SendEntityTileUnblock(sess, d.X, d.Y)
 		}
 	}
 
+	// --- 隨從 AOI ---
 	oldFollow := ws.GetNearbyFollowers(curX, curY, player.MapID)
 	newFollow := ws.GetNearbyFollowers(destX, destY, player.MapID)
 	oldFollowSet := make(map[int32]struct{}, len(oldFollow))
@@ -270,7 +254,9 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 	for _, f := range newFollow {
 		if _, wasOld := oldFollowSet[f.ID]; !wasOld {
 			sendFollowerPack(sess, f)
+			SendEntityTileBlock(sess, f.X, f.Y)
 		}
+		// 持續在視野內：進入視野時已封鎖 → 不需處理
 	}
 	newFollowSet := make(map[int32]struct{}, len(newFollow))
 	for _, f := range newFollow {
@@ -279,9 +265,11 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 	for _, f := range oldFollow {
 		if _, isNew := newFollowSet[f.ID]; !isNew {
 			sendRemoveObject(sess, f.ID)
+			SendEntityTileUnblock(sess, f.X, f.Y)
 		}
 	}
 
+	// --- 寵物 AOI ---
 	oldPets := ws.GetNearbyPets(curX, curY, player.MapID)
 	newPets := ws.GetNearbyPets(destX, destY, player.MapID)
 	oldPetSet := make(map[int32]struct{}, len(oldPets))
@@ -296,7 +284,9 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 				masterName = m.Name
 			}
 			sendPetPack(sess, p, isOwner, masterName)
+			SendEntityTileBlock(sess, p.X, p.Y)
 		}
+		// 持續在視野內：進入視野時已封鎖 → 不需處理
 	}
 	newPetSet := make(map[int32]struct{}, len(newPets))
 	for _, p := range newPets {
@@ -305,6 +295,7 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 	for _, p := range oldPets {
 		if _, isNew := newPetSet[p.ID]; !isNew {
 			sendRemoveObject(sess, p.ID)
+			SendEntityTileUnblock(sess, p.X, p.Y)
 		}
 	}
 
@@ -358,6 +349,88 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 		}
 	}
 
+}
+
+// rejectMove 碰撞拒絕：回彈玩家位置 + 重發所有附近實體。
+// 對應 Java L1PcUnlock.Pc_Unlock() 流程：
+//   S_OwnCharPack → removeAllKnownObjects → updateObject → S_CharVisualUpdate
+// 只發 S_OwnCharPack 會讓客戶端清除附近物件渲染，必須立即重發所有可見實體。
+func rejectMove(sess *net.Session, player *world.PlayerInfo, ws *world.State, deps *Deps) {
+	// 1. 回彈：告知客戶端正確座標
+	sendOwnCharPackPlayer(sess, player)
+
+	px, py := player.X, player.Y
+
+	// 2. 重發所有附近玩家 + 封鎖格子
+	nearbyPlayers := ws.GetNearbyPlayers(px, py, player.MapID, sess.ID)
+	for _, other := range nearbyPlayers {
+		sendPutObject(sess, other)
+		SendEntityTileBlock(sess, other.X, other.Y)
+	}
+
+	// 3. 重發所有附近 NPC + 封鎖格子
+	nearbyNpcs := ws.GetNearbyNpcs(px, py, player.MapID)
+	for _, n := range nearbyNpcs {
+		sendNpcPack(sess, n)
+		SendEntityTileBlock(sess, n.X, n.Y)
+	}
+
+	// 4. 重發所有附近召喚獸 + 封鎖格子
+	nearbySummons := ws.GetNearbySummons(px, py, player.MapID)
+	for _, s := range nearbySummons {
+		isOwner := s.OwnerCharID == player.CharID
+		masterName := ""
+		if m := ws.GetByCharID(s.OwnerCharID); m != nil {
+			masterName = m.Name
+		}
+		sendSummonPack(sess, s, isOwner, masterName)
+		SendEntityTileBlock(sess, s.X, s.Y)
+	}
+
+	// 5. 重發所有附近魔法娃娃 + 封鎖格子
+	nearbyDolls := ws.GetNearbyDolls(px, py, player.MapID)
+	for _, d := range nearbyDolls {
+		masterName := ""
+		if m := ws.GetByCharID(d.OwnerCharID); m != nil {
+			masterName = m.Name
+		}
+		sendDollPack(sess, d, masterName)
+		SendEntityTileBlock(sess, d.X, d.Y)
+	}
+
+	// 6. 重發所有附近隨從 + 封鎖格子
+	nearbyFollowers := ws.GetNearbyFollowers(px, py, player.MapID)
+	for _, f := range nearbyFollowers {
+		sendFollowerPack(sess, f)
+		SendEntityTileBlock(sess, f.X, f.Y)
+	}
+
+	// 7. 重發所有附近寵物 + 封鎖格子
+	nearbyPets := ws.GetNearbyPets(px, py, player.MapID)
+	for _, p := range nearbyPets {
+		isOwner := p.OwnerCharID == player.CharID
+		masterName := ""
+		if m := ws.GetByCharID(p.OwnerCharID); m != nil {
+			masterName = m.Name
+		}
+		sendPetPack(sess, p, isOwner, masterName)
+		SendEntityTileBlock(sess, p.X, p.Y)
+	}
+
+	// 8. 重發所有附近地面物品（地面物品不佔格子，不需封鎖）
+	nearbyGnd := ws.GetNearbyGroundItems(player.X, player.Y, player.MapID)
+	for _, g := range nearbyGnd {
+		sendDropItem(sess, g)
+	}
+
+	// 9. 重發所有附近門
+	nearbyDoors := ws.GetNearbyDoors(player.X, player.Y, player.MapID)
+	for _, d := range nearbyDoors {
+		SendDoorPerceive(sess, d)
+	}
+
+	// 10. 武器/變身視覺更新（Java 流程最後一步）
+	sendCharVisualUpdate(sess, player)
 }
 
 // HandleChangeDirection processes C_CHANGE_DIRECTION (opcode 225).

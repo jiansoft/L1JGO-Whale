@@ -348,9 +348,10 @@ func handleNpcDeath(npc *world.NpcInfo, killer *world.PlayerInfo, nearby []*worl
 		deps.MapData.SetImpassable(npc.MapID, npc.X, npc.Y, false)
 	}
 
-	// Broadcast death animation
+	// 廣播死亡動畫 + 解鎖格子
 	for _, viewer := range nearby {
 		sendActionGfx(viewer.Session, npc.ID, 8) // ACTION_Die = 8
+		SendEntityTileUnblock(viewer.Session, npc.X, npc.Y)
 	}
 
 	// Schedule removal after delay (Java: NPC_DELETION_TIME = 10 seconds = 50 ticks)

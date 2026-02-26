@@ -174,29 +174,25 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 		}
 	}
 
-	// --- Send nearby players (AOI) ---
+	px, py := player.X, player.Y
+
+	// --- 發送附近玩家（AOI）+ 封鎖格子 ---
 	nearby := deps.World.GetNearbyPlayers(ch.X, ch.Y, ch.MapID, sess.ID)
 	for _, other := range nearby {
 		sendPutObject(sess, other)
+		SendEntityTileBlock(sess, other.X, other.Y)
 		sendPutObject(other.Session, player)
-		// Entity collision: only block if within proximity range
-		if ChebyshevDist(player.X, player.Y, other.X, other.Y) <= entityBlockRange {
-			SendEntityBlock(sess, other.X, other.Y, ch.MapID, deps.World)
-			SendEntityBlock(other.Session, player.X, player.Y, ch.MapID, deps.World)
-		}
+		SendEntityTileBlock(other.Session, px, py)
 	}
 
-	// --- Send nearby NPCs ---
+	// --- 發送附近 NPC + 封鎖格子 ---
 	nearbyNpcs := deps.World.GetNearbyNpcs(ch.X, ch.Y, ch.MapID)
 	for _, npc := range nearbyNpcs {
 		sendNpcPack(sess, npc)
-		// Entity collision: only block NPCs within proximity range
-		if !npc.Dead && ChebyshevDist(player.X, player.Y, npc.X, npc.Y) <= entityBlockRange {
-			SendEntityBlock(sess, npc.X, npc.Y, ch.MapID, deps.World)
-		}
+		SendEntityTileBlock(sess, npc.X, npc.Y)
 	}
 
-	// --- Send nearby companions (summons, dolls, followers, pets) ---
+	// --- 發送附近寵伴 + 封鎖格子 ---
 	nearbySum := deps.World.GetNearbySummons(ch.X, ch.Y, ch.MapID)
 	for _, sum := range nearbySum {
 		isOwner := sum.OwnerCharID == player.CharID
@@ -205,6 +201,7 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 			masterName = master.Name
 		}
 		sendSummonPack(sess, sum, isOwner, masterName)
+		SendEntityTileBlock(sess, sum.X, sum.Y)
 	}
 	nearbyDolls := deps.World.GetNearbyDolls(ch.X, ch.Y, ch.MapID)
 	for _, doll := range nearbyDolls {
@@ -213,10 +210,12 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 			masterName = master.Name
 		}
 		sendDollPack(sess, doll, masterName)
+		SendEntityTileBlock(sess, doll.X, doll.Y)
 	}
 	nearbyFollowers := deps.World.GetNearbyFollowers(ch.X, ch.Y, ch.MapID)
 	for _, f := range nearbyFollowers {
 		sendFollowerPack(sess, f)
+		SendEntityTileBlock(sess, f.X, f.Y)
 	}
 	nearbyPets := deps.World.GetNearbyPets(ch.X, ch.Y, ch.MapID)
 	for _, pet := range nearbyPets {
@@ -226,6 +225,7 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 			masterName = master.Name
 		}
 		sendPetPack(sess, pet, isOwner, masterName)
+		SendEntityTileBlock(sess, pet.X, pet.Y)
 	}
 
 	// --- Send nearby ground items ---

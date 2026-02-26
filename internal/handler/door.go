@@ -108,9 +108,9 @@ func sendDoorAttr(viewer *net.Session, x, y int32, direction int, passable bool)
 	w.WriteH(uint16(y))
 	w.WriteC(byte(direction))
 	if passable {
-		w.WriteC(0) // PASS (Java: PASS = 0)
+		w.WriteC(0x00) // PASS（Java: L1DoorInstance.PASS = 0x00）
 	} else {
-		w.WriteC(1) // NOT_PASS (Java: NOT_PASS = 1)
+		w.WriteC(0x41) // NOT_PASS（Java: L1DoorInstance.NOT_PASS = 0x41）
 	}
 	viewer.Send(w.Bytes())
 }
@@ -169,98 +169,43 @@ func sendDoorTilesAll(door *world.DoorInfo, deps *Deps) {
 	}
 }
 
-// ==================== Entity Collision (proximity-based S_CHANGE_ATTR) ====================
+// ==================== 實體動態格子封鎖 ====================
+// 第一層防線：告知客戶端 NPC/玩家/召喚獸所站的格子不可通行。
+// 客戶端收到後會在本地標記該格子為不可通行，根本不會發出 C_MOVE。
 //
-// Approach: no blocking by default. Only when a player is within proximity (≤3 tiles)
-// of an entity, dynamically send S_CHANGE_ATTR to block all 4 edges.
+// L1J 地圖通行性原理：
+//   每個格子只有 2 個 bit：north (0x02) 和 east (0x01)。
+//   客戶端 isPassable 依方向檢查不同格子的 bit：
+//     heading 0 (北): tile1=(x,y).north     ← 檢查「自己格」的 north
+//     heading 2 (東): tile1=(x,y).east      ← 檢查「自己格」的 east
+//     heading 4 (南): tile2=(dx,dy).north   ← 檢查「目標格」的 north
+//     heading 6 (西): tile2=(dx,dy).east    ← 檢查「目標格」的 east
 //
-// Own-tile S_CHANGE_ATTR (dir=0 + dir=1) does NOT cause render suppression — safe always.
-// Neighbor-tile S_CHANGE_ATTR (south/west edges) skips tiles occupied by other entities.
+//   因此要完全封鎖格子 (tx,ty)，必須封鎖 4 個邊界：
+//     北邊界：(tx, ty) 的 north bit    → 阻擋從北方(heading 4)進入
+//     東邊界：(tx, ty) 的 east bit     → 阻擋從東方(heading 6)進入
+//     南邊界：(tx, ty+1) 的 north bit  → 阻擋從南方(heading 0)進入
+//     西邊界：(tx-1, ty) 的 east bit   → 阻擋從西方(heading 2)進入
+//
+// rejectMove（第二層）只是安全網，理論上不應該觸發。
 
-const entityBlockRange = 3 // Chebyshev distance to trigger blocking
-
-type entityDoorKey struct {
-	viewerID uint64
-	x, y     int32
+// SendEntityTileBlock 封鎖實體所站格子（客戶端端）。
+// 發送 4 個 S_CHANGE_ATTR 封包，封鎖目標格子的全部 4 個邊界（8 方向全擋）。
+// 視野內所有實體都會封鎖，無距離限制。
+func SendEntityTileBlock(viewer *net.Session, x, y int32) {
+	sendDoorAttr(viewer, x, y, 0, false)   // 北邊界：阻擋從北、東北進入
+	sendDoorAttr(viewer, x, y, 1, false)   // 東邊界：阻擋從東進入
+	sendDoorAttr(viewer, x, y+1, 0, false) // 南邊界：阻擋從南、東南、西南進入
+	sendDoorAttr(viewer, x-1, y, 1, false) // 西邊界：阻擋從西、西北、西南進入
 }
 
-type entityDoorEntry struct {
-	selfDir0     bool // NOT_PASS at (x, y) dir=0 — blocks north edge
-	selfDir1     bool // NOT_PASS at (x, y) dir=1 — blocks east edge
-	southBlocked bool // NOT_PASS at (x, y+1) dir=0 — blocks south edge
-	westBlocked  bool // NOT_PASS at (x-1, y) dir=1 — blocks west edge
-}
-
-var (
-	entityDoorMap       = make(map[entityDoorKey]entityDoorEntry)
-	entityDoorsByViewer = make(map[uint64]map[entityDoorKey]struct{})
-)
-
-// SendEntityBlock sets S_CHANGE_ATTR on all 4 edges around (x, y).
-// Own-tile edges (north+east) always sent. Neighbor edges (south+west) skip occupied tiles.
-func SendEntityBlock(viewer *net.Session, x, y int32, mapID int16, ws *world.State) {
-	key := entityDoorKey{viewerID: viewer.ID, x: x, y: y}
-	if _, ok := entityDoorMap[key]; ok {
-		return
-	}
-
-	var entry entityDoorEntry
-
-	// Own tile dir=0: blocks "/" edge between (x,y) and (x,y-1) — north
-	sendDoorAttr(viewer, x, y, 0, false)
-	entry.selfDir0 = true
-
-	// Own tile dir=1: blocks "\" edge between (x,y) and (x+1,y) — east
-	sendDoorAttr(viewer, x, y, 1, false)
-	entry.selfDir1 = true
-
-	// South neighbor (x, y+1) dir=0: blocks edge between (x,y+1) and (x,y) — south
-	sendDoorAttr(viewer, x, y+1, 0, false)
-	entry.southBlocked = true
-
-	// West neighbor (x-1, y) dir=1: blocks edge between (x-1,y) and (x,y) — west
-	sendDoorAttr(viewer, x-1, y, 1, false)
-	entry.westBlocked = true
-
-	entityDoorMap[key] = entry
-	if entityDoorsByViewer[viewer.ID] == nil {
-		entityDoorsByViewer[viewer.ID] = make(map[entityDoorKey]struct{})
-	}
-	entityDoorsByViewer[viewer.ID][key] = struct{}{}
-}
-
-// SendEntityUnblock restores passability for all directions that were blocked.
-func SendEntityUnblock(viewer *net.Session, x, y int32) {
-	key := entityDoorKey{viewerID: viewer.ID, x: x, y: y}
-	entry, ok := entityDoorMap[key]
-	if !ok {
-		return
-	}
-	if entry.selfDir0 {
-		sendDoorAttr(viewer, x, y, 0, true)
-	}
-	if entry.selfDir1 {
-		sendDoorAttr(viewer, x, y, 1, true)
-	}
-	if entry.southBlocked {
-		sendDoorAttr(viewer, x, y+1, 0, true)
-	}
-	if entry.westBlocked {
-		sendDoorAttr(viewer, x-1, y, 1, true)
-	}
-	delete(entityDoorMap, key)
-	if viewerKeys := entityDoorsByViewer[viewer.ID]; viewerKeys != nil {
-		delete(viewerKeys, key)
-	}
-}
-
-// CleanupViewerEntityDoors removes all tracking for a disconnecting viewer.
-func CleanupViewerEntityDoors(viewerID uint64) {
-	keys := entityDoorsByViewer[viewerID]
-	for key := range keys {
-		delete(entityDoorMap, key)
-	}
-	delete(entityDoorsByViewer, viewerID)
+// SendEntityTileUnblock 解除實體格子封鎖（客戶端端）。
+// 恢復目標格子 4 個邊界的通行性。
+func SendEntityTileUnblock(viewer *net.Session, x, y int32) {
+	sendDoorAttr(viewer, x, y, 0, true)   // 恢復北邊界
+	sendDoorAttr(viewer, x, y, 1, true)   // 恢復東邊界
+	sendDoorAttr(viewer, x, y+1, 0, true) // 恢復南邊界
+	sendDoorAttr(viewer, x-1, y, 1, true) // 恢復西邊界
 }
 
 // ChebyshevDist returns Chebyshev (chessboard) distance between two points.
