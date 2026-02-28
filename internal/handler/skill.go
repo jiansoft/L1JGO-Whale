@@ -18,23 +18,34 @@ const (
 
 // HandleUseSpell processes C_USE_SPELL (opcode 6).
 // Thin handler: parse packet → queue to SkillSystem (Phase 2).
-// Packet format: [C row][C column] then variable data depending on skill:
-//
-//	Most spells: [D targetID][H targetX][H targetY]
+// 封包格式依技能不同：
+//   一般技能:      [C row][C column][D targetID][H targetX][H targetY]
+//   傳送技能(5,69): [C row][C column][H mapID][D bookmarkID]
+//   火牆/生命之流:  [C row][C column][H targetX][H targetY]
 func HandleUseSpell(sess *net.Session, r *packet.Reader, deps *Deps) {
 	row := int32(r.ReadC())
 	column := int32(r.ReadC())
 	skillID := row*8 + column + 1
 
-	// Java 用 try-catch 包裹讀取——客戶端不一定發送完整 8 bytes
-	// 有些技能只發 targetID（4 bytes）不含 targetX/targetY
+	// Java C_UseSkill: 依技能類型讀取不同的後續欄位
 	var targetID int32
-	if r.Remaining() >= 4 {
-		targetID = r.ReadD()
-	}
-	if r.Remaining() >= 4 {
-		_ = r.ReadH() // targetX
-		_ = r.ReadH() // targetY
+	if skillID == 5 || skillID == 69 {
+		// 指定傳送 / 集體傳送術：[H mapID][D bookmarkID]
+		if r.Remaining() >= 2 {
+			_ = r.ReadH() // mapID（客戶端發送但伺服器不使用）
+		}
+		if r.Remaining() >= 4 {
+			targetID = r.ReadD() // bookmarkID
+		}
+	} else {
+		// 一般技能：[D targetID][H targetX][H targetY]
+		if r.Remaining() >= 4 {
+			targetID = r.ReadD()
+		}
+		if r.Remaining() >= 4 {
+			_ = r.ReadH() // targetX
+			_ = r.ReadH() // targetY
+		}
 	}
 
 	if deps.Skill == nil {

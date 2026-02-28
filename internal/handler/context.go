@@ -48,6 +48,8 @@ type SkillManager interface {
 	TickPlayerBuffs(p *world.PlayerInfo)
 	// RemoveBuffAndRevert 移除指定 buff 並還原屬性。
 	RemoveBuffAndRevert(target *world.PlayerInfo, skillID int32)
+	// ApplyNpcDebuff NPC 對玩家施放 debuff 技能（麻痺/睡眠/減速等）。
+	ApplyNpcDebuff(target *world.PlayerInfo, skill *data.SkillInfo)
 }
 
 // DeathManager 處理玩家死亡與重生。由 system.DeathSystem 實作。

@@ -74,12 +74,9 @@ func (s *NpcAISystem) tickMonsterAI(npc *world.NpcInfo) {
 			npc.AggroTarget = 0
 			target = nil
 		}
-		// Drop aggro if target entered a safety zone (Java: getZoneType() == 1)
-		if target != nil && s.deps.MapData != nil &&
-			s.deps.MapData.IsSafetyZone(target.MapID, target.X, target.Y) {
-			npc.AggroTarget = 0
-			target = nil
-		}
+		// 注意：不在此處檢查安全區域。被動仇恨（被攻擊）不受安全區域限制。
+		// 安全區域只阻止主動索敵（agro scan），由下方第 95-98 行處理。
+		// Java 行為：隱藏之谷等新手區整張地圖都是安全區域，怪物被打一定會反擊。
 	}
 
 	// Agro mobs scan for new target if none
@@ -495,10 +492,14 @@ func (s *NpcAISystem) executeNpcSkill(npc *world.NpcInfo, target *world.PlayerIn
 		}
 		sendHPUpdate(target.Session, target.HP, target.MaxHP)
 	} else {
-		// Non-damage skill (buff/debuff): use S_EFFECT on target
+		// 非傷害技能（debuff）：發送特效 + 套用 debuff 狀態
 		if gfx > 0 {
 			effData := handler.BuildSkillEffect(target.CharID, gfx)
 			handler.BroadcastToPlayers(nearby, effData)
+		}
+		// 透過 SkillManager 套用 buff/debuff 效果（麻痺、睡眠、減速等）
+		if s.deps.Skill != nil {
+			s.deps.Skill.ApplyNpcDebuff(target, skill)
 		}
 	}
 }
@@ -681,14 +682,15 @@ func calcNpcHeading(sx, sy, tx, ty int32) int16 {
 var npcArrowSeqNum int32
 
 // buildNpcMove 建構 NPC 移動封包位元組（不發送）。
-// Java S_MoveCharPacket constructor 2 (AI): [C op][D id][H locX][H locY][C heading]
-// 與玩家版不同：無 trailing writeH(0)。
+// Java S_MoveNpcPacket: [C op][D id][H locX][H locY][C heading][C 0x80]
+// 與玩家版不同：NPC 版尾部有 0x80 旗標。
 func buildNpcMove(npcID int32, prevX, prevY int32, heading int16) []byte {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_MOVE_OBJECT)
 	w.WriteD(npcID)
 	w.WriteH(uint16(prevX))
 	w.WriteH(uint16(prevY))
 	w.WriteC(byte(heading))
+	w.WriteC(0x80) // NPC 移動旗標（Java S_MoveNpcPacket 第 30 行）
 	return w.Bytes()
 }
 

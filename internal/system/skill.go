@@ -1538,6 +1538,12 @@ func (s *SkillSystem) applyBuffEffect(target *world.PlayerInfo, skill *data.Skil
 	s.sendBuffIcon(target, skill.SkillID, uint16(skill.BuffDuration))
 }
 
+// ApplyNpcDebuff NPC 對玩家施放 debuff 技能（麻痺/睡眠/減速等）。
+// 實際委派給 applyBuffEffect，由 NpcAISystem 透過 SkillManager 介面呼叫。
+func (s *SkillSystem) ApplyNpcDebuff(target *world.PlayerInfo, skill *data.SkillInfo) {
+	s.applyBuffEffect(target, skill)
+}
+
 // removeBuffAndRevert 移除衝突 buff 並還原屬性。
 func (s *SkillSystem) removeBuffAndRevert(target *world.PlayerInfo, skillID int32) {
 	old := target.RemoveBuff(skillID)
