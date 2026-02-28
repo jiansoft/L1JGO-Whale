@@ -4,7 +4,7 @@ import (
 	"time"
 
 	coresys "github.com/l1jgo/server/internal/core/system"
-	"github.com/l1jgo/server/internal/net/packet"
+	"github.com/l1jgo/server/internal/handler"
 	"github.com/l1jgo/server/internal/world"
 )
 
@@ -24,10 +24,7 @@ func (s *GroundItemSystem) Update(_ time.Duration) {
 	expired := s.world.TickGroundItems()
 	for _, g := range expired {
 		nearby := s.world.GetNearbyPlayersAt(g.X, g.Y, g.MapID)
-		for _, viewer := range nearby {
-			w := packet.NewWriterWithOpcode(packet.S_OPCODE_REMOVE_OBJECT)
-			w.WriteD(g.ID)
-			viewer.Session.Send(w.Bytes())
-		}
+		data := handler.BuildRemoveObject(g.ID)
+		handler.BroadcastToPlayers(nearby, data)
 	}
 }

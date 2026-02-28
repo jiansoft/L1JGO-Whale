@@ -116,9 +116,8 @@ func HandleMove(sess *net.Session, r *packet.Reader, deps *Deps) {
 	// 只做 1 次 GetNearbyPlayers 查詢（原本 16 次）。
 	// 玩家進出視野由 VisibilitySystem（Phase 3, 每 400ms）獨立處理。
 	nearby := ws.GetNearbyPlayers(destX, destY, player.MapID, sess.ID)
-	for _, other := range nearby {
-		sendMoveObject(other.Session, player.CharID, curX, curY, heading)
-	}
+	data := BuildMoveObject(player.CharID, curX, curY, heading)
+	BroadcastToPlayers(nearby, data)
 }
 
 // rejectMove 碰撞拒絕：回彈玩家位置 + 重發所有附近實體。
@@ -240,9 +239,8 @@ func HandleChangeDirection(sess *net.Session, r *packet.Reader, deps *Deps) {
 	}
 	player.Heading = heading
 
-	// Broadcast direction change to nearby players
+	// 廣播方向變更給附近玩家
 	nearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)
-	for _, other := range nearby {
-		sendChangeHeading(other.Session, player.CharID, heading)
-	}
+	chData := BuildChangeHeading(player.CharID, heading)
+	BroadcastToPlayers(nearby, chData)
 }

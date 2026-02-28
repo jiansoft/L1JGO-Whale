@@ -244,6 +244,23 @@ func (s *SkillSystem) processSkill(sessID uint64, skillID, targetID int32) {
 		return
 	}
 
+	// --- 物品強化技能：targetID = 背包物品 ObjectID ---
+	// Java: 這些技能將 target_id 解釋為物品 ObjectID，不是角色/NPC ID
+	switch skillID {
+	case 21: // BLESSED_ARMOR（鎧甲護持）— 鎧甲 AC-3
+		s.executeArmorEnchant(sess, player, skill, targetID)
+		return
+	case 12, 107: // ENCHANT_WEAPON（擬似魔法武器）/ SHADOW_FANG（暗影之牙）— 武器強化 buff
+		s.executeWeaponEnchant(sess, player, skill, targetID)
+		return
+	case 73: // CREATE_MAGICAL_WEAPON（創造魔法武器）— 武器強化 +1
+		s.executeCreateMagicalWeapon(sess, player, skill, targetID)
+		return
+	case 100: // BRING_STONE（提煉魔石）— 魔石升級鏈
+		s.executeBringStone(sess, player, skill, targetID)
+		return
+	}
+
 	// --- 依目標類型執行 ---
 	switch skill.Target {
 	case "attack":
@@ -302,9 +319,8 @@ func (s *SkillSystem) executeResurrection(sess *net.Session, player *world.Playe
 	nearby := s.deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
 
 	// 廣播施法動畫
-	for _, viewer := range nearby {
-		handler.SendActionGfx(viewer.Session, player.CharID, byte(skill.ActionID))
-	}
+	actData := handler.BuildActionGfx(player.CharID, byte(skill.ActionID))
+	handler.BroadcastToPlayers(nearby, actData)
 
 	switch skill.SkillID {
 	case 131: // 世界樹的呼喚 — 範圍復活
@@ -346,9 +362,8 @@ func (s *SkillSystem) executeResurrection(sess *net.Session, player *world.Playe
 
 	// 施法特效
 	if skill.CastGfx > 0 {
-		for _, viewer := range nearby {
-			handler.SendSkillEffect(viewer.Session, player.CharID, skill.CastGfx)
-		}
+		effData := handler.BuildSkillEffect(player.CharID, skill.CastGfx)
+		handler.BroadcastToPlayers(nearby, effData)
 	}
 }
 
@@ -524,13 +539,11 @@ func (s *SkillSystem) executeAttackSkill(sess *net.Session, player *world.Player
 			dmg := t.dmg
 
 			if isPhysicalSkill {
-				for _, viewer := range nearby {
-					handler.SendAttackPacket(viewer.Session, player.CharID, t.npc.ID, dmg, player.Heading)
-				}
+				atkData := handler.BuildAttackPacket(player.CharID, t.npc.ID, dmg, player.Heading)
+				handler.BroadcastToPlayers(nearby, atkData)
 				if skill.CastGfx > 0 {
-					for _, viewer := range nearby {
-						handler.SendSkillEffect(viewer.Session, t.npc.ID, skill.CastGfx)
-					}
+					effData := handler.BuildSkillEffect(t.npc.ID, skill.CastGfx)
+					handler.BroadcastToPlayers(nearby, effData)
 				}
 			} else {
 				gfxID := int32(skill.CastGfx)
@@ -567,9 +580,8 @@ func (s *SkillSystem) executeAttackSkill(sess *net.Session, player *world.Player
 			if t.npc.MaxHP > 0 {
 				hpRatio = int16((t.npc.HP * 100) / t.npc.MaxHP)
 			}
-			for _, viewer := range nearby {
-				handler.SendHpMeter(viewer.Session, t.npc.ID, hpRatio)
-			}
+			hpData := handler.BuildHpMeter(t.npc.ID, hpRatio)
+			handler.BroadcastToPlayers(nearby, hpData)
 
 			if t.npc.HP <= 0 {
 				handleNpcDeath(t.npc, player, nearby, s.deps)
@@ -606,9 +618,7 @@ func (s *SkillSystem) executeAttackSkill(sess *net.Session, player *world.Player
 				}
 				t.npc.Paralyzed = true
 				t.npc.AddDebuff(80, (dur+1)*5)
-				for _, viewer := range nearby {
-					handler.SendPoison(viewer.Session, t.npc.ID, 2) // 灰色
-				}
+				handler.BroadcastToPlayers(nearby, handler.BuildPoison(t.npc.ID, 2))
 			}
 		}
 	}
@@ -646,9 +656,7 @@ func (s *SkillSystem) executeBuffSkill(sess *net.Session, player *world.PlayerIn
 	nearby := s.deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
 
 	// 廣播施法動畫
-	for _, viewer := range nearby {
-		handler.SendActionGfx(viewer.Session, player.CharID, byte(skill.ActionID))
-	}
+	handler.BroadcastToPlayers(nearby, handler.BuildActionGfx(player.CharID, byte(skill.ActionID)))
 
 	// 變形術：開啟怪物列表對話框
 	if skill.SkillID == handler.SkillShapeChange {
@@ -759,9 +767,7 @@ func (s *SkillSystem) executeBuffSkill(sess *net.Session, player *world.PlayerIn
 
 	// 效果 GFX
 	if skill.CastGfx > 0 {
-		for _, viewer := range nearby {
-			handler.SendSkillEffect(viewer.Session, target.CharID, skill.CastGfx)
-		}
+		handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(target.CharID, skill.CastGfx))
 	}
 
 	if skill.SysMsgHappen > 0 {
@@ -794,9 +800,7 @@ func (s *SkillSystem) executeNpcDebuffSkill(sess *net.Session, player *world.Pla
 
 	nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 
-	for _, viewer := range nearby {
-		handler.SendActionGfx(viewer.Session, player.CharID, byte(skill.ActionID))
-	}
+	handler.BroadcastToPlayers(nearby, handler.BuildActionGfx(player.CharID, byte(skill.ActionID)))
 
 	switch skill.SkillID {
 	case 87: // 衝擊之暈 — 需要雙手劍
@@ -817,9 +821,7 @@ func (s *SkillSystem) executeNpcDebuffSkill(sess *net.Session, player *world.Pla
 		npc.Paralyzed = true
 		npc.AddDebuff(87, dur*5)
 		if skill.CastGfx > 0 {
-			for _, viewer := range nearby {
-				handler.SendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
-			}
+			handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(npc.ID, skill.CastGfx))
 		}
 		s.deps.Log.Info(fmt.Sprintf("衝擊之暈  施法者=%s  NPC=%s  持續=%d秒", player.Name, npc.Name, dur))
 
@@ -831,13 +833,9 @@ func (s *SkillSystem) executeNpcDebuffSkill(sess *net.Session, player *world.Pla
 		dur := 1 + world.RandInt(12)
 		npc.Paralyzed = true
 		npc.AddDebuff(157, dur*5)
-		for _, viewer := range nearby {
-			handler.SendPoison(viewer.Session, npc.ID, 2)
-		}
+		handler.BroadcastToPlayers(nearby, handler.BuildPoison(npc.ID, 2))
 		if skill.CastGfx > 0 {
-			for _, viewer := range nearby {
-				handler.SendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
-			}
+			handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(npc.ID, skill.CastGfx))
 		}
 		s.deps.Log.Info(fmt.Sprintf("大地屏障  施法者=%s  NPC=%s  持續=%d秒", player.Name, npc.Name, dur))
 
@@ -853,9 +851,7 @@ func (s *SkillSystem) executeNpcDebuffSkill(sess *net.Session, player *world.Pla
 		npc.Sleeped = true
 		npc.AddDebuff(103, dur*5)
 		if skill.CastGfx > 0 {
-			for _, viewer := range nearby {
-				handler.SendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
-			}
+			handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(npc.ID, skill.CastGfx))
 		}
 		s.deps.Log.Info(fmt.Sprintf("暗黑盲咒  施法者=%s  NPC=%s  持續=%d秒", player.Name, npc.Name, dur))
 
@@ -871,9 +867,7 @@ func (s *SkillSystem) executeNpcDebuffSkill(sess *net.Session, player *world.Pla
 		npc.Sleeped = true
 		npc.AddDebuff(66, dur*5)
 		if skill.CastGfx > 0 {
-			for _, viewer := range nearby {
-				handler.SendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
-			}
+			handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(npc.ID, skill.CastGfx))
 		}
 		s.deps.Log.Info(fmt.Sprintf("沉睡之霧  施法者=%s  NPC=%s  持續=%d秒", player.Name, npc.Name, dur))
 
@@ -886,13 +880,9 @@ func (s *SkillSystem) executeNpcDebuffSkill(sess *net.Session, player *world.Pla
 			return
 		}
 		npc.AddDebuff(33, 25)
-		for _, viewer := range nearby {
-			handler.SendPoison(viewer.Session, npc.ID, 2)
-		}
+		handler.BroadcastToPlayers(nearby, handler.BuildPoison(npc.ID, 2))
 		if skill.CastGfx > 0 {
-			for _, viewer := range nearby {
-				handler.SendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
-			}
+			handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(npc.ID, skill.CastGfx))
 		}
 		s.deps.Log.Info(fmt.Sprintf("木乃伊詛咒(階段一)  施法者=%s  NPC=%s  延遲=5秒", player.Name, npc.Name))
 
@@ -908,13 +898,9 @@ func (s *SkillSystem) executeNpcDebuffSkill(sess *net.Session, player *world.Pla
 			npc.AggroTarget = sess.ID
 		}
 		npc.AddDebuff(11, 150) // 30 秒 = 150 ticks
-		for _, viewer := range nearby {
-			handler.SendPoison(viewer.Session, npc.ID, 1) // 綠色
-		}
+		handler.BroadcastToPlayers(nearby, handler.BuildPoison(npc.ID, 1))
 		if skill.CastGfx > 0 {
-			for _, viewer := range nearby {
-				handler.SendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
-			}
+			handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(npc.ID, skill.CastGfx))
 		}
 		s.deps.Log.Info(fmt.Sprintf("毒咒  施法者=%s  NPC=%s  持續=30秒  每次=5傷害", player.Name, npc.Name))
 
@@ -929,9 +915,7 @@ func (s *SkillSystem) executeNpcDebuffSkill(sess *net.Session, player *world.Pla
 		}
 		npc.AddDebuff(skill.SkillID, dur*5)
 		if skill.CastGfx > 0 {
-			for _, viewer := range nearby {
-				handler.SendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
-			}
+			handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(npc.ID, skill.CastGfx))
 		}
 		s.deps.Log.Info(fmt.Sprintf("緩速術  施法者=%s  NPC=%s  技能=%d  持續=%d秒", player.Name, npc.Name, skill.SkillID, dur))
 
@@ -948,21 +932,15 @@ func (s *SkillSystem) executeNpcDebuffSkill(sess *net.Session, player *world.Pla
 		}
 		npc.Paralyzed = true
 		npc.AddDebuff(80, (dur+1)*5) // Java: buffDuration + 1
-		for _, viewer := range nearby {
-			handler.SendPoison(viewer.Session, npc.ID, 2) // 灰色
-		}
+		handler.BroadcastToPlayers(nearby, handler.BuildPoison(npc.ID, 2))
 		if skill.CastGfx > 0 {
-			for _, viewer := range nearby {
-				handler.SendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
-			}
+			handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(npc.ID, skill.CastGfx))
 		}
 		s.deps.Log.Info(fmt.Sprintf("冰雪颶風凍結  施法者=%s  NPC=%s  持續=%d秒", player.Name, npc.Name, dur+1))
 
 	default:
 		if skill.CastGfx > 0 {
-			for _, viewer := range nearby {
-				handler.SendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
-			}
+			handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(npc.ID, skill.CastGfx))
 		}
 	}
 }
@@ -1048,9 +1026,7 @@ func (s *SkillSystem) executeSelfSkill(sess *net.Session, player *world.PlayerIn
 	}
 
 	// 廣播施法動畫
-	for _, viewer := range nearby {
-		handler.SendActionGfx(viewer.Session, player.CharID, byte(skill.ActionID))
-	}
+	handler.BroadcastToPlayers(nearby, handler.BuildActionGfx(player.CharID, byte(skill.ActionID)))
 
 	// 自身範圍治療
 	if skill.Type == 16 && (skill.DamageValue > 0 || skill.DamageDice > 0) {
@@ -1122,9 +1098,7 @@ func (s *SkillSystem) executeSelfSkill(sess *net.Session, player *world.PlayerIn
 			}
 			res := s.deps.Scripting.CalcSkillDamage(ctx)
 			dmg := int32(res.Damage)
-			for _, viewer := range nearby {
-				handler.SendSkillEffect(viewer.Session, npc.ID, skill.CastGfx)
-			}
+			handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(npc.ID, skill.CastGfx))
 			npc.HP -= dmg
 			if npc.HP < 0 {
 				npc.HP = 0
@@ -1136,9 +1110,7 @@ func (s *SkillSystem) executeSelfSkill(sess *net.Session, player *world.PlayerIn
 			if npc.MaxHP > 0 {
 				hpRatio = int16((npc.HP * 100) / npc.MaxHP)
 			}
-			for _, viewer := range nearby {
-				handler.SendHpMeter(viewer.Session, npc.ID, hpRatio)
-			}
+			handler.BroadcastToPlayers(nearby, handler.BuildHpMeter(npc.ID, hpRatio))
 			if npc.HP <= 0 {
 				handleNpcDeath(npc, player, nearby, s.deps)
 				continue
@@ -1153,9 +1125,7 @@ func (s *SkillSystem) executeSelfSkill(sess *net.Session, player *world.PlayerIn
 					}
 					npc.Paralyzed = true
 					npc.AddDebuff(80, (dur+1)*5)
-					for _, viewer := range nearby {
-						handler.SendPoison(viewer.Session, npc.ID, 2) // 灰色
-					}
+					handler.BroadcastToPlayers(nearby, handler.BuildPoison(npc.ID, 2))
 				}
 			}
 		}
@@ -1166,14 +1136,134 @@ func (s *SkillSystem) executeSelfSkill(sess *net.Session, player *world.PlayerIn
 
 	// 效果 GFX
 	if skill.CastGfx > 0 {
-		for _, viewer := range nearby {
-			handler.SendSkillEffect(viewer.Session, player.CharID, skill.CastGfx)
-		}
+		handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(player.CharID, skill.CastGfx))
 	}
 
 	if skill.SysMsgHappen > 0 {
 		handler.SendServerMessage(sess, uint16(skill.SysMsgHappen))
 	}
+}
+
+// ========================================================================
+//  鎧甲強化技能
+// ========================================================================
+
+// executeArmorEnchant 處理鎧甲護持（skill 21）— 物品強化技能。
+// Java: targetID = 背包物品 ObjectID。檢查物品是否為身體鎧甲（type2=2, type=2），
+// 是 → AC-3 buff + 訊息 161；否 → 訊息 79「沒有任何事情發生。」
+func (s *SkillSystem) executeArmorEnchant(sess *net.Session, player *world.PlayerInfo, skill *data.SkillInfo, itemObjID int32) {
+	// 查找背包物品
+	invItem := player.Inv.FindByObjectID(itemObjID)
+	if invItem == nil {
+		handler.SendServerMessage(sess, 79) // 沒有任何事情發生。
+		return
+	}
+
+	// 查詢物品模板 — 必須為身體鎧甲（Java: type2==2 && type==2）
+	itemInfo := s.deps.Items.Get(invItem.ItemID)
+	if itemInfo == nil || itemInfo.Category != data.CategoryArmor || itemInfo.Type != "armor" {
+		handler.SendServerMessage(sess, 79) // 沒有任何事情發生。
+		return
+	}
+
+	// 施法動畫 + GFX
+	nearby := s.deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
+	handler.BroadcastToPlayers(nearby, handler.BuildActionGfx(player.CharID, byte(skill.ActionID)))
+	if skill.CastGfx > 0 {
+		handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(player.CharID, skill.CastGfx))
+	}
+
+	// 套用 AC-3 buff（簡化：Java 是物品級 enchant，Go 用玩家 buff 代替）
+	s.applyBuffEffect(player, skill)
+
+	// 成功訊息（Java: S_ServerMessage 161 "{item} 的 {效果} 增加了。"）
+	handler.SendServerMessage(sess, 161)
+}
+
+// executeWeaponEnchant 處理擬似魔法武器（skill 12）和暗影之牙（skill 107）— 武器強化 buff。
+// Java: targetID = 背包物品 ObjectID。檢查物品是否為武器（type2=1），
+// 是 → 套用武器強化 buff + icon；否 → 訊息 79。
+func (s *SkillSystem) executeWeaponEnchant(sess *net.Session, player *world.PlayerInfo, skill *data.SkillInfo, itemObjID int32) {
+	invItem := player.Inv.FindByObjectID(itemObjID)
+	if invItem == nil {
+		handler.SendServerMessage(sess, 79) // 沒有任何事情發生。
+		return
+	}
+
+	// 查詢物品模板 — 必須為武器（Java: type2==1）
+	itemInfo := s.deps.Items.Get(invItem.ItemID)
+	if itemInfo == nil || itemInfo.Category != data.CategoryWeapon {
+		handler.SendServerMessage(sess, 79)
+		return
+	}
+
+	// 施法動畫 + GFX
+	nearby := s.deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
+	handler.BroadcastToPlayers(nearby, handler.BuildActionGfx(player.CharID, byte(skill.ActionID)))
+	if skill.CastGfx > 0 {
+		handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(player.CharID, skill.CastGfx))
+	}
+
+	// 套用 buff 效果
+	s.applyBuffEffect(player, skill)
+
+	handler.SendServerMessage(sess, 161)
+}
+
+// executeCreateMagicalWeapon 處理創造魔法武器（skill 73）— 武器強化 +1。
+// Java: 僅可對 safe_enchant > 0 且 enchant_level == 0 的武器使用。
+// Go 簡化：驗證物品為武器即可，完整強化邏輯待後續實作。
+func (s *SkillSystem) executeCreateMagicalWeapon(sess *net.Session, player *world.PlayerInfo, skill *data.SkillInfo, itemObjID int32) {
+	invItem := player.Inv.FindByObjectID(itemObjID)
+	if invItem == nil {
+		handler.SendServerMessage(sess, 79)
+		return
+	}
+
+	itemInfo := s.deps.Items.Get(invItem.ItemID)
+	if itemInfo == nil || itemInfo.Category != data.CategoryWeapon {
+		handler.SendServerMessage(sess, 79)
+		return
+	}
+
+	// TODO: 完整強化邏輯（safe_enchant 檢查、enchant_level == 0 檢查、+1 強化）
+	// 目前僅驗證物品為武器，避免對非武器物品誤操作
+	nearby := s.deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
+	handler.BroadcastToPlayers(nearby, handler.BuildActionGfx(player.CharID, byte(skill.ActionID)))
+	if skill.CastGfx > 0 {
+		handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(player.CharID, skill.CastGfx))
+	}
+
+	handler.SendServerMessage(sess, 79) // 暫時回報「沒有任何事情發生」直到完整實作
+}
+
+// executeBringStone 處理提煉魔石（skill 100）— 魔石升級鏈。
+// Java: 40320→40321→40322→40323→40324，各有不同成功率。
+// Go 簡化：驗證物品為魔石即可，完整升級邏輯待後續實作。
+func (s *SkillSystem) executeBringStone(sess *net.Session, player *world.PlayerInfo, skill *data.SkillInfo, itemObjID int32) {
+	invItem := player.Inv.FindByObjectID(itemObjID)
+	if invItem == nil {
+		handler.SendServerMessage(sess, 79)
+		return
+	}
+
+	// 檢查是否為可升級的魔石（Java: 40320/40321/40322/40323）
+	switch invItem.ItemID {
+	case 40320, 40321, 40322, 40323:
+		// 有效的魔石
+	default:
+		handler.SendServerMessage(sess, 79)
+		return
+	}
+
+	// TODO: 完整升級邏輯（成功率計算、物品轉換、消耗處理）
+	nearby := s.deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
+	handler.BroadcastToPlayers(nearby, handler.BuildActionGfx(player.CharID, byte(skill.ActionID)))
+	if skill.CastGfx > 0 {
+		handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(player.CharID, skill.CastGfx))
+	}
+
+	handler.SendServerMessage(sess, skillMsgCastFail) // 暫時回報失敗直到完整實作
 }
 
 // ========================================================================
@@ -1268,16 +1358,10 @@ func (s *SkillSystem) executeTeleportSpell(sess *net.Session, player *world.Play
 	}
 
 	nearby := s.deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
-	for _, viewer := range nearby {
-		handler.SendActionGfx(viewer.Session, player.CharID, byte(skill.ActionID))
-	}
+	handler.BroadcastToPlayers(nearby, handler.BuildActionGfx(player.CharID, byte(skill.ActionID)))
 
-	handler.SendSkillEffect(sess, player.CharID, int32(skill.CastGfx))
-	for _, viewer := range nearby {
-		if viewer.SessionID != sess.ID {
-			handler.SendSkillEffect(viewer.Session, player.CharID, int32(skill.CastGfx))
-		}
-	}
+	// 施法者在 nearby 中（GetNearbyPlayersAt 不排除），直接廣播即可
+	handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(player.CharID, int32(skill.CastGfx)))
 
 	// 傳送時取消交易
 	handler.CancelTradeIfActive(player, s.deps)

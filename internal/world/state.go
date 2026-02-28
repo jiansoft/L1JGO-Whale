@@ -421,6 +421,10 @@ type State struct {
 	// Weather & game time (accessed from game loop only)
 	Weather  byte // current weather type (0=clear, 1-3=snow, 17-19=rain)
 	LastHour int  // last game hour for hour-change detection (-1 = uninitialized)
+
+	// 可重用 AOI 查詢 buffer（遊戲迴圈單線程，無需鎖）
+	aoiBuf    []uint64
+	npcAoiBuf []int32
 }
 
 // RandomizeWeather picks a random weather with weighted distribution.
@@ -517,7 +521,8 @@ func (s *State) UpdatePosition(sessionID uint64, newX, newY int32, newMapID int1
 // GetNearbyPlayers returns all players visible to the given position.
 // Uses Chebyshev distance <= 20 (matching Java PC_RECOGNIZE_RANGE).
 func (s *State) GetNearbyPlayers(x, y int32, mapID int16, excludeSession uint64) []*PlayerInfo {
-	nearbyIDs := s.aoi.GetNearby(x, y, mapID)
+	s.aoiBuf = s.aoi.GetNearbyInto(x, y, mapID, s.aoiBuf)
+	nearbyIDs := s.aoiBuf
 	result := make([]*PlayerInfo, 0, len(nearbyIDs))
 	for _, sid := range nearbyIDs {
 		if sid == excludeSession {
@@ -577,7 +582,8 @@ func (s *State) GetNpc(id int32) *NpcInfo {
 // GetNearbyNpcs returns all alive NPCs visible from the given position (Chebyshev <= 20).
 // Uses NPC AOI grid for O(cells) lookup instead of O(N) full scan.
 func (s *State) GetNearbyNpcs(x, y int32, mapID int16) []*NpcInfo {
-	nearbyIDs := s.npcAoi.GetNearby(x, y, mapID)
+	s.npcAoiBuf = s.npcAoi.GetNearbyInto(x, y, mapID, s.npcAoiBuf)
+	nearbyIDs := s.npcAoiBuf
 	result := make([]*NpcInfo, 0, len(nearbyIDs))
 	for _, nid := range nearbyIDs {
 		npc := s.npcs[nid]
@@ -606,7 +612,8 @@ func (s *State) GetNearbyNpcs(x, y int32, mapID int16) []*NpcInfo {
 // GetNearbyNpcsForVis 回傳附近可見 NPC（含屍體）供 VisibilitySystem 使用。
 // 活著的 NPC + 死亡但 DeleteTimer > 0 的 NPC（屍體仍需顯示在客戶端）。
 func (s *State) GetNearbyNpcsForVis(x, y int32, mapID int16) []*NpcInfo {
-	nearbyIDs := s.npcAoi.GetNearby(x, y, mapID)
+	s.npcAoiBuf = s.npcAoi.GetNearbyInto(x, y, mapID, s.npcAoiBuf)
+	nearbyIDs := s.npcAoiBuf
 	result := make([]*NpcInfo, 0, len(nearbyIDs))
 	for _, nid := range nearbyIDs {
 		npc := s.npcs[nid]
@@ -710,7 +717,8 @@ func (s *State) GetNearbyPlayersAt(x, y int32, mapID int16) []*PlayerInfo {
 
 // IsPlayerAt returns true if any alive player occupies the exact tile (excluding excludeSession).
 func (s *State) IsPlayerAt(x, y int32, mapID int16, excludeSession uint64) bool {
-	nearbyIDs := s.aoi.GetNearby(x, y, mapID)
+	s.aoiBuf = s.aoi.GetNearbyInto(x, y, mapID, s.aoiBuf)
+	nearbyIDs := s.aoiBuf
 	for _, sid := range nearbyIDs {
 		if sid == excludeSession {
 			continue
@@ -726,7 +734,8 @@ func (s *State) IsPlayerAt(x, y int32, mapID int16, excludeSession uint64) bool 
 // IsNpcAt returns true if any alive NPC occupies the exact tile.
 // Uses NPC AOI grid for O(cells) lookup instead of O(N) full scan.
 func (s *State) IsNpcAt(x, y int32, mapID int16) bool {
-	nearbyIDs := s.npcAoi.GetNearby(x, y, mapID)
+	s.npcAoiBuf = s.npcAoi.GetNearbyInto(x, y, mapID, s.npcAoiBuf)
+	nearbyIDs := s.npcAoiBuf
 	for _, nid := range nearbyIDs {
 		npc := s.npcs[nid]
 		if npc != nil && npc.X == x && npc.Y == y && !npc.Dead {
@@ -817,7 +826,8 @@ func (s *State) DoorCount() int {
 
 // GetNearbyPets returns all alive pets visible from the given position (Chebyshev <= 20).
 func (s *State) GetNearbyPets(x, y int32, mapID int16) []*PetInfo {
-	nearbyIDs := s.npcAoi.GetNearby(x, y, mapID)
+	s.npcAoiBuf = s.npcAoi.GetNearbyInto(x, y, mapID, s.npcAoiBuf)
+	nearbyIDs := s.npcAoiBuf
 	var result []*PetInfo
 	for _, nid := range nearbyIDs {
 		pet := s.pets[nid]

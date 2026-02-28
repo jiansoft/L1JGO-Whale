@@ -2,6 +2,7 @@ package packet
 
 import (
 	"encoding/binary"
+	"sync"
 
 	"golang.org/x/text/encoding/traditionalchinese"
 )
@@ -91,4 +92,30 @@ func (w *Writer) RawBytes() []byte {
 // Len returns the current unpadded length.
 func (w *Writer) Len() int {
 	return len(w.buf)
+}
+
+// --- Writer 物件池 ---
+
+var writerPool = sync.Pool{
+	New: func() any { return &Writer{buf: make([]byte, 0, 64)} },
+}
+
+// AcquireWriter 從物件池取得 Writer 並寫入 opcode。
+// 用完後應呼叫 BytesAndRelease 取得封包並歸還 Writer。
+func AcquireWriter(opcode byte) *Writer {
+	w := writerPool.Get().(*Writer)
+	w.buf = w.buf[:0]
+	w.WriteC(opcode)
+	return w
+}
+
+// BytesAndRelease 回傳填充至 8 位元組邊界的封包副本，並將 Writer 歸還物件池。
+// 回傳的 []byte 由呼叫方持有，與 Writer 的內部 buffer 無關。
+func (w *Writer) BytesAndRelease() []byte {
+	padded := w.Bytes()
+	out := make([]byte, len(padded))
+	copy(out, padded)
+	w.buf = w.buf[:0]
+	writerPool.Put(w)
+	return out
 }

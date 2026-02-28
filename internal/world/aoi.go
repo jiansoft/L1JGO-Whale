@@ -86,6 +86,23 @@ func (g *AOIGrid) GetNearby(x, y int32, mapID int16) []uint64 {
 	return result
 }
 
+// GetNearbyInto 同 GetNearby，但將結果寫入呼叫方提供的 buffer 以避免分配。
+// 遊戲迴圈為單線程，可安全重用 buffer。
+func (g *AOIGrid) GetNearbyInto(x, y int32, mapID int16, buf []uint64) []uint64 {
+	buf = buf[:0]
+	cx := toCellCoord(x)
+	cy := toCellCoord(y)
+	for dx := int32(-1); dx <= 1; dx++ {
+		for dy := int32(-1); dy <= 1; dy++ {
+			k := cellKey{mapID: mapID, cx: cx + dx, cy: cy + dy}
+			for sid := range g.cells[k] {
+				buf = append(buf, sid)
+			}
+		}
+	}
+	return buf
+}
+
 // NpcAOIGrid tracks which NPCs are in which cells.
 // Same logic as AOIGrid but keyed by int32 NPC object IDs instead of uint64 session IDs.
 // Separate type to avoid type assertions on the hot path.
@@ -151,4 +168,20 @@ func (g *NpcAOIGrid) GetNearby(x, y int32, mapID int16) []int32 {
 		}
 	}
 	return result
+}
+
+// GetNearbyInto 同 GetNearby，但將結果寫入呼叫方提供的 buffer 以避免分配。
+func (g *NpcAOIGrid) GetNearbyInto(x, y int32, mapID int16, buf []int32) []int32 {
+	buf = buf[:0]
+	cx := toCellCoord(x)
+	cy := toCellCoord(y)
+	for dx := int32(-1); dx <= 1; dx++ {
+		for dy := int32(-1); dy <= 1; dy++ {
+			k := cellKey{mapID: mapID, cx: cx + dx, cy: cy + dy}
+			for nid := range g.cells[k] {
+				buf = append(buf, nid)
+			}
+		}
+	}
+	return buf
 }

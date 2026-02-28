@@ -92,6 +92,10 @@ func HandleGMCommand(sess *net.Session, player *world.PlayerInfo, text string, d
 		gmClearWall(sess, player, deps)
 	case "weather":
 		gmWeather(sess, player, args, deps)
+	case "stresstest":
+		gmStressTest(sess, player, args, deps)
+	case "cleartest":
+		gmClearTest(sess, player, deps)
 	default:
 		gmMsg(sess, "\\f3未知的GM指令: ."+cmd+"  輸入 .help 查看指令列表")
 	}
@@ -140,6 +144,8 @@ func gmHelp(sess *net.Session) {
 	gmMsg(sess, ".loc [玩家名]  — 顯示自己或指定玩家的當下座標")
 	gmMsg(sess, ".wall [1|2|3]  — 測試牆壁: 1=隱形門 2=僅封包 3=可見門")
 	gmMsg(sess, ".clearwall  — 清除測試牆壁")
+	gmMsg(sess, ".stresstest <npcID> [數量] [半徑]  — 壓力測試(預設10000隻,半徑50)")
+	gmMsg(sess, ".cleartest  — 清除所有壓力測試怪物")
 }
 
 func gmLevel(sess *net.Session, player *world.PlayerInfo, args []string, deps *Deps) {
@@ -1249,4 +1255,145 @@ func gmWeather(sess *net.Session, _ *world.PlayerInfo, args []string, deps *Deps
 		sendWeather(p.Session, byte(val))
 	})
 	gmMsgf(sess, "天氣已變更為 %d", val)
+}
+
+// gmStressTest 一次生成大量怪物用於壓力測試。
+// 用法: .stresstest <npcID> [數量] [半徑]
+// 怪物分散在玩家周圍，不會重生（關服即消失）。
+func gmStressTest(sess *net.Session, player *world.PlayerInfo, args []string, deps *Deps) {
+	if len(args) < 1 {
+		gmMsg(sess, "\\f3用法: .stresstest <npcID> [數量] [半徑]")
+		return
+	}
+
+	npcID, err := strconv.Atoi(args[0])
+	if err != nil {
+		gmMsg(sess, "\\f3無效的NPC ID")
+		return
+	}
+
+	count := 10000
+	if len(args) >= 2 {
+		if c, err := strconv.Atoi(args[1]); err == nil && c > 0 {
+			if c > 10000 {
+				c = 10000
+			}
+			count = c
+		}
+	}
+
+	radius := int32(50)
+	if len(args) >= 3 {
+		if r, err := strconv.Atoi(args[2]); err == nil && r > 0 {
+			if r > 100 {
+				r = 100
+			}
+			radius = int32(r)
+		}
+	}
+
+	if deps.Npcs == nil {
+		gmMsg(sess, "\\f3NPC模板未載入")
+		return
+	}
+	tmpl := deps.Npcs.Get(int32(npcID))
+	if tmpl == nil {
+		gmMsgf(sess, "\\f3找不到NPC模板: %d", npcID)
+		return
+	}
+
+	// 查詢動畫速度（只查一次，所有 NPC 共用）
+	atkSpeed := tmpl.AtkSpeed
+	moveSpeed := tmpl.PassiveSpeed
+	if deps.SprTable != nil {
+		gfx := int(tmpl.GfxID)
+		if tmpl.AtkSpeed != 0 {
+			if v := deps.SprTable.GetAttackSpeed(gfx, data.ActAttack); v > 0 {
+				atkSpeed = int16(v)
+			}
+		}
+		if tmpl.PassiveSpeed != 0 {
+			if v := deps.SprTable.GetMoveSpeed(gfx, data.ActWalk); v > 0 {
+				moveSpeed = int16(v)
+			}
+		}
+	}
+
+	gmMsgf(sess, "開始生成 %d 隻 %s（半徑 %d 格）...", count, tmpl.Name, radius)
+
+	spawned := 0
+	for i := 0; i < count; i++ {
+		x := player.X + int32(rand.Intn(int(radius*2+1))) - radius
+		y := player.Y + int32(rand.Intn(int(radius*2+1))) - radius
+
+		// 可行走性檢查（最多重試 3 次）
+		if deps.MapData != nil {
+			ok := deps.MapData.IsPassablePoint(player.MapID, x, y)
+			for retry := 0; !ok && retry < 3; retry++ {
+				x = player.X + int32(rand.Intn(int(radius*2+1))) - radius
+				y = player.Y + int32(rand.Intn(int(radius*2+1))) - radius
+				ok = deps.MapData.IsPassablePoint(player.MapID, x, y)
+			}
+			if !ok {
+				continue
+			}
+		}
+
+		npc := &world.NpcInfo{
+			ID:           world.NextNpcID(),
+			NpcID:        tmpl.NpcID,
+			Impl:         tmpl.Impl,
+			GfxID:        tmpl.GfxID,
+			Name:         tmpl.Name,
+			NameID:       tmpl.NameID,
+			Level:        tmpl.Level,
+			X:            x,
+			Y:            y,
+			MapID:        player.MapID,
+			Heading:      int16(rand.Intn(8)),
+			HP:           tmpl.HP,
+			MaxHP:        tmpl.HP,
+			MP:           tmpl.MP,
+			MaxMP:        tmpl.MP,
+			AC:           tmpl.AC,
+			STR:          tmpl.STR,
+			DEX:          tmpl.DEX,
+			Exp:          tmpl.Exp,
+			Lawful:       tmpl.Lawful,
+			Size:         tmpl.Size,
+			MR:           tmpl.MR,
+			Undead:       tmpl.Undead,
+			Agro:         tmpl.Agro,
+			AtkDmg:       int32(tmpl.Level) + int32(tmpl.STR)/3,
+			Ranged:       tmpl.Ranged,
+			AtkSpeed:     atkSpeed,
+			MoveSpeed:    moveSpeed,
+			PoisonAtk:    tmpl.PoisonAtk,
+			SpawnX:       x,
+			SpawnY:       y,
+			SpawnMapID:   player.MapID,
+			RespawnDelay: 0, // 壓力測試：不重生
+		}
+		deps.World.AddNpc(npc)
+		spawned++
+	}
+
+	gmMsgf(sess, "壓力測試完成：已生成 %d 隻 %s（半徑 %d 格）", spawned, tmpl.Name, radius)
+	gmMsg(sess, "走動即可看到怪物，使用 .cleartest 清除")
+}
+
+// gmClearTest 清除所有壓力測試用怪物（RespawnDelay == 0 的非永久 NPC）。
+func gmClearTest(sess *net.Session, player *world.PlayerInfo, deps *Deps) {
+	removed := 0
+	for _, npc := range deps.World.NpcList() {
+		if npc.Dead || npc.RespawnDelay > 0 {
+			continue
+		}
+		npc.HP = 0
+		npc.Dead = true
+		deps.World.NpcDied(npc)
+		npc.DeleteTimer = 1 // 下一 tick 由 NpcRespawnSystem 廣播 RemoveObject
+		removed++
+	}
+	gmMsgf(sess, "已清除 %d 隻測試怪物", removed)
 }

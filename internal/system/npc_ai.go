@@ -83,10 +83,11 @@ func (s *NpcAISystem) tickMonsterAI(npc *world.NpcInfo) {
 	}
 
 	// Agro mobs scan for new target if none
+	var nearbyPlayers []*world.PlayerInfo
 	if target == nil && npc.Agro {
-		nearby := s.world.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
+		nearbyPlayers = s.world.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 		bestDist := int32(999)
-		for _, p := range nearby {
+		for _, p := range nearbyPlayers {
 			if p.Dead {
 				continue
 			}
@@ -108,10 +109,12 @@ func (s *NpcAISystem) tickMonsterAI(npc *world.NpcInfo) {
 		}
 	}
 
-	// Skip Lua call if no players nearby (optimization)
+	// 附近無玩家 → 跳過 Lua（複用 agro 掃描結果，避免重複 AOI 查詢）
 	if target == nil {
-		nearby := s.world.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
-		if len(nearby) == 0 {
+		if nearbyPlayers == nil {
+			nearbyPlayers = s.world.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
+		}
+		if len(nearbyPlayers) == 0 {
 			return
 		}
 	}
@@ -319,9 +322,8 @@ func (s *NpcAISystem) guardTeleportHome(npc *world.NpcInfo) {
 
 	// 通知舊位置附近玩家：移除 NPC + 解鎖格子
 	oldNearby := s.world.GetNearbyPlayersAt(oldX, oldY, npc.MapID)
-	for _, viewer := range oldNearby {
-		sendRemoveObject(viewer.Session, npc.ID)
-	}
+	rmData := handler.BuildRemoveObject(npc.ID)
+	handler.BroadcastToPlayers(oldNearby, rmData)
 
 	// Update map passability
 	if s.deps.MapData != nil {
@@ -360,9 +362,8 @@ func (s *NpcAISystem) npcMeleeAttack(npc *world.NpcInfo, target *world.PlayerInf
 	}
 
 	nearby := s.world.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
-	for _, viewer := range nearby {
-		sendNpcAttack(viewer.Session, npc.ID, target.CharID, damage, npc.Heading)
-	}
+	atkData := buildNpcAttack(npc.ID, target.CharID, damage, npc.Heading)
+	handler.BroadcastToPlayers(nearby, atkData)
 
 	if damage <= 0 {
 		return
@@ -402,10 +403,9 @@ func (s *NpcAISystem) npcRangedAttack(npc *world.NpcInfo, target *world.PlayerIn
 	}
 
 	nearby := s.world.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
-	for _, viewer := range nearby {
-		sendNpcRangedAttack(viewer.Session, npc.ID, target.CharID, damage, npc.Heading,
-			npc.X, npc.Y, target.X, target.Y)
-	}
+	rngData := buildNpcRangedAttack(npc.ID, target.CharID, damage, npc.Heading,
+		npc.X, npc.Y, target.X, target.Y)
+	handler.BroadcastToPlayers(nearby, rngData)
 
 	if damage <= 0 {
 		return
@@ -480,11 +480,10 @@ func (s *NpcAISystem) executeNpcSkill(npc *world.NpcInfo, target *world.PlayerIn
 		if skill.Area > 0 {
 			useType = 8 // AoE magic
 		}
-		for _, viewer := range nearby {
-			sendNpcUseAttackSkill(viewer.Session, npc.ID, target.CharID,
-				int16(damage), npc.Heading, gfx, useType,
-				npc.X, npc.Y, target.X, target.Y)
-		}
+		skillAtkData := buildNpcUseAttackSkill(npc.ID, target.CharID,
+			int16(damage), npc.Heading, gfx, useType,
+			npc.X, npc.Y, target.X, target.Y)
+		handler.BroadcastToPlayers(nearby, skillAtkData)
 
 		target.HP -= int16(damage)
 		target.Dirty = true
@@ -498,9 +497,8 @@ func (s *NpcAISystem) executeNpcSkill(npc *world.NpcInfo, target *world.PlayerIn
 	} else {
 		// Non-damage skill (buff/debuff): use S_EFFECT on target
 		if gfx > 0 {
-			for _, viewer := range nearby {
-				sendSkillEffect(viewer.Session, target.CharID, gfx)
-			}
+			effData := handler.BuildSkillEffect(target.CharID, gfx)
+			handler.BroadcastToPlayers(nearby, effData)
 		}
 	}
 }
@@ -578,9 +576,8 @@ func npcExecuteMove(ws *world.State, npc *world.NpcInfo, moveX, moveY int32, hea
 	ws.UpdateNpcPosition(npc.ID, moveX, moveY, heading)
 
 	nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
-	for _, viewer := range nearby {
-		sendNpcMove(viewer.Session, npc.ID, oldX, oldY, npc.Heading)
-	}
+	data := buildNpcMove(npc.ID, oldX, oldY, npc.Heading)
+	handler.BroadcastToPlayers(nearby, data)
 }
 
 // npcWander handles idle wandering. dir: 0-7=new direction, -1=continue, -2=toward spawn.
@@ -621,9 +618,8 @@ func npcWander(ws *world.State, npc *world.NpcInfo, dir int, maps *data.MapDataT
 	ws.UpdateNpcPosition(npc.ID, moveX, moveY, npc.WanderDir)
 
 	nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
-	for _, viewer := range nearby {
-		sendNpcMove(viewer.Session, npc.ID, oldX, oldY, npc.Heading)
-	}
+	data := buildNpcMove(npc.ID, oldX, oldY, npc.Heading)
+	handler.BroadcastToPlayers(nearby, data)
 }
 
 // ---------- Shared utilities ----------
@@ -684,31 +680,25 @@ func calcNpcHeading(sx, sy, tx, ty int32) int16 {
 // npcArrowSeqNum is a sequential counter for NPC ranged attack packets.
 var npcArrowSeqNum int32
 
-// sendNpcMove sends S_MOVE_OBJECT (opcode 10) to animate NPC movement.
+// buildNpcMove 建構 NPC 移動封包位元組（不發送）。
 // Java S_MoveCharPacket constructor 2 (AI): [C op][D id][H locX][H locY][C heading]
-// No trailing bytes — differs from PC constructor which has writeH(0).
-func sendNpcMove(sess *gonet.Session, npcID int32, prevX, prevY int32, heading int16) {
+// 與玩家版不同：無 trailing writeH(0)。
+func buildNpcMove(npcID int32, prevX, prevY int32, heading int16) []byte {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_MOVE_OBJECT)
 	w.WriteD(npcID)
 	w.WriteH(uint16(prevX))
 	w.WriteH(uint16(prevY))
 	w.WriteC(byte(heading))
-	sess.Send(w.Bytes())
+	return w.Bytes()
 }
 
-func sendNpcAttack(sess *gonet.Session, attackerID, targetID, damage int32, heading int16) {
-	w := packet.NewWriterWithOpcode(packet.S_OPCODE_ATTACK)
-	w.WriteC(1)
-	w.WriteD(attackerID)
-	w.WriteD(targetID)
-	w.WriteH(uint16(damage))
-	w.WriteC(byte(heading))
-	w.WriteD(0)
-	w.WriteC(0)
-	sess.Send(w.Bytes())
+// buildNpcAttack 建構 NPC 近戰攻擊封包位元組（不發送）。
+func buildNpcAttack(attackerID, targetID, damage int32, heading int16) []byte {
+	return handler.BuildAttackPacket(attackerID, targetID, damage, heading)
 }
 
-func sendNpcRangedAttack(sess *gonet.Session, attackerID, targetID, damage int32, heading int16, ax, ay, tx, ty int32) {
+// buildNpcRangedAttack 建構 NPC 遠程攻擊封包位元組（不發送）。
+func buildNpcRangedAttack(attackerID, targetID, damage int32, heading int16, ax, ay, tx, ty int32) []byte {
 	npcArrowSeqNum++
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_ATTACK)
 	w.WriteC(1)
@@ -726,7 +716,7 @@ func sendNpcRangedAttack(sess *gonet.Session, attackerID, targetID, damage int32
 	w.WriteC(0)
 	w.WriteC(0)
 	w.WriteC(0)
-	sess.Send(w.Bytes())
+	return w.Bytes()
 }
 
 func sendNpcPack(sess *gonet.Session, npc *world.NpcInfo) {
@@ -757,7 +747,8 @@ func sendNpcPack(sess *gonet.Session, npc *world.NpcInfo) {
 	sess.Send(w.Bytes())
 }
 
-func sendNpcUseAttackSkill(sess *gonet.Session, casterID, targetID int32, damage int16, heading int16, gfxID int32, useType byte, cx, cy, tx, ty int32) {
+// buildNpcUseAttackSkill 建構 NPC 技能攻擊封包位元組（不發送）。
+func buildNpcUseAttackSkill(casterID, targetID int32, damage int16, heading int16, gfxID int32, useType byte, cx, cy, tx, ty int32) []byte {
 	npcArrowSeqNum++
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_ATTACK)
 	w.WriteC(18)
@@ -775,26 +766,13 @@ func sendNpcUseAttackSkill(sess *gonet.Session, casterID, targetID int32, damage
 	w.WriteC(0)
 	w.WriteC(0)
 	w.WriteC(0)
-	sess.Send(w.Bytes())
-}
-
-func sendRemoveObject(sess *gonet.Session, objectID int32) {
-	w := packet.NewWriterWithOpcode(packet.S_OPCODE_REMOVE_OBJECT)
-	w.WriteD(objectID)
-	sess.Send(w.Bytes())
+	return w.Bytes()
 }
 
 func sendHPUpdate(sess *gonet.Session, hp, maxHP int16) {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_HIT_POINT)
 	w.WriteH(uint16(hp))
 	w.WriteH(uint16(maxHP))
-	sess.Send(w.Bytes())
-}
-
-func sendSkillEffect(sess *gonet.Session, objectID int32, gfxID int32) {
-	w := packet.NewWriterWithOpcode(packet.S_OPCODE_EFFECT)
-	w.WriteD(objectID)
-	w.WriteH(uint16(gfxID))
 	sess.Send(w.Bytes())
 }
 
@@ -819,23 +797,20 @@ func tickNpcDebuffs(npc *world.NpcInfo, ws *world.State, deps *handler.Deps) {
 // removeNpcDebuffEffect 清除 NPC 的 debuff 狀態旗標，並廣播視覺解除封包。
 func removeNpcDebuffEffect(npc *world.NpcInfo, skillID int32, ws *world.State) {
 	nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
+	clearPoison := handler.BuildPoison(npc.ID, 0) // 預建清除色調封包
 
 	switch skillID {
 	case 87: // 衝擊之暈 — 解除暈眩
 		npc.Paralyzed = false
 	case 157: // 大地屏障 — 解除凍結 + 灰色色調
 		npc.Paralyzed = false
-		for _, viewer := range nearby {
-			sendNpcPoison(viewer.Session, npc.ID, 0) // 清除灰色色調
-		}
+		handler.BroadcastToPlayers(nearby, clearPoison)
 	case 33: // 木乃伊詛咒 階段一到期 → 進入階段二（真正麻痺 4 秒）
 		npc.Paralyzed = true
 		npc.AddDebuff(4001, 20) // 4 秒 = 20 ticks
 	case 4001: // 木乃伊詛咒 階段二到期 — 解除麻痺
 		npc.Paralyzed = false
-		for _, viewer := range nearby {
-			sendNpcPoison(viewer.Session, npc.ID, 0) // 清除灰色色調
-		}
+		handler.BroadcastToPlayers(nearby, clearPoison)
 	case 62, 66: // 沉睡之霧 — 解除睡眠
 		npc.Sleeped = false
 	case 103: // 暗黑盲咒 — 解除睡眠（Java 用 skill 66 的效果）
@@ -847,33 +822,11 @@ func removeNpcDebuffEffect(npc *world.NpcInfo, skillID int32, ws *world.State) {
 	case 11: // 毒咒 — 清除傷害毒
 		npc.PoisonDmgAmt = 0
 		npc.PoisonDmgTimer = 0
-		for _, viewer := range nearby {
-			sendNpcPoison(viewer.Session, npc.ID, 0) // 清除綠色色調
-		}
+		handler.BroadcastToPlayers(nearby, clearPoison)
 	case 80: // 冰雪颶風 — 解除凍結
 		npc.Paralyzed = false
-		for _, viewer := range nearby {
-			sendNpcPoison(viewer.Session, npc.ID, 0) // 清除灰色色調
-		}
+		handler.BroadcastToPlayers(nearby, clearPoison)
 	}
-}
-
-// sendNpcPoison 發送 S_Poison 到觀察者（NPC 版本，避免 handler 套件循環引用）。
-func sendNpcPoison(sess *gonet.Session, objectID int32, poisonType byte) {
-	w := packet.NewWriterWithOpcode(packet.S_OPCODE_POISON)
-	w.WriteD(objectID)
-	switch poisonType {
-	case 1: // 綠色
-		w.WriteC(0x01)
-		w.WriteC(0x00)
-	case 2: // 灰色
-		w.WriteC(0x00)
-		w.WriteC(0x01)
-	default: // 治癒
-		w.WriteC(0x00)
-		w.WriteC(0x00)
-	}
-	sess.Send(w.Bytes())
 }
 
 // calcNpcMoveTicks 計算 NPC 移動間隔 tick 數。
@@ -908,9 +861,7 @@ func tickNpcPoison(npc *world.NpcInfo, ws *world.State, deps *handler.Deps) {
 		npc.PoisonAttackerSID = 0
 		// 清除綠色色調
 		nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
-		for _, viewer := range nearby {
-			sendNpcPoison(viewer.Session, npc.ID, 0)
-		}
+		handler.BroadcastToPlayers(nearby, handler.BuildPoison(npc.ID, 0))
 		return
 	}
 
@@ -933,8 +884,6 @@ func tickNpcPoison(npc *world.NpcInfo, ws *world.State, deps *handler.Deps) {
 		if npc.MaxHP > 0 {
 			hpRatio = int16((npc.HP * 100) / npc.MaxHP)
 		}
-		for _, viewer := range nearby {
-			handler.SendHpMeter(viewer.Session, npc.ID, hpRatio)
-		}
+		handler.BroadcastToPlayers(nearby, handler.BuildHpMeter(npc.ID, hpRatio))
 	}
 }

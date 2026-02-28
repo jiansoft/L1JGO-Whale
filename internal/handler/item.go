@@ -93,8 +93,11 @@ func HandleDestroyItem(sess *net.Session, r *packet.Reader, deps *Deps) {
 }
 
 // HandleDropItem processes C_DROP (opcode 25) — player drops item to ground.
-// Format: [D objectID][D count]
+// Format: [H x][H y][D objectID][D count]
+// Java C_DropItem.java: readH(x), readH(y), readD(objectId), readD(count)
 func HandleDropItem(sess *net.Session, r *packet.Reader, deps *Deps) {
+	_ = r.ReadH() // x（客戶端丟棄座標，伺服器使用玩家座標）
+	_ = r.ReadH() // y
 	objectID := r.ReadD()
 	count := r.ReadD()
 

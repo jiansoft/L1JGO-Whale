@@ -214,13 +214,12 @@ func ApplyNpcPoisonAttack(npc *world.NpcInfo, target *world.PlayerInfo, ws *worl
 // Java: setPoisonEffect → broadcastPacketX8(S_Poison)。
 // poisonType: 0=治癒, 1=綠色, 2=灰色
 func broadcastPlayerPoison(target *world.PlayerInfo, poisonType byte, deps *handler.Deps) {
+	data := handler.BuildPoison(target.CharID, poisonType)
 	// 發給自己
-	handler.SendPoison(target.Session, target.CharID, poisonType)
+	target.Session.Send(data)
 	// 發給附近觀察者
 	nearby := deps.World.GetNearbyPlayers(target.X, target.Y, target.MapID, target.SessionID)
-	for _, viewer := range nearby {
-		handler.SendPoison(viewer.Session, target.CharID, poisonType)
-	}
+	handler.BroadcastToPlayers(nearby, data)
 }
 
 // BroadcastPlayerPoison 廣播毒素色調到附近所有玩家。Exported for other system packages.

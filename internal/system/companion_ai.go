@@ -239,9 +239,8 @@ func (s *CompanionAISystem) summonAttackTarget(sum *world.SummonInfo) {
 
 	// Broadcast attack animation
 	nearby := ws.GetNearbyPlayersAt(sum.X, sum.Y, sum.MapID)
-	for _, viewer := range nearby {
-		sendNpcAttack(viewer.Session, sum.ID, targetNpc.ID, dmg, heading)
-	}
+	atkData := buildNpcAttack(sum.ID, targetNpc.ID, dmg, heading)
+	handler.BroadcastToPlayers(nearby, atkData)
 
 	// Send HP update to summon's master only
 	master := ws.GetByCharID(sum.OwnerCharID)
@@ -633,9 +632,8 @@ func (s *CompanionAISystem) petAttackTarget(pet *world.PetInfo) {
 
 	// Broadcast attack animation
 	nearby := ws.GetNearbyPlayersAt(pet.X, pet.Y, pet.MapID)
-	for _, viewer := range nearby {
-		sendNpcAttack(viewer.Session, pet.ID, targetNpc.ID, dmg, heading)
-	}
+	petAtkData := buildNpcAttack(pet.ID, targetNpc.ID, dmg, heading)
+	handler.BroadcastToPlayers(nearby, petAtkData)
 
 	// NPC counterattack — simplified damage calc
 	if targetNpc.HP > 0 {

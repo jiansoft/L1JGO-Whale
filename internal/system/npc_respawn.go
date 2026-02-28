@@ -5,6 +5,7 @@ import (
 
 	coresys "github.com/l1jgo/server/internal/core/system"
 	"github.com/l1jgo/server/internal/data"
+	"github.com/l1jgo/server/internal/handler"
 	"github.com/l1jgo/server/internal/world"
 )
 
@@ -35,9 +36,8 @@ func (s *NpcRespawnSystem) Update(_ time.Duration) {
 				// 屍體消失 — 從 AOI 網格移除 + 通知客戶端
 				s.world.NpcCorpseCleanup(npc)
 				nearby := s.world.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
-				for _, viewer := range nearby {
-					sendRemoveObject(viewer.Session, npc.ID)
-				}
+				rmData := handler.BuildRemoveObject(npc.ID)
+				handler.BroadcastToPlayers(nearby, rmData)
 			}
 			continue // 等刪除階段完成才開始重生計時
 		}

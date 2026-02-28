@@ -6,11 +6,13 @@ package system
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/l1jgo/server/internal/handler"
 	"github.com/l1jgo/server/internal/net"
+	"github.com/l1jgo/server/internal/net/packet"
 	"github.com/l1jgo/server/internal/persist"
 	"github.com/l1jgo/server/internal/world"
 )
@@ -465,7 +467,9 @@ func broadcastNpcChat(ws *world.State, npcID int32, x, y int32, mapID int16, msg
 //  寵物給予 / 馴服 / 進化
 // ========================================================================
 
-// GiveToPet 處理給予寵物物品（裝備或進化）。
+// GiveToPet 處理給予寵物物品。
+// Java 流程：tradeItem → onGetItem（藥水自動使用 / 消化計時器）→ 進化 / 裝備。
+// Go 簡化：消耗玩家物品 → 對應效果（進化 > 裝備 > 治療藥水 > 加速藥水 > 一般物品消化）。
 func (s *PetSystem) GiveToPet(sess *net.Session, player *world.PlayerInfo, pet *world.PetInfo, invItem *world.InvItem) {
 	petType := s.deps.PetTypes.Get(pet.NpcID)
 	if petType == nil {
@@ -489,7 +493,7 @@ func (s *PetSystem) GiveToPet(sess *net.Session, player *world.PlayerInfo, pet *
 				return
 			}
 
-			// 從玩家背包轉移到寵物
+			// 從玩家背包轉移到寵物（裝備不可堆疊，直接移除）
 			player.Inv.RemoveItem(invItem.ObjectID, 1)
 			handler.SendRemoveInventoryItem(sess, invItem.ObjectID)
 
@@ -504,8 +508,101 @@ func (s *PetSystem) GiveToPet(sess *net.Session, player *world.PlayerInfo, pet *
 				Bless:    invItem.Bless,
 			})
 			handler.SendPetInventory(sess, pet)
+			return
 		}
 	}
+
+	// ── 以下為 Java onGetItem 行為：藥水自動使用 / 食物消化 ──
+
+	// 治療藥水 — 消耗後回復寵物 HP（Java: L1NpcInstance.useItem USEITEM_HEAL）
+	if heal, ok := petHealPotions[invItem.ItemID]; ok {
+		if pet.HP >= pet.MaxHP {
+			return // 滿血不消耗
+		}
+		consumePlayerItem(sess, player, invItem, 1)
+		pet.HP += heal.healHP
+		if pet.HP > pet.MaxHP {
+			pet.HP = pet.MaxHP
+		}
+		pet.Dirty = true
+		// 廣播治療特效音效 + 更新主人的 HP 條
+		nearby := s.deps.World.GetNearbyPlayers(pet.X, pet.Y, pet.MapID, 0)
+		effectData := handler.BuildSkillEffect(pet.ID, heal.effectGfx)
+		handler.BroadcastToPlayers(nearby, effectData)
+		handler.SendPetHpMeter(sess, pet.ID, pet.HP, pet.MaxHP)
+		return
+	}
+
+	// 加速藥水 — 消耗後給予寵物加速效果（Java: L1NpcInstance.useItem USEITEM_HASTE）
+	if dur, ok := petHastePotions[invItem.ItemID]; ok {
+		if pet.MoveSpeed == 1 {
+			return // 已有加速效果，不重複使用
+		}
+		consumePlayerItem(sess, player, invItem, 1)
+		pet.MoveSpeed = 1 // 加速狀態
+		pet.Dirty = true
+		// 廣播加速封包 + 音效（Java: S_SkillHaste + S_SkillSound(191)）
+		nearby := s.deps.World.GetNearbyPlayers(pet.X, pet.Y, pet.MapID, 0)
+		hasteData := buildPetHastePacket(pet.ID, 1, uint16(dur))
+		handler.BroadcastToPlayers(nearby, hasteData)
+		effectData := handler.BuildSkillEffect(pet.ID, 191) // 加速音效
+		handler.BroadcastToPlayers(nearby, effectData)
+		return
+	}
+
+	// 一般物品（食物等）— 消耗（寵物吃掉）。
+	// Java: 物品轉移到寵物背包後由 digestItem 計時器自動消化。
+	// Go 簡化：直接從玩家背包消耗，不需要轉移到寵物背包。
+	consumePlayerItem(sess, player, invItem, 1)
+}
+
+// petHealPotion 治療藥水效果定義（Java: L1NpcInstance.useItem USEITEM_HEAL）。
+type petHealPotion struct {
+	healHP    int32 // 回復量
+	effectGfx int32 // 特效 GFX ID
+}
+
+// petHealPotions 寵物可使用的治療藥水列表（Java: L1NpcInstance.useItem switch case）。
+var petHealPotions = map[int32]petHealPotion{
+	40012: {80, 197},  // 終極體力恢復劑（白水）
+	40011: {50, 194},  // 強力體力恢復劑（橙水）
+	40010: {20, 189},  // 體力恢復劑（紅水）
+	40021: {80, 197},  // 濃縮終極體力恢復劑
+	40020: {50, 194},  // 濃縮強力體力恢復劑
+	40019: {20, 189},  // 濃縮體力恢復劑
+	40024: {54, 197},  // 古代終極體力恢復劑
+	40023: {48, 194},  // 古代強力體力恢復劑
+	40022: {16, 189},  // 古代體力恢復劑
+}
+
+// petHastePotions 寵物可使用的加速藥水列表（value = 持續秒數）。
+// Java: L1NpcInstance.useItem USEITEM_HASTE。
+var petHastePotions = map[int32]int{
+	140018: 2100, // 受祝福的加速藥水（35 分鐘）
+	40018:  1800, // 加速藥水（30 分鐘）
+	140013: 350,  // 受祝福的綠色藥水（約 5.8 分鐘）
+	40013:  300,  // 綠色藥水（5 分鐘）
+}
+
+// consumePlayerItem 從玩家背包消耗指定數量的物品，並發送對應的 UI 更新封包。
+// 可堆疊物品扣減數量；不可堆疊或數量歸零則移除整個格子。
+func consumePlayerItem(sess *net.Session, player *world.PlayerInfo, invItem *world.InvItem, count int32) {
+	removed := player.Inv.RemoveItem(invItem.ObjectID, count)
+	if removed {
+		handler.SendRemoveInventoryItem(sess, invItem.ObjectID)
+	} else {
+		handler.SendItemCountUpdate(sess, invItem)
+	}
+}
+
+// buildPetHastePacket 建構 S_SkillHaste（opcode 255）封包位元組。
+// 用於廣播寵物加速效果給附近所有玩家。
+func buildPetHastePacket(petID int32, speedType byte, duration uint16) []byte {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_SPEED)
+	w.WriteD(petID)
+	w.WriteC(speedType)
+	w.WriteH(duration)
+	return w.Bytes()
 }
 
 // petNoEquipNpcIDs 不能裝備物品的寵物 NPC ID（Java 硬編碼列表）。
@@ -517,16 +614,28 @@ var petNoEquipNpcIDs = map[int32]bool{
 }
 
 // TameNpc 處理馴服野生 NPC 為寵物。
+// Java: C_GiveItem.tamePet() — HP < 1/3、CHA 職業加成、divisor 機制、馴服後立即生成。
 func (s *PetSystem) TameNpc(sess *net.Session, player *world.PlayerInfo, npc *world.NpcInfo) {
 	ws := s.deps.World
+
+	log.Printf("[TameNpc] 開始馴服 npcID=%d npcName=%s HP=%d/%d playerCHA=%d class=%d",
+		npc.NpcID, npc.Name, npc.HP, npc.MaxHP, player.Cha, player.ClassType)
+
 	tmpl := s.deps.Npcs.Get(npc.NpcID)
-	if tmpl == nil || !tmpl.Tameable {
+	if tmpl == nil {
+		log.Printf("[TameNpc] NPC 模板未找到 npcID=%d", npc.NpcID)
+		handler.SendServerMessage(sess, 324) // 馴養失敗
+		return
+	}
+	if !tmpl.Tameable {
+		log.Printf("[TameNpc] NPC 不可馴服 npcID=%d tameable=%v", npc.NpcID, tmpl.Tameable)
 		handler.SendServerMessage(sess, 324) // 馴養失敗
 		return
 	}
 
 	// Java: NPC 血量必須低於 1/3 才能馴服
 	if npc.HP > npc.MaxHP/3 {
+		log.Printf("[TameNpc] 血量太高 HP=%d > MaxHP/3=%d", npc.HP, npc.MaxHP/3)
 		handler.SendServerMessage(sess, 324)
 		return
 	}
@@ -534,21 +643,53 @@ func (s *PetSystem) TameNpc(sess *net.Session, player *world.PlayerInfo, npc *wo
 	// 特殊案例：Tiger Man (45313) 即使血量低於 1/3 也只有 1/16 機率
 	if npc.NpcID == 45313 {
 		if world.RandInt(16) != 15 {
+			log.Printf("[TameNpc] 虎男馴服機率失敗")
 			handler.SendServerMessage(sess, 324)
 			return
 		}
 	}
 
-	// CHA 檢查
+	// CHA 檢查 — 含職業加成（Java: C_GiveItem.tamePet 第 279-297 行）
+	// 君主+6、精靈+12、法師+6、黑暗精靈+6、龍騎士+6、幻術師+6
+	// 注意：騎士（case 1）在 Java 中沒有 CHA 加成
+	charisma := int(player.Cha)
+	switch player.ClassType {
+	case 0: // 君主
+		charisma += 6
+	case 2: // 精靈
+		charisma += 12
+	case 3: // 法師
+		charisma += 6
+	case 4: // 黑暗精靈
+		charisma += 6
+	case 5: // 龍騎士
+		charisma += 6
+	case 6: // 幻術師
+		charisma += 6
+	}
+
 	usedCost := s.CalcUsedPetCost(player.CharID)
-	availCHA := int(player.Cha) - usedCost
-	if availCHA < 6 {
+	charisma -= usedCost
+
+	// Java: 特殊寵物 divisor=12（需要雙倍 CHA），一般寵物 divisor=6
+	divisor := 6
+	if npc.NpcID == 45313 || npc.NpcID == 45710 || // 虎男、真虎男
+		npc.NpcID == 45711 || npc.NpcID == 45712 { // 高麗幼犬、高麗犬
+		divisor = 12
+	}
+
+	log.Printf("[TameNpc] CHA 計算: base=%d classBonus後=%d usedCost=%d 剩餘=%d divisor=%d petCount=%d",
+		player.Cha, charisma+usedCost, usedCost, charisma, divisor, charisma/divisor)
+
+	if charisma/divisor <= 0 {
 		handler.SendServerMessage(sess, 489) // 你無法一次控制那麼多寵物
 		return
 	}
 
 	// 背包空間檢查
 	if player.Inv.Size() >= 180 {
+		log.Printf("[TameNpc] 背包已滿 size=%d", player.Inv.Size())
+		handler.SendServerMessage(sess, 263) // 背包已滿
 		return
 	}
 
@@ -571,16 +712,20 @@ func (s *PetSystem) TameNpc(sess *net.Session, player *world.PlayerInfo, npc *wo
 		}
 	}
 	if collarInfo == nil {
+		log.Printf("[TameNpc] 項圈建立失敗 — deps.Items=%v", s.deps.Items != nil)
 		return
 	}
 
-	// 儲存寵物到 DB
+	log.Printf("[TameNpc] 馴服成功！項圈 objID=%d，準備生成寵物", collarInfo.ObjectID)
+
+	// 寵物名稱 + 類型
 	petType := s.deps.PetTypes.Get(npc.NpcID)
 	petName := npc.Name
 	if petType != nil && petType.Name != "" {
 		petName = petType.Name
 	}
 
+	// 儲存寵物到 DB
 	if s.deps.PetRepo != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		s.deps.PetRepo.Save(ctx, &persist.PetRow{
@@ -597,6 +742,53 @@ func (s *PetSystem) TameNpc(sess *net.Session, player *world.PlayerInfo, npc *wo
 		})
 		cancel()
 	}
+
+	// Java: 馴服後寵物立即生成在世界中（L1PetInstance 建構函式）
+	spawnX := npc.X
+	spawnY := npc.Y
+	pet := &world.PetInfo{
+		ID:          world.NextNpcID(),
+		OwnerCharID: player.CharID,
+		ItemObjID:   collarInfo.ObjectID,
+		NpcID:       npc.NpcID,
+		Name:        petName,
+		Level:       npc.Level,
+		HP:          npc.MaxHP,
+		MaxHP:       npc.MaxHP,
+		MP:          npc.MaxMP,
+		MaxMP:       npc.MaxMP,
+		Exp:         750,
+		Lawful:      0,
+		GfxID:       tmpl.GfxID,
+		NameID:      tmpl.NameID,
+		MoveSpeed:   tmpl.PassiveSpeed,
+		X:           spawnX,
+		Y:           spawnY,
+		MapID:       player.MapID,
+		Heading:     player.Heading,
+		Status:      world.PetStatusRest,
+		AC:          tmpl.AC,
+		STR:         tmpl.STR,
+		DEX:         tmpl.DEX,
+		MR:          tmpl.MR,
+		AtkDmg:      tmpl.HP / 4,
+		AtkSpeed:    tmpl.AtkSpeed,
+		Ranged:      tmpl.Ranged,
+	}
+
+	// 註冊到世界
+	ws.AddPet(pet)
+
+	// 廣播外觀給附近玩家（重新查詢 nearby，因為 NPC 已移除可能有變化）
+	nearbyAfter := ws.GetNearbyPlayersAt(pet.X, pet.Y, pet.MapID)
+	for _, viewer := range nearbyAfter {
+		isOwner := viewer.CharID == player.CharID
+		handler.SendPetPack(viewer.Session, pet, isOwner, player.Name)
+	}
+
+	// 發送寵物控制面板和 HP 條給主人
+	handler.SendPetCtrlMenu(sess, pet, true)
+	handler.SendPetHpMeter(sess, pet.ID, pet.HP, pet.MaxHP)
 }
 
 // Pet collar item IDs（與 handler/pet.go 相同常數，供馴服/進化使用）。

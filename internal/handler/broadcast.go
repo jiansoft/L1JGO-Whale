@@ -95,31 +95,48 @@ func SendPutObject(viewer *net.Session, p *world.PlayerInfo) {
 
 // SendRemoveObject sends S_REMOVE_OBJECT (opcode 120) to remove an entity from view.
 func SendRemoveObject(viewer *net.Session, charID int32) {
+	viewer.Send(BuildRemoveObject(charID))
+}
+
+// BuildRemoveObject 建構 S_REMOVE_OBJECT 封包位元組（不發送）。
+// 用於廣播場景：序列化一次、發送多次。
+func BuildRemoveObject(charID int32) []byte {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_REMOVE_OBJECT)
 	w.WriteD(charID)
-	viewer.Send(w.Bytes())
+	return w.Bytes()
 }
 
 // sendMoveObject sends S_MOVE_OBJECT (opcode 10) to animate PC movement.
 // Sends the PREVIOUS position + heading — client calculates destination.
 // Java S_MoveCharPacket constructor 1: [C op][D id][H locX][H locY][C heading][H 0]
 func sendMoveObject(viewer *net.Session, charID int32, prevX, prevY int32, heading int16) {
+	viewer.Send(BuildMoveObject(charID, prevX, prevY, heading))
+}
+
+// BuildMoveObject 建構玩家移動封包位元組（不發送）。
+// 用於廣播場景：序列化一次、發送多次。
+func BuildMoveObject(charID int32, prevX, prevY int32, heading int16) []byte {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_MOVE_OBJECT)
 	w.WriteD(charID)
 	w.WriteH(uint16(prevX))
 	w.WriteH(uint16(prevY))
 	w.WriteC(byte(heading))
-	w.WriteH(0) // Java: writeH(0) — trailing padding
-	viewer.Send(w.Bytes())
+	w.WriteH(0)
+	return w.Bytes()
 }
 
 // sendChangeHeading sends S_CHANGEHEADING (opcode 122) — direction change to nearby players.
 // Format: [D objectId][C heading]
 func sendChangeHeading(viewer *net.Session, charID int32, heading int16) {
+	viewer.Send(BuildChangeHeading(charID, heading))
+}
+
+// BuildChangeHeading 建構方向變更封包位元組（不發送）。
+func BuildChangeHeading(charID int32, heading int16) []byte {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_CHANGEHEADING)
 	w.WriteD(charID)
 	w.WriteC(byte(heading))
-	viewer.Send(w.Bytes())
+	return w.Bytes()
 }
 
 // SendWeather 匯出 sendWeather — 供 system 套件發送天氣封包。
@@ -212,15 +229,21 @@ func SendNpcDeadPack(viewer *net.Session, npc *world.NpcInfo) {
 // sendAttackPacket sends S_ATTACK (opcode 30) — attack animation.
 // Format: [C opcode][C actionId][D attackerID][D targetID][H damage][C heading][D 0][C effectFlags]
 func sendAttackPacket(viewer *net.Session, attackerID, targetID, damage int32, heading int16) {
+	viewer.Send(BuildAttackPacket(attackerID, targetID, damage, heading))
+}
+
+// BuildAttackPacket 建構近戰攻擊封包位元組（不發送）。
+// 用於廣播場景：序列化一次、發送多次。
+func BuildAttackPacket(attackerID, targetID, damage int32, heading int16) []byte {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_ATTACK)
-	w.WriteC(1)                    // actionId: 1 = normal melee
+	w.WriteC(1)
 	w.WriteD(attackerID)
 	w.WriteD(targetID)
 	w.WriteH(uint16(damage))
 	w.WriteC(byte(heading))
-	w.WriteD(0)                    // reserved
-	w.WriteC(0)                    // effect flags (0 = none)
-	viewer.Send(w.Bytes())
+	w.WriteD(0)
+	w.WriteC(0)
+	return w.Bytes()
 }
 
 // sendArrowAttackPacket sends S_UseArrowSkill (same opcode 30) — ranged attack with arrow projectile.
@@ -275,19 +298,31 @@ func sendUseAttackSkill(viewer *net.Session, casterID, targetID int32, damage in
 // Format: [C opcode][D objectID][H hpRatio(0-100)]
 // 0xFF = 清除 HP 條。
 func sendHpMeter(viewer *net.Session, objectID int32, hpRatio int16) {
+	viewer.Send(BuildHpMeter(objectID, hpRatio))
+}
+
+// BuildHpMeter 建構 NPC HP 條封包位元組（不發送）。
+// 用於廣播場景：序列化一次、發送多次。
+func BuildHpMeter(objectID int32, hpRatio int16) []byte {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_HP_METER)
 	w.WriteD(objectID)
 	w.WriteH(uint16(hpRatio))
-	viewer.Send(w.Bytes())
+	return w.Bytes()
 }
 
 // sendActionGfx sends S_ACTION (opcode 158) — action animation (death, etc.).
 // Format: [C opcode][D objectID][C actionCode]
 func sendActionGfx(viewer *net.Session, objectID int32, actionCode byte) {
+	viewer.Send(BuildActionGfx(objectID, actionCode))
+}
+
+// BuildActionGfx 建構動作動畫封包位元組（不發送）。
+// 用於廣播場景：序列化一次、發送多次。
+func BuildActionGfx(objectID int32, actionCode byte) []byte {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_ACTION)
 	w.WriteD(objectID)
 	w.WriteC(actionCode)
-	viewer.Send(w.Bytes())
+	return w.Bytes()
 }
 
 // sendExpUpdate sends S_EXP (opcode 113) — level + cumulative exp.
@@ -347,10 +382,16 @@ func sendPlayerStatus(sess *net.Session, p *world.PlayerInfo) {
 
 // sendSkillEffect sends S_EFFECT (opcode 55) — GFX effect on an entity.
 func sendSkillEffect(viewer *net.Session, objectID int32, gfxID int32) {
+	viewer.Send(BuildSkillEffect(objectID, gfxID))
+}
+
+// BuildSkillEffect 建構技能特效封包位元組（不發送）。
+// 用於廣播場景：序列化一次、發送多次。
+func BuildSkillEffect(objectID int32, gfxID int32) []byte {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_EFFECT)
 	w.WriteD(objectID)
 	w.WriteH(uint16(gfxID))
-	viewer.Send(w.Bytes())
+	return w.Bytes()
 }
 
 // SendDropItem sends S_PUT_OBJECT (opcode 87) for a ground item.
@@ -394,26 +435,24 @@ func sendIconShield(sess *net.Session, durationSec uint16, iconType byte) {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_SKILLICONSHIELD)
 	w.WriteH(durationSec)
 	w.WriteC(iconType)
-	w.WriteD(0)
 	sess.Send(w.Bytes())
 }
 
 // sendIconStrup sends S_Strup (opcode 166) — STR buff icon.
-// Java: [C opcode=166][H time][C currentStr][C weightPercent][C type][H 0]
+// Java: [C opcode][H time][C currentStr][C weightPercent][C type]
 // Types: 2=DressMighty, 5=PhysicalEnchantSTR
 // Send time=0 to cancel.
 func sendIconStrup(sess *net.Session, durationSec uint16, currentStr byte, iconType byte) {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_STRUP)
 	w.WriteH(durationSec)
 	w.WriteC(currentStr)
-	w.WriteC(0) // weight percent (placeholder)
+	w.WriteC(0) // weight percent（佔位）
 	w.WriteC(iconType)
-	w.WriteH(0)
 	sess.Send(w.Bytes())
 }
 
 // sendIconDexup sends S_Dexup (opcode 188) — DEX buff icon.
-// Java: [C opcode=188][H time][C currentDex][C type][C 0][C 0][C 0]
+// Java: [C opcode][H time][C currentDex][C type]
 // Types: 2=DressDexterity, 5=PhysicalEnchantDEX
 // Send time=0 to cancel.
 func sendIconDexup(sess *net.Session, durationSec uint16, currentDex byte, iconType byte) {
@@ -421,9 +460,6 @@ func sendIconDexup(sess *net.Session, durationSec uint16, currentDex byte, iconT
 	w.WriteH(durationSec)
 	w.WriteC(currentDex)
 	w.WriteC(iconType)
-	w.WriteC(0)
-	w.WriteC(0)
-	w.WriteC(0)
 	sess.Send(w.Bytes())
 }
 
@@ -450,14 +486,14 @@ func sendIconGfx(sess *net.Session, iconID byte, durationSec uint16) {
 	sess.Send(w.Bytes())
 }
 
-// sendWisdomPotionIcon sends S_SkillIconWisdomPotion (opcode 250) — wisdom potion buff icon.
-// Java: S_SkillIconWisdomPotion: [C opcode=250][C 0x39][C 0x2c][C time/4]
+// sendWisdomPotionIcon sends S_PacketBoxWisdomPotion (opcode 250) — 慎重藥水 buff icon。
+// Java: S_PacketBoxWisdomPotion: [C opcode=250][C 0x39][C 0x2c][H time]
 // Send time=0 to cancel icon.
 func sendWisdomPotionIcon(sess *net.Session, timeSec uint16) {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_EVENT)
 	w.WriteC(0x39)
 	w.WriteC(0x2c)
-	w.WriteC(byte(timeSec / 4))
+	w.WriteH(timeSec)
 	sess.Send(w.Bytes())
 }
 
@@ -550,20 +586,26 @@ func sendParalysis(sess *net.Session, subtype byte) {
 // Java 格式：[C opcode=165][D objectId][C byte1][C byte2]
 // poisonType: 0=治癒（清除色調）, 1=綠色（傷害毒）, 2=灰色（麻痺/凍結）
 func sendPoison(viewer *net.Session, objectID int32, poisonType byte) {
+	viewer.Send(BuildPoison(objectID, poisonType))
+}
+
+// BuildPoison 建構中毒色調封包位元組（不發送）。
+// 用於廣播場景：序列化一次、發送多次。
+func BuildPoison(objectID int32, poisonType byte) []byte {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_POISON)
 	w.WriteD(objectID)
 	switch poisonType {
-	case 1: // 綠色（傷害毒）
+	case 1:
 		w.WriteC(0x01)
 		w.WriteC(0x00)
-	case 2: // 灰色（麻痺/凍結）
+	case 2:
 		w.WriteC(0x00)
 		w.WriteC(0x01)
-	default: // 治癒
+	default:
 		w.WriteC(0x00)
 		w.WriteC(0x00)
 	}
-	viewer.Send(w.Bytes())
+	return w.Bytes()
 }
 
 // SendPoison 匯出 sendPoison — 供 system 套件發送中毒色調封包。
@@ -669,4 +711,12 @@ func SendInvisible(sess *net.Session, objectID int32, invisible bool) {
 // SendArrowAttackPacket 廣播遠程箭矢攻擊封包。
 func SendArrowAttackPacket(viewer *net.Session, attackerID, targetID, damage int32, heading int16, ax, ay, tx, ty int32) {
 	sendArrowAttackPacket(viewer, attackerID, targetID, damage, heading, ax, ay, tx, ty)
+}
+
+// BroadcastToPlayers 將預建的封包位元組發送給一組玩家。
+// 搭配 BuildXxx 函式使用：序列化一次、發送多次，避免重複建構封包。
+func BroadcastToPlayers(viewers []*world.PlayerInfo, data []byte) {
+	for _, v := range viewers {
+		v.Session.Send(data)
+	}
 }
