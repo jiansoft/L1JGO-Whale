@@ -1,5 +1,81 @@
 # 更新日誌
 
+## v0.3.0 (2026-02-28)
+
+### 架構重構：Handler→System 大規模瘦身（Phase 4-11）
+
+遵循「Handler 是薄層」架構原則，將業務邏輯從 handler/ 全面抽出至 system/。
+Handler 只負責封包解析、基本驗證、委派到 System 或 Event Bus。
+
+**新建 System 模組（13 個）：**
+- `system/shop.go` — 商店買賣邏輯
+- `system/weapon_skill.go` — 武器技能系統（揮空劍、骰子匕首）
+- `system/craft.go` — 製作系統
+- `system/item_ground.go` — 地面物品操作（銷毀、掉落、撿取）
+- `system/pet_mgr.go` (910 行) — 寵物完整生命週期（召喚/收回/解放/死亡/經驗/裝備穿脫/馴服/進化）
+- `system/doll.go` — 魔法娃娃召喚/解散/屬性加成
+- `system/polymorph.go` — 變身系統（卷軸/技能驗證+消耗+執行）
+- `system/death.go` — 死亡/重生系統
+- `system/pvp.go` — PvP 戰鬥系統
+- `system/mail.go` — 郵件系統
+- `system/warehouse.go` — 倉庫系統
+- `system/skill_summon.go` — 召喚獸系統
+- `system/poison.go` — 毒系統
+
+**Handler 瘦身成果：**
+
+| 檔案 | 行數變化 | 削減率 |
+|------|---------|--------|
+| pet.go | 473 → 12 | -97% |
+| doll.go | 219 → 5 | -98% |
+| pet_tame.go | 329 → 72 | -78% |
+| pet_inventory.go | 253 → 46 | -82% |
+| polymorph.go | 243 → 147 | -40% |
+| item.go | 973 → 779 | -20% |
+| **總計** | **+1765 / -5651** | **淨減 3886 行** |
+
+**介面驅動架構：**
+- 每個 System 實作對應 Manager 介面（定義在 `handler/context.go`）
+- 透過 `Deps` 結構注入，handler 呼叫 `deps.PetLife.UsePetCollar()` 等方法
+- System 透過匯出的封包建構器（`handler.SendXxx()`）回送封包
+
+### 程式碼清理
+
+- 消除 `removeDollBonuses` 在 handler↔companion_ai 的重複定義
+- 消除 `sendRemoveInvItem` 在 pet↔shop 的重複函式
+- 統一 `petNoEquipNpcIDs` 至 system 層單一定義
+- 移除所有已搬遷函式的殘留匯出包裝
+
+---
+
+## v0.2.1 (2026-02-27)
+
+### 架構重構：Handler→System 分離（Phase 1-3）
+
+Handler→System 架構分離的前 6 階段，system 佔比從 16% 提升至 37%。
+
+**新建 System 模組（6 個）：**
+- `TradeSystem` — 交易邏輯 + WAL 保護
+- `PartySystem` — 組隊邀請/離開/驅逐/HP 同步
+- `ClanSystem` — 血盟建立/加入/階級/盟徽
+- `EquipSystem` — 裝備穿脫驗證 + 屬性計算
+- `ItemUseSystem` — 藥水/卷軸/強化/技能書
+- `SkillSystem 擴展` — 完整技能管線（35 → 1555 行）
+
+### 倉庫系統擴充
+
+- 角色專屬倉庫（每角色獨立）
+- 血盟倉庫歷史記錄
+- 延遲載入 + 多類型 DB 查詢鍵
+
+### Bug 修復
+
+- 修正輔助技能特效顯示在目標身上（C_UseSkill 封包分段讀取）
+- 修正交易可交易性判斷邏輯
+- NPC 中毒攻擊 + poison.go 獨立模組
+
+---
+
 ## v0.2.0 (2026-02-24)
 
 ### 新增：實體碰撞系統
