@@ -109,6 +109,7 @@ func (s *PersistenceSystem) savePlayers(dirtyOnly bool) {
 			Title:      p.Title,
 			Karma:      p.Karma,
 			PKCount:    p.PKCount,
+			Food:       p.Food,
 		}
 		if err := s.charRepo.SaveCharacter(ctx, row); err != nil {
 			s.log.Error("自動存檔角色失敗", zap.String("name", p.Name), zap.Error(err))

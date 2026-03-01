@@ -394,6 +394,40 @@ func BuildSkillEffect(objectID int32, gfxID int32) []byte {
 	return w.Bytes()
 }
 
+// SendDamageNumbers 發送浮動傷害數字到攻擊者客戶端。
+// 利用 S_SkillSoundGFX (opcode 55) 播放數字精靈圖。
+// GFX ID 範圍: 個位 12266-12275, 十位 12276-12285, 百位 12286-12295,
+// 千位 12296-12305, 萬位 12306-12315, MISS 12316。僅發送給攻擊者本人（非廣播）。
+func SendDamageNumbers(sess *net.Session, targetID int32, damage int32) {
+	if damage <= 0 {
+		// MISS 精靈圖
+		sess.Send(BuildSkillEffect(targetID, 12316))
+		return
+	}
+	d := damage
+	units := d % 10
+	tens := (d / 10) % 10
+	hundreds := (d / 100) % 10
+	thousands := (d / 1000) % 10
+	tenThousands := (d / 10000) % 10
+
+	if units > 0 || tens > 0 || hundreds > 0 || thousands > 0 || tenThousands > 0 {
+		sess.Send(BuildSkillEffect(targetID, 12266+units))
+	}
+	if tens > 0 || hundreds > 0 || thousands > 0 || tenThousands > 0 {
+		sess.Send(BuildSkillEffect(targetID, 12276+tens))
+	}
+	if hundreds > 0 || thousands > 0 || tenThousands > 0 {
+		sess.Send(BuildSkillEffect(targetID, 12286+hundreds))
+	}
+	if thousands > 0 || tenThousands > 0 {
+		sess.Send(BuildSkillEffect(targetID, 12296+thousands))
+	}
+	if tenThousands > 0 {
+		sess.Send(BuildSkillEffect(targetID, 12306+tenThousands))
+	}
+}
+
 // SendDropItem sends S_PUT_OBJECT (opcode 87) for a ground item.
 // Same opcode as S_CharPack, but client distinguishes by the status byte (0x00 = item vs 0x04 = PC).
 // Matches Java S_DropItem packet format.
@@ -711,6 +745,30 @@ func SendInvisible(sess *net.Session, objectID int32, invisible bool) {
 // SendArrowAttackPacket 廣播遠程箭矢攻擊封包。
 func SendArrowAttackPacket(viewer *net.Session, attackerID, targetID, damage int32, heading int16, ax, ay, tx, ty int32) {
 	sendArrowAttackPacket(viewer, attackerID, targetID, damage, heading, ax, ay, tx, ty)
+}
+
+// BuildGreenMessage 建構 S_GreenMessage 封包位元組（不發送）。
+// Java: S_GreenMessage — opcode 250, sub 0x54, 0x02, 字串訊息。
+// 用於全伺服器公告（擊殺訊息等）。訊息可包含色碼：\f2=黃, \f3=紅。
+func BuildGreenMessage(msg string) []byte {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_EVENT)
+	w.WriteC(0x54)
+	w.WriteC(0x02)
+	w.WriteS(msg)
+	return w.Bytes()
+}
+
+// SendGreenMessage 發送 S_GreenMessage 到指定 session。
+func SendGreenMessage(sess *net.Session, msg string) {
+	sess.Send(BuildGreenMessage(msg))
+}
+
+// SendPacketBoxHpMsg 發送 S_PacketBoxHpMsg（「你覺得舒服多了」恢復提示）。
+// Java: S_PacketBoxHpMsg — opcode 250, sub 31 (MSG_FEEL_GOOD)。
+func SendPacketBoxHpMsg(sess *net.Session) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_EVENT)
+	w.WriteC(31) // MSG_FEEL_GOOD
+	sess.Send(w.Bytes())
 }
 
 // BroadcastToPlayers 將預建的封包位元組發送給一組玩家。

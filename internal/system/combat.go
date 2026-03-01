@@ -90,6 +90,15 @@ func (s *CombatSystem) processMeleeAttack(sessID uint64, targetID int32) *handle
 	// 非戰鬥 NPC（商人等）：只播放攻擊動畫，不造成傷害
 	// Java: L1MerchantInstance.onAction() 只呼叫 attack.action()
 	if !isAttackableNpc(npc.Impl) {
+		// FieldObject 特殊處理 — Java: L1FieldObjectInstance.onAction()
+		// NPC 81171（幽靈之家終點鬼火）：觸碰 = 到達終點
+		if npc.Impl == "L1FieldObject" && npc.NpcID == 81171 {
+			if player.Session != nil && s.deps.HauntedHouse != nil {
+				s.deps.HauntedHouse.OnGoalReached(player.Session, player)
+			}
+			return nil
+		}
+
 		player.Heading = CalcHeading(player.X, player.Y, npc.X, npc.Y)
 		nearby := ws.GetNearbyPlayersAt(npc.X, npc.Y, npc.MapID)
 		for _, viewer := range nearby {
@@ -168,6 +177,11 @@ func (s *CombatSystem) processMeleeAttack(sessID uint64, targetID int32) *handle
 	// 廣播攻擊動畫
 	for _, viewer := range nearby {
 		handler.SendAttackPacket(viewer.Session, player.CharID, npc.ID, damage, player.Heading)
+	}
+
+	// 浮動傷害數字（GFX 12266-12315 數字 / 12316 MISS）
+	if player.AttackView {
+		handler.SendDamageNumbers(player.Session, npc.ID, damage)
 	}
 
 	if damage > 0 {
@@ -352,6 +366,11 @@ func (s *CombatSystem) processRangedAttack(sessID uint64, targetID int32) *handl
 		}
 		handler.SendArrowAttackPacket(viewer.Session, player.CharID, npc.ID, damage, player.Heading,
 			player.X, player.Y, npc.X, npc.Y)
+	}
+
+	// 浮動傷害數字（遠程攻擊）
+	if player.AttackView {
+		handler.SendDamageNumbers(player.Session, npc.ID, damage)
 	}
 
 	if damage > 0 {

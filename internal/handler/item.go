@@ -332,6 +332,13 @@ func handleUseEtcItem(sess *net.Session, r *packet.Reader, player *world.PlayerI
 		return
 	}
 
+	// 龍之鑰匙（物品 47010）— 開啟龍門選擇 UI
+	// Java: DragonKey.execute() — 獨立的 ItemExecutor 處理
+	if invItem.ItemID == 47010 {
+		HandleDragonKeyUse(sess, player, invItem, deps)
+		return
+	}
+
 	// Enchant scrolls: use_type "dai" (weapon) or "zel" (armor)
 	if itemInfo.UseType == "dai" || itemInfo.UseType == "zel" {
 		if deps.ItemUse != nil {

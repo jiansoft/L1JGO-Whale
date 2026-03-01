@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"time"
 
 	"github.com/l1jgo/server/internal/data"
 	"github.com/l1jgo/server/internal/handler"
@@ -165,6 +166,10 @@ func (s *ItemUseSystem) UseConsumable(sess *net.Session, player *world.PlayerInf
 			player.Food += addFood
 			if player.Food > maxFood {
 				player.Food = maxFood
+			}
+			// 飽食度達 225 時記錄生存吶喊計時（Java: set_h_time）
+			if player.Food >= 225 {
+				player.FoodFullTime = time.Now().Unix()
 			}
 			handler.SendFoodUpdate(sess, player.Food)
 		}
@@ -556,8 +561,8 @@ func (s *ItemUseSystem) UseHomeScroll(sess *net.Session, player *world.PlayerInf
 		return
 	}
 
-	// 取得重生點
-	loc := s.deps.Scripting.GetRespawnLocation(int(player.MapID))
+	// 取得回家目的地（依地圖和座標找最近城鎮，非死亡重生點）
+	loc := s.deps.Scripting.GetHomeScrollLocation(int(player.MapID), int(player.X), int(player.Y))
 	if loc == nil {
 		loc = &scripting.RespawnLocation{X: 33089, Y: 33397, Map: 4}
 	}

@@ -26,9 +26,10 @@ type InputSystem struct {
 	charRepo    *persist.CharacterRepo
 	itemRepo    *persist.ItemRepo
 	buffRepo    *persist.BuffRepo
-	worldState  *world.State
-	mapData     *data.MapDataTable
-	petRepo     *persist.PetRepo
+	worldState   *world.State
+	mapData      *data.MapDataTable
+	petRepo      *persist.PetRepo
+	hauntedHouse handler.HauntedHouseManager // 鬼屋副本（斷線時移除成員）
 }
 
 func NewInputSystem(
@@ -59,6 +60,11 @@ func NewInputSystem(
 		mapData:     mapData,
 		petRepo:     petRepo,
 	}
+}
+
+// SetHauntedHouse 設定鬼屋副本管理器（斷線時移除成員用）。
+func (s *InputSystem) SetHauntedHouse(hh handler.HauntedHouseManager) {
+	s.hauntedHouse = hh
 }
 
 func (s *InputSystem) Phase() coresys.Phase { return coresys.PhaseInput }
@@ -290,6 +296,11 @@ func (s *InputSystem) handleDisconnect(sess *net.Session) {
 					clan.WarehouseUsingCharID = 0
 				}
 			}
+		}
+
+		// 鬼屋副本：斷線時移除成員
+		if s.hauntedHouse != nil {
+			s.hauntedHouse.RemoveOnDisconnect(player)
 		}
 
 		// Clean up all companion entities (summons, dolls, followers)

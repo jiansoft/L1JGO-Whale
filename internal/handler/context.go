@@ -249,6 +249,24 @@ type PetLifecycleManager interface {
 	UsePetItem(sess *net.Session, pet *world.PetInfo, listNo int)
 }
 
+// HauntedHouseManager 鬼屋副本管理器。由 system.HauntedHouseSystem 實作。
+type HauntedHouseManager interface {
+	// AddMember 嘗試讓玩家加入鬼屋副本。
+	AddMember(sess *net.Session, player *world.PlayerInfo)
+	// OnGoalReached 處理玩家觸碰終點鬼火（NPC 81171）。
+	OnGoalReached(sess *net.Session, player *world.PlayerInfo)
+	// RemoveOnDisconnect 玩家斷線時移除。
+	RemoveOnDisconnect(player *world.PlayerInfo)
+}
+
+// DragonDoorManager 龍門系統管理器。由 system.DragonDoorSystem 實作。
+type DragonDoorManager interface {
+	// GetAvailableCounts 取得各類型門衛可用名額（安塔瑞斯、法利昂、林德拜爾）。
+	GetAvailableCounts() (a, b, c int)
+	// SpawnKeeper 在玩家位置生成指定類型的門衛 NPC。
+	SpawnKeeper(sess *net.Session, player *world.PlayerInfo, npcID int32)
+}
+
 // DollManager 處理魔法娃娃召喚/解散/屬性加成。由 system.DollSystem 實作。
 type DollManager interface {
 	// UseDoll 處理使用魔法娃娃物品（召喚或收回）。
@@ -391,6 +409,8 @@ type Deps struct {
 	ItemGround    ItemGroundManager    // filled after ItemGroundSystem is created
 	PetLife       PetLifecycleManager // filled after PetSystem is created
 	DollMgr       DollManager         // filled after DollSystem is created
+	HauntedHouse  HauntedHouseManager // filled after HauntedHouseSystem is created
+	DragonDoor    DragonDoorManager   // filled after DragonDoorSystem is created
 	Bus           *event.Bus  // event bus for emitting game events (EntityKilled, etc.)
 	WeaponSkills  *data.WeaponSkillTable
 	Ranking       RankingChecker // filled after RankingSystem is created

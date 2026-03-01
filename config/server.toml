@@ -70,6 +70,7 @@ warehouse_elf_fee = 2              # 精靈倉庫提領費（秘銀數量）
 repair_cost_per_durability = 200   # 修理費用（每點耐久金幣）
 world_chat_min_food = 6            # 世界頻道最低飽食度
 world_chat_food_cost = 5           # 世界頻道消耗飽食度
+kill_message_level = 90            # PvP 擊殺公告最低等級（受害者等級 ≥ 此值才廣播，0=關閉）
 max_exclude_list = 16              # 黑名單上限
 initial_food = 40                  # 建角/重生初始飽食度
 base_ac = 10                       # 基礎防禦等級

@@ -600,6 +600,11 @@ func (s *SkillSystem) executeAttackSkill(sess *net.Session, player *world.Player
 				}
 			}
 
+			// 浮動傷害數字（技能攻擊，魔防抵抗時顯示 MISS）
+			if player.AttackView {
+				handler.SendDamageNumbers(sess, t.npc.ID, dmg)
+			}
+
 			t.npc.HP -= dmg
 			if t.npc.HP < 0 {
 				t.npc.HP = 0
@@ -1389,6 +1394,10 @@ func (s *SkillSystem) executeSelfSkill(sess *net.Session, player *world.PlayerIn
 			res := s.deps.Scripting.CalcSkillDamage(ctx)
 			dmg := int32(res.Damage)
 			handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(npc.ID, skill.CastGfx))
+			// 浮動傷害數字（自我範圍攻擊技能，魔防抵抗時顯示 MISS）
+			if player.AttackView {
+				handler.SendDamageNumbers(sess, npc.ID, dmg)
+			}
 			npc.HP -= dmg
 			if npc.HP < 0 {
 				npc.HP = 0

@@ -73,9 +73,11 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 		Exp:        int32(ch.Exp),
 		BonusStats:  ch.BonusStats,
 		ElixirStats: ch.ElixirStats,
-		Food:        40, // Java: initial food = 40 (max 225, increased by eating food items)
+		Food:         ch.Food, // 從 DB 載入飽食度
+		FoodFullTime: -1,     // 登入時重置生存吶喊計時（Java: _h_time = -1）
 		PKCount:     ch.PKCount,
 		Karma:       ch.Karma,
+		AttackView: true, // Java: is_attack_view 預設啟用浮動傷害數字
 		Inv:        world.NewInventory(),
 	}
 	// 載入帳號的倉庫密碼

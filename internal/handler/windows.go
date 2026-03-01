@@ -35,8 +35,8 @@ func HandleWindows(sess *net.Session, r *packet.Reader, deps *Deps) {
 
 	case 6:
 		// 龍門（副本傳送門）
-		// Java: readD(itemObjID) + readD(selectDoor) → 龍門副本傳送
-		// TODO: 實作龍門系統
+		// Java: C_Windows.java case 6 — readD(itemObjID) + readD(selectDoor) → 消耗鑰匙 + 生成門衛
+		HandleDragonDoorSelect(sess, player, r, deps)
 
 	default:
 		deps.Log.Debug("C_Windows 未處理的 type",

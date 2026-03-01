@@ -737,6 +737,42 @@ func (e *Engine) GetRespawnLocation(mapID int) *RespawnLocation {
 	}
 }
 
+// GetHomeScrollLocation 呼叫 Lua get_home_scroll_location(map_id, x, y)。
+// 回家卷軸依地圖和座標找最近城鎮（非主大陸查映射表，主大陸找最近城鎮）。
+func (e *Engine) GetHomeScrollLocation(mapID, x, y int) *RespawnLocation {
+	fn := e.vm.GetGlobal("get_home_scroll_location")
+	if fn == lua.LNil {
+		return nil
+	}
+
+	if err := e.vm.CallByParam(lua.P{
+		Fn:      fn,
+		NRet:    1,
+		Protect: true,
+	}, lua.LNumber(mapID), lua.LNumber(x), lua.LNumber(y)); err != nil {
+		e.log.Error("lua get_home_scroll_location error", zap.Error(err))
+		return nil
+	}
+
+	result := e.vm.Get(-1)
+	e.vm.Pop(1)
+
+	if result == lua.LNil {
+		return nil
+	}
+
+	rt, ok := result.(*lua.LTable)
+	if !ok {
+		return nil
+	}
+
+	return &RespawnLocation{
+		X:   lInt(rt, "x"),
+		Y:   lInt(rt, "y"),
+		Map: lInt(rt, "map"),
+	}
+}
+
 // CalcDeathExpPenalty calls Lua calc_death_exp_penalty(level, exp).
 func (e *Engine) CalcDeathExpPenalty(level, exp int) int {
 	return e.callIntFunc("calc_death_exp_penalty", level, exp)

@@ -511,6 +511,13 @@ func run() error {
 	runner.Register(system.NewRegenSystem(worldState, luaEngine))
 	runner.Register(system.NewWeatherSystem(worldState))
 	runner.Register(system.NewMapTimerSystem(worldState, deps))
+	hauntedHouseSys := system.NewHauntedHouseSystem(worldState, deps)
+	deps.HauntedHouse = hauntedHouseSys
+	inputSys.SetHauntedHouse(hauntedHouseSys)
+	runner.Register(hauntedHouseSys)
+	dragonDoorSys := system.NewDragonDoorSystem(worldState, deps)
+	deps.DragonDoor = dragonDoorSys
+	runner.Register(dragonDoorSys)
 	runner.Register(system.NewGroundItemSystem(worldState))
 	runner.Register(system.NewPartyRefreshSystem(worldState, deps, 10)) // 10 ticks = 2 seconds
 	rankingSys := system.NewRankingSystem(worldState, deps)

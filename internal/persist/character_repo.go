@@ -182,14 +182,14 @@ func (r *CharacterRepo) SaveCharacter(ctx context.Context, c *CharacterRow) erro
 			lawful = $11, str = $12, dex = $13, con = $14, wis = $15, cha = $16, intel = $17,
 			bonus_stats = $18, elixir_stats = $19,
 			clan_id = $20, clan_name = $21, clan_rank = $22,
-			title = $23, karma = $24, pk_count = $25
-		WHERE name = $26`,
+			title = $23, karma = $24, pk_count = $25, food = $26
+		WHERE name = $27`,
 		c.Level, c.Exp, c.HP, c.MP, c.MaxHP, c.MaxMP,
 		c.X, c.Y, c.MapID, c.Heading,
 		c.Lawful, c.Str, c.Dex, c.Con, c.Wis, c.Cha, c.Intel,
 		c.BonusStats, c.ElixirStats,
 		c.ClanID, c.ClanName, c.ClanRank,
-		c.Title, c.Karma, c.PKCount,
+		c.Title, c.Karma, c.PKCount, c.Food,
 		c.Name,
 	)
 	return err

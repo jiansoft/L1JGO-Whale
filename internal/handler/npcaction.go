@@ -139,9 +139,15 @@ func HandleNpcAction(sess *net.Session, r *packet.Reader, deps *Deps) {
 	case "enca":
 		handleNpcArmorEnchant(sess, player, deps)
 
-	// 角色重置（洗點）— 回憶蠟燭嚮導（Java: Npc_BaseReset2 動作 "ent"）
+	// "ent" 動作 — 多個 NPC 共用，依 NPC ID 分派
+	// Java: C_NPCAction.java 對 "ent" 按 npcId 做 if/else
 	case "ent":
-		StartCharReset(sess, player, deps)
+		switch npc.NpcID {
+		case 80085: // 幽靈之家管理人杜烏 → 鬼屋副本
+			enterHauntedHouse(sess, player, deps)
+		default: // NPC 71264 回憶蠟燭嚮導等 → 角色重置
+			StartCharReset(sess, player, deps)
+		}
 
 	// Close dialog (empty string or explicit close)
 	case "":

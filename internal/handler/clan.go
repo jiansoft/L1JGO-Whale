@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"time"
+
 	"github.com/l1jgo/server/internal/net"
 	"github.com/l1jgo/server/internal/net/packet"
 	"github.com/l1jgo/server/internal/world"
@@ -122,11 +124,88 @@ func HandleRankControl(sess *net.Session, r *packet.Reader, deps *Deps) {
 		if deps.Clan != nil {
 			deps.Clan.ChangeRank(sess, player, giveRank, targetName)
 		}
+	case 5:
+		// 生存吶喊（Java: C_Rank case 5）
+		handleSurvivalShout(sess, player)
 	case 9:
 		// Ctrl+Q 查詢限時地圖剩餘時間
 		// Java: pc.sendPackets(new S_PacketBoxMapTimer(pc))
 		SendMapTimerOut(sess, player)
 	}
+}
+
+// handleSurvivalShout 處理生存吶喊（Java: C_Rank case 5）。
+// 前置條件：飽食度 225、裝備武器、距吃飽至少 1 分鐘。
+// 效果：依飽食飽和持續時間回復 HP，然後飽食度歸零。
+// 1-29 分鐘: (分鐘數/100) × MaxHP
+// 30+ 分鐘: 依武器強化等級回復 20%-70%
+func handleSurvivalShout(sess *net.Session, player *world.PlayerInfo) {
+	// 條件 1：飽食度必須 225
+	if player.Food < 225 {
+		SendSystemMessage(sess, "飽食度不足，無法使用生存的吶喊。")
+		return
+	}
+
+	// 條件 2：必須裝備武器
+	if player.Equip.Weapon() == nil {
+		SendSystemMessage(sess, "必須裝備武器才能使用生存的吶喊。")
+		return
+	}
+
+	// 條件 3：距吃飽至少 1 分鐘
+	if player.FoodFullTime <= 0 {
+		// 1974：還無法使用生存的吶喊。
+		SendServerMessage(sess, 1974)
+		return
+	}
+	now := time.Now().Unix()
+	minutes := int((now - player.FoodFullTime) / 60)
+	if minutes <= 0 {
+		SendServerMessage(sess, 1974)
+		return
+	}
+
+	// 計算回復量
+	addHP := int16(0)
+	if minutes >= 30 {
+		// 30 分鐘後：依武器強化等級
+		enchant := int(player.Equip.Weapon().EnchantLvl)
+		var pct float64
+		switch {
+		case enchant >= 11:
+			pct = 0.70
+		case enchant >= 9:
+			pct = 0.55 // 9-10 平均
+		case enchant >= 7:
+			pct = 0.45 // 7-8 平均
+		default:
+			pct = 0.30 // 0-6 平均
+		}
+		addHP = int16(float64(player.MaxHP) * pct)
+	} else {
+		// 1-29 分鐘: (分鐘數/100) × MaxHP
+		addHP = int16(float64(player.MaxHP) * float64(minutes) / 100.0)
+	}
+
+	if addHP <= 0 {
+		SendServerMessage(sess, 1974)
+		return
+	}
+
+	// 消耗飽食度
+	player.Food = 0
+	player.FoodFullTime = -1
+	SendFoodUpdate(sess, player.Food)
+
+	// 回復 HP
+	player.HP += addHP
+	if player.HP > player.MaxHP {
+		player.HP = player.MaxHP
+	}
+	SendHpUpdate(sess, player)
+
+	// 特效音效（Java: S_SkillSound(4013)）
+	SendSkillEffect(sess, player.CharID, 4013)
 }
 
 // HandleTitle 處理 C_TITLE (opcode 90) — 設定稱號。

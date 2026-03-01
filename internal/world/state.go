@@ -60,7 +60,8 @@ type PlayerInfo struct {
 	WindRes    int16 // wind resistance
 	EarthRes   int16 // earth resistance
 	Dodge      int16 // dodge bonus
-	Food       int16 // satiety 0-225 (225=full); sent in S_STATUS
+	Food         int16 // satiety 0-225 (225=full); sent in S_STATUS
+	FoodFullTime int64 // 飽食度達 225 的時刻（Unix 秒）；-1=未滿（Java: _h_time，生存吶喊用）
 	PKCount       int32 // PK kill count
 	Karma         int32 // 善惡值（Java: L1Karma）— 正=善, 負=惡
 	PinkName      bool  // temporary red name (180 seconds after attacking blue player)
@@ -82,6 +83,7 @@ type PlayerInfo struct {
 	Sleeped          bool // true when under sleep effect
 	Silenced         bool // 沉默狀態（沉默毒 / silence 技能）— 禁止施法
 	AbsoluteBarrier  bool // 絕對屏障（skill 78）— 免疫所有傷害，攻擊/施法/使用道具時解除
+	AttackView       bool // 浮動傷害數字開關（Java: is_attack_view，預設 true，聊天輸入 dmg 切換）
 
 	LastMoveTime int64 // time.Now().UnixNano() of last accepted move (0 = no throttle)
 
@@ -821,6 +823,17 @@ func (s *State) GetNearbyDoors(x, y int32, mapID int16) []*DoorInfo {
 			dist = dy
 		}
 		if dist <= 20 {
+			result = append(result, door)
+		}
+	}
+	return result
+}
+
+// GetDoorsByMap 回傳指定地圖上的所有門。
+func (s *State) GetDoorsByMap(mapID int16) []*DoorInfo {
+	var result []*DoorInfo
+	for _, door := range s.doorList {
+		if door.MapID == mapID {
 			result = append(result, door)
 		}
 	}

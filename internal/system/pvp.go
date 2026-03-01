@@ -108,6 +108,11 @@ func (s *PvPSystem) HandlePvPAttack(attacker, target *world.PlayerInfo) {
 		handler.SendAttackPacket(viewer.Session, attacker.CharID, target.CharID, damage, attacker.Heading)
 	}
 
+	// 浮動傷害數字（PvP 近戰）
+	if attacker.AttackView {
+		handler.SendDamageNumbers(attacker.Session, target.CharID, damage)
+	}
+
 	if damage > 0 {
 		target.HP -= int16(damage)
 		if target.HP < 0 {
@@ -244,6 +249,11 @@ func (s *PvPSystem) HandlePvPFarAttack(attacker, target *world.PlayerInfo) {
 		}
 		handler.SendArrowAttackPacket(viewer.Session, attacker.CharID, target.CharID, damage, attacker.Heading,
 			attacker.X, attacker.Y, target.X, target.Y)
+	}
+
+	// 浮動傷害數字（PvP 遠程）
+	if attacker.AttackView {
+		handler.SendDamageNumbers(attacker.Session, target.CharID, damage)
 	}
 
 	if damage > 0 {
@@ -389,6 +399,9 @@ func (s *PvPSystem) processPKKill(killer, victim *world.PlayerInfo) {
 	}
 
 	s.dropItemsOnPKDeath(victim)
+
+	// 擊殺公告（Java: S_GreenMessage — 受害者等級 ≥ KillMessageLevel 時全伺服器廣播）
+	s.broadcastKillMessage(killer, victim)
 }
 
 // dropItemsOnPKDeath 根據 Lua 公式從受害者身上掉落物品。
@@ -468,6 +481,38 @@ func (s *PvPSystem) breakPlayerSleep(target *world.PlayerInfo) {
 	target.RemoveBuff(66)  // 沉睡之霧
 	target.RemoveBuff(103) // 暗黑盲咒
 	handler.SendParalysis(target.Session, handler.SleepRemove)
+}
+
+// broadcastKillMessage 全伺服器廣播 PvP 擊殺訊息。
+// Java: S_GreenMessage — 受害者等級 ≥ KillMessageLevel 時觸發。
+// 訊息包含殺手名稱、武器名稱與強化等級。
+func (s *PvPSystem) broadcastKillMessage(killer, victim *world.PlayerInfo) {
+	minLevel := s.deps.Config.Gameplay.KillMessageLevel
+	if minLevel <= 0 {
+		return // 功能關閉
+	}
+	if int(victim.Level) < minLevel {
+		return
+	}
+
+	// 組裝武器資訊
+	weaponName := "空手"
+	enchantLvl := 0
+	if wpn := killer.Equip.Weapon(); wpn != nil {
+		if info := s.deps.Items.Get(wpn.ItemID); info != nil {
+			weaponName = info.Name
+			enchantLvl = int(wpn.EnchantLvl)
+		}
+	}
+
+	// Java 格式：\\f3殺人公告:\\f2☆★強者\\f3【殺手】使用武器【+N武器名】\\f2將☆★可憐的弱者\\f3【受害者】\\f2給打趴在地上★☆
+	msg := fmt.Sprintf("\\f3殺人公告:\\f2☆★強者\\f3【%s】使用武器【+%d %s】\\f2將☆★可憐的弱者\\f3【%s】\\f2給打趴在地上★☆",
+		killer.Name, enchantLvl, weaponName, victim.Name)
+
+	data := handler.BuildGreenMessage(msg)
+	s.deps.World.AllPlayers(func(p *world.PlayerInfo) {
+		p.Session.Send(data)
+	})
 }
 
 // calcCounterBarrierDmg 計算 PvP 反擊屏障的反彈傷害。

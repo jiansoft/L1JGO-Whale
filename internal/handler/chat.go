@@ -38,6 +38,17 @@ func HandleChat(sess *net.Session, r *packet.Reader, deps *Deps) {
 		return
 	}
 
+	// 浮動傷害數字開關（Java: C_Chat 攔截 "dmg" / "DMG" 切換 is_attack_view）
+	if chatType == ChatNormal && (text == "dmg" || text == "DMG") {
+		player.AttackView = !player.AttackView
+		if player.AttackView {
+			SendSystemMessage(sess, "傷害數字：開啟")
+		} else {
+			SendSystemMessage(sess, "傷害數字：關閉")
+		}
+		return
+	}
+
 	deps.Log.Debug("C_Chat",
 		zap.String("player", player.Name),
 		zap.Uint8("type", chatType),

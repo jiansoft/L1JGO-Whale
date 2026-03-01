@@ -57,6 +57,11 @@ func broadcastDoorOpen(door *world.DoorInfo, deps *Deps) {
 	sendDoorTilesAll(door, deps)
 }
 
+// BroadcastDoorOpen 匯出版 — 供 system 套件使用。
+func BroadcastDoorOpen(door *world.DoorInfo, deps *Deps) {
+	broadcastDoorOpen(door, deps)
+}
+
 // broadcastDoorClose sends close state to all nearby players and updates tile passability.
 func broadcastDoorClose(door *world.DoorInfo, deps *Deps) {
 	nearby := deps.World.GetNearbyPlayersAt(door.X, door.Y, door.MapID)
@@ -66,6 +71,11 @@ func broadcastDoorClose(door *world.DoorInfo, deps *Deps) {
 	}
 	// Update passability: close = blocked
 	sendDoorTilesAll(door, deps)
+}
+
+// BroadcastDoorClose 匯出版 — 供 system 套件使用。
+func BroadcastDoorClose(door *world.DoorInfo, deps *Deps) {
+	broadcastDoorClose(door, deps)
 }
 
 // sendDoorPack sends S_DoorPack (opcode 87 = S_PUT_OBJECT) — door appearance.

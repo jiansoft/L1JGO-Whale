@@ -115,6 +115,9 @@ type GameplayConfig struct {
 	WorldChatMinFood int `toml:"world_chat_min_food"` // minimum food to world chat
 	WorldChatFoodCost int `toml:"world_chat_food_cost"` // food consumed per world chat
 
+	// PvP
+	KillMessageLevel int `toml:"kill_message_level"` // min victim level for kill broadcast (0=disabled, default 90)
+
 	// Exclude (block list)
 	MaxExcludeList int `toml:"max_exclude_list"` // max entries in block list
 
