@@ -75,7 +75,7 @@ func LoadFireCrystalTable(path string) (*FireCrystalTable, error) {
 
 	t := &FireCrystalTable{
 		byItemID:    make(map[int32]*FireCrystalEntry, len(f.Items)),
-		fireSmithID: 111414, // 火神煉化工匠 NPC ID
+		fireSmithID: 81436, // 火神煉化工匠 NPC ID
 	}
 	for _, item := range f.Items {
 		entry := &FireCrystalEntry{

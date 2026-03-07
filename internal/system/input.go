@@ -356,6 +356,7 @@ func (s *InputSystem) handleDisconnect(sess *net.Session) {
 			Title:       player.Title,
 			Karma:       player.Karma,
 			PKCount:     player.PKCount,
+			Food:        player.Food,
 		}
 		if err := s.charRepo.SaveCharacter(ctx, row); err != nil {
 			s.log.Error("斷線存檔角色失敗",

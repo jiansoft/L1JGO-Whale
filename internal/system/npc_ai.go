@@ -37,10 +37,48 @@ func (s *NpcAISystem) Update(_ time.Duration) {
 			s.tickGuardAI(npc)
 			continue
 		}
-		if npc.Impl != "L1Monster" {
+		if npc.Impl == "L1Monster" {
+			s.tickMonsterAI(npc)
 			continue
 		}
-		s.tickMonsterAI(npc)
+		// 非戰鬥 NPC：有 passive_speed 的才隨機行走（鳥、村莊 NPC 等）
+		if npc.MoveSpeed > 0 {
+			s.tickNpcRandomWalk(npc)
+		}
+	}
+}
+
+// ---------- Non-combat NPC Random Walk ----------
+
+// tickNpcRandomWalk 處理非戰鬥 NPC 的隨機行走（鳥、村莊 NPC 等）。
+// Java 參考：L1NpcInstance.noTarget() — 方向 0-7 = 8 方位移動，8-39 = 暫停。
+// 距離出生點超過 8 格時，強制走向出生點。
+func (s *NpcAISystem) tickNpcRandomWalk(npc *world.NpcInfo) {
+	if npc.MoveTimer > 0 {
+		npc.MoveTimer--
+		return
+	}
+
+	// 距離出生點超過 8 格 → 走回家
+	if chebyshev32(npc.X, npc.Y, npc.SpawnX, npc.SpawnY) > 8 {
+		npcWander(s.world, npc, -2, s.deps.MapData)
+		return
+	}
+
+	// 還有剩餘步數 → 繼續同方向走
+	if npc.WanderDist > 0 {
+		npcWander(s.world, npc, -1, s.deps.MapData)
+		return
+	}
+
+	// 隨機選擇新動作（Java: random 0-39）
+	dir := rand.Intn(40)
+	if dir < 8 {
+		// 0-7: 向該方向移動
+		npcWander(s.world, npc, dir, s.deps.MapData)
+	} else {
+		// 8-39: 暫停不動（機率 80%）
+		npc.MoveTimer = calcNpcMoveTicks(npc)
 	}
 }
 

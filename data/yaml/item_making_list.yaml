@@ -1,2 +1,156 @@
-# L1JTW 無對應的製作配方資料表
-recipes: []
+# 製作配方測試資料
+recipes:
+  # ---- NPC 吉倫(70009) ----
+  # 配方 A：合成魔法寶石（3 鑽石 → 1 魔法寶石，100% 成功）
+  - action: "A"
+    npc_id: 70009
+    note: "合成魔法寶石"
+    amount_inputable: false
+    all_in_once: false
+    required_level: 0
+    required_class: 0
+    hp_consume: 0
+    mp_consume: 0
+    success_rate: 0          # 0 = 100% 成功
+    items:
+      - item_id: 40318       # 魔法寶石
+        amount: 1
+        enchant_lvl: 0
+        bless: 0
+    materials:
+      - item_id: 40044       # 鑽石
+        amount: 3
+        enchant_lvl: 0
+    bonus_item_id: 0
+    bonus_item_count: 0
+    residue_item_id: 0
+    residue_item_count: 0
+    broadcast: false
+
+  # 配方 B：煉化黑魔石（2 一級 → 1 二級，70% 成功，失敗殘留精靈玉）
+  - action: "B"
+    npc_id: 70009
+    note: "煉化二級黑魔石"
+    amount_inputable: false
+    all_in_once: false
+    required_level: 10
+    required_class: 0
+    hp_consume: 0
+    mp_consume: 5
+    success_rate: 70
+    items:
+      - item_id: 40321       # 二級黑魔石
+        amount: 1
+        enchant_lvl: 0
+        bless: 0
+    materials:
+      - item_id: 40320       # 一級黑魔石
+        amount: 2
+        enchant_lvl: 0
+    bonus_item_id: 0
+    bonus_item_count: 0
+    residue_item_id: 40319   # 精靈玉（失敗殘留）
+    residue_item_count: 1
+    broadcast: true
+
+  # 配方 C：批量煉藥（1 強力治癒 → 3 治癒，支援批量）
+  - action: "C"
+    npc_id: 70009
+    note: "分解治癒藥水"
+    amount_inputable: true
+    all_in_once: false
+    required_level: 0
+    required_class: 0
+    hp_consume: 0
+    mp_consume: 0
+    success_rate: 0          # 100% 成功
+    items:
+      - item_id: 40010       # 治癒藥水
+        amount: 3
+        enchant_lvl: 0
+        bless: 0
+    materials:
+      - item_id: 40011       # 強力治癒藥水
+        amount: 1
+        enchant_lvl: 0
+    bonus_item_id: 0
+    bonus_item_count: 0
+    residue_item_id: 0
+    residue_item_count: 0
+    broadcast: false
+
+  # ---- 火神煉化工匠(81436) ----
+  - action: "A"
+    npc_id: 81436
+    note: "合成魔法寶石"
+    amount_inputable: false
+    all_in_once: false
+    required_level: 0
+    required_class: 0
+    hp_consume: 0
+    mp_consume: 0
+    success_rate: 0
+    items:
+      - item_id: 40318
+        amount: 1
+        enchant_lvl: 0
+        bless: 0
+    materials:
+      - item_id: 40044
+        amount: 3
+        enchant_lvl: 0
+    bonus_item_id: 0
+    bonus_item_count: 0
+    residue_item_id: 0
+    residue_item_count: 0
+    broadcast: false
+
+  - action: "B"
+    npc_id: 81436
+    note: "煉化二級黑魔石"
+    amount_inputable: false
+    all_in_once: false
+    required_level: 10
+    required_class: 0
+    hp_consume: 0
+    mp_consume: 5
+    success_rate: 70
+    items:
+      - item_id: 40321
+        amount: 1
+        enchant_lvl: 0
+        bless: 0
+    materials:
+      - item_id: 40320
+        amount: 2
+        enchant_lvl: 0
+    bonus_item_id: 0
+    bonus_item_count: 0
+    residue_item_id: 40319
+    residue_item_count: 1
+    broadcast: true
+
+  - action: "C"
+    npc_id: 81436
+    note: "分解治癒藥水"
+    amount_inputable: true
+    all_in_once: false
+    required_level: 0
+    required_class: 0
+    hp_consume: 0
+    mp_consume: 0
+    success_rate: 0
+    items:
+      - item_id: 40010
+        amount: 3
+        enchant_lvl: 0
+        bless: 0
+    materials:
+      - item_id: 40011
+        amount: 1
+        enchant_lvl: 0
+    bonus_item_id: 0
+    bonus_item_count: 0
+    residue_item_id: 0
+    residue_item_count: 0
+    broadcast: false

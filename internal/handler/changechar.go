@@ -91,6 +91,7 @@ func HandleChangeChar(sess *net.Session, _ *packet.Reader, deps *Deps) {
 			Title:       player.Title,
 			Karma:       player.Karma,
 			PKCount:     player.PKCount,
+			Food:        player.Food,
 		}
 		if err := deps.CharRepo.SaveCharacter(ctx, row); err != nil {
 			deps.Log.Error("切換角色時存檔角色失敗",

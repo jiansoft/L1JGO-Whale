@@ -3822,3 +3822,6 @@ actions:
   - npc_id: 91002
     normal_action: dufo
     caotic_action: dufo
+  - npc_id: 81436
+    normal_action: refine
+    caotic_action: refine

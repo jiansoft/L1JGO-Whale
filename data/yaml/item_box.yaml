@@ -1,0 +1,51 @@
+# 物品箱（寶箱）測試資料
+# items: 隨機抽取型（機率）
+# all_items: 全給型（固定給所有物品）
+# key_items: 鑰匙開啟型
+
+items:
+  # 古老皮袋(40167) — 隨機開出鑽石或魔法寶石
+  - box_item_id: 40167
+    get_item_id: 40044    # 鑽石
+    random_int: 100
+    random: 50            # 50% 機率
+    min_count: 1
+    max_count: 3
+    broadcast: false
+    bless: -1
+    enchant: 0
+  - box_item_id: 40167
+    get_item_id: 40318    # 魔法寶石
+    random_int: 100
+    random: 50            # 50% 機率
+    min_count: 1
+    max_count: 1
+    broadcast: false
+    bless: -1
+    enchant: 0
+
+all_items:
+  # 古老絲袋(40168) — 固定給治癒藥水 + 強力治癒 + 加速藥水
+  - box_item_id: 40168
+    get_item_id: 40010    # 治癒藥水
+    count: 5
+    use_type: 0
+    bless: -1
+    enchant: 0
+    broadcast: false
+  - box_item_id: 40168
+    get_item_id: 40011    # 強力治癒藥水
+    count: 3
+    use_type: 0
+    bless: -1
+    enchant: 0
+    broadcast: false
+  - box_item_id: 40168
+    get_item_id: 40013    # 自我加速藥水
+    count: 2
+    use_type: 0
+    bless: -1
+    enchant: 0
+    broadcast: false
+
+key_items: []

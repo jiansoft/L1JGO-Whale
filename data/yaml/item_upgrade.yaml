@@ -1,0 +1,41 @@
+# 物品升級測試資料
+# NPC 吉倫(70009) 提供升級服務
+
+upgrades:
+  # 歐西斯匕首 → 骰子匕首（需要一級黑魔石，80% 成功）
+  - id: 1
+    npc_id: 70009
+    action_id: "ut0"
+    action_name: "歐西斯匕首 → 骰子匕首"
+    upgrade_chance: 80
+    delete_chance: 0
+    new_item_id: 2          # 骰子匕首
+    main_item_id: 1         # 歐西斯匕首
+    main_item_count: 1
+    need_item_ids: [40320]  # 一級黑魔石
+    need_counts: [1]
+    plus_item_ids: []
+    plus_counts: []
+    plus_add_chance: []
+    success_html: ""
+    failure_html: ""
+    delete_html: ""
+
+  # 皮帽子 → 皮頭盔（需要二級黑魔石，60% 成功，失敗 50% 機率刪除原物品）
+  - id: 2
+    npc_id: 70009
+    action_id: "ut1"
+    action_name: "皮帽子 → 皮頭盔"
+    upgrade_chance: 60
+    delete_chance: 50
+    new_item_id: 20002      # 皮頭盔
+    main_item_id: 20001     # 皮帽子
+    main_item_count: 1
+    need_item_ids: [40321]  # 二級黑魔石
+    need_counts: [1]
+    plus_item_ids: [40044]  # 鑽石可當加成材料
+    plus_counts: [1]
+    plus_add_chance: [15]   # 鑽石增加 15% 成功率
+    success_html: ""
+    failure_html: ""
+    delete_html: ""
