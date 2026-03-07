@@ -125,6 +125,25 @@ func (s *PvPSystem) HandlePvPAttack(attacker, target *world.PlayerInfo) {
 		}
 		handler.SendHpUpdate(target.Session, target)
 
+		// 尖刺盔甲（skill 89）：PvP 近戰命中時 10% 機率破壞攻擊者武器
+		// Java: L1AttackPc.damagePcWeaponDurability — hasSkillEffect(89) → 10% → receiveDamage
+		if target.HasBuff(89) && world.RandInt(100) < 10 {
+			handler.DamageWeaponDurability(attacker.Session, attacker, s.deps)
+			handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(target.CharID, 10712))
+		}
+
+		// 武器附毒（skill 98）：PvP 近戰命中時 10% 機率對目標施加毒素
+		// Java: L1AttackPc.addPcPoisonAttack — hasSkillEffect(98) → 10% → doInfection(3000, 5)
+		if attacker.HasBuff(98) && attacker.Equip.Weapon() != nil &&
+			target.PoisonType == 0 && world.RandInt(100) < 10 {
+			target.PoisonType = 1
+			target.PoisonTicksLeft = 150 // 30 秒 = 150 ticks
+			target.PoisonDmgTimer = 0
+			target.PoisonDmgAmount = 5 // 每 3 秒扣 5 HP
+			target.PoisonAttacker = attacker.SessionID
+			BroadcastPlayerPoison(target, 1, s.deps) // 綠色毒
+		}
+
 		if target.HP <= 0 {
 			// 在 KillPlayer 之前保存決鬥狀態（KillPlayer 會清除 FightId）
 			isDuel := attacker.FightId == target.CharID && target.FightId == attacker.CharID

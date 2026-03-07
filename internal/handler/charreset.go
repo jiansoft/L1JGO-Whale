@@ -441,7 +441,7 @@ func sendOwnCharPackFromPlayer(sess *net.Session, p *world.PlayerInfo) {
 	w.WriteH(uint16(gfx))
 	w.WriteC(p.CurrentWeapon)
 	w.WriteC(byte(p.Heading))
-	w.WriteC(0) // light
+	w.WriteC(p.LightSize) // light
 	w.WriteD(0) // speed
 	w.WriteD(0) // exp
 	w.WriteH(uint16(p.Lawful))

@@ -183,9 +183,10 @@ function calc_joy_of_pain(ctx)
 end
 
 ---------------------------------------------------------------------
--- Elemental resistance calculation
--- Java: calcAttrResistance -> resist -> floor(0.32 * |resist|) / 32
--- Returns a fraction: positive = damage reduction
+-- 魔法元素抗性計算
+-- Java: L1MagicMode.calcAttrResistance() → abs(resist) / 10.0
+-- 正負抗性都是減傷（取絕對值）
+-- 用於 coefficient = max(1.0 - attrDefence + INT*3/32, 0)
 ---------------------------------------------------------------------
 function calc_attr_resistance(attr, tgt)
     local resist = 0
@@ -201,11 +202,7 @@ function calc_attr_resistance(attr, tgt)
         return 0
     end
 
-    local resist_floor = math.floor(0.32 * math.abs(resist))
-    if resist < 0 then
-        resist_floor = -resist_floor
-    end
-    return resist_floor / 32.0
+    return math.abs(resist) / 10.0
 end
 
 ---------------------------------------------------------------------

@@ -161,10 +161,9 @@ func processWeaponSkillAoE(player *world.PlayerInfo, primaryTarget *world.NpcInf
 	}
 }
 
-// calcWeaponSkillDmgReduction 計算武器技能的 MR 減傷。
-// NPC 目前無屬性抗性欄位，僅計算 MR 減傷。
+// calcWeaponSkillDmgReduction 計算武器技能的 MR 減傷 + 屬性抗性減傷。
 // Java: L1WeaponSkill.calcDamageReduction()
-func calcWeaponSkillDmgReduction(caster *world.PlayerInfo, target *world.NpcInfo, dmg float64, _ int) float64 {
+func calcWeaponSkillDmgReduction(caster *world.PlayerInfo, target *world.NpcInfo, dmg float64, attr int) float64 {
 	if dmg <= 0 {
 		return 0
 	}
@@ -178,13 +177,13 @@ func calcWeaponSkillDmgReduction(caster *world.PlayerInfo, target *world.NpcInfo
 	mr := int(target.MR)
 	magicHit := int(caster.SP) // 簡化：用 SP 近似 magic_hit
 	var mrFloor float64
-	if mr <= 100 {
+	if mr < 100 {
 		mrFloor = math.Floor(float64(mr-magicHit) / 2)
 	} else {
 		mrFloor = math.Floor(float64(mr-magicHit) / 10)
 	}
 	var mrCoeff float64
-	if mr <= 100 {
+	if mr < 100 {
 		mrCoeff = 1.0 - 0.01*mrFloor
 	} else {
 		mrCoeff = 0.6 - 0.01*mrFloor
@@ -194,8 +193,26 @@ func calcWeaponSkillDmgReduction(caster *world.PlayerInfo, target *world.NpcInfo
 	}
 	dmg *= mrCoeff
 
-	// NPC 屬性抗性：目前 NpcInfo 無 FireRes/WaterRes/WindRes/EarthRes 欄位
-	// 待 NPC 屬性系統實作後補充
+	// 屬性抗性減傷（Java: resist → resistFloor → attrDeffence）
+	var resist int
+	switch attr {
+	case attrEarth:
+		resist = int(target.EarthRes)
+	case attrFire:
+		resist = int(target.FireRes)
+	case attrWater:
+		resist = int(target.WaterRes)
+	case attrWind:
+		resist = int(target.WindRes)
+	}
+	if resist != 0 {
+		resistFloor := int(0.16 * math.Abs(float64(resist)))
+		if resist < 0 {
+			resistFloor = -resistFloor
+		}
+		attrDefence := float64(resistFloor) / 32.0
+		dmg *= (1.0 - attrDefence)
+	}
 
 	return dmg
 }

@@ -1,0 +1,502 @@
+# NPC 定時聊天設定（來源：npcchat.sql）
+# chat_timing: 0=出現, 1=死亡, 2=隱身解除, 3=遊戲時間, 4=被攻擊
+chats:
+  - npc_id: 45264
+    chat_timing: 2
+    note: "哈維(空降時)"
+    start_delay_time: 0
+    chat_id1: "$994"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45458
+    chat_timing: 1
+    note: "德雷克(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3603"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45464
+    chat_timing: 0
+    note: "西瑪(出現時)"
+    start_delay_time: 15000
+    chat_id1: "$342"
+    chat_interval: 0
+    is_shout: true
+    is_world_chat: false
+    is_repeat: true
+    repeat_interval: 20000
+
+  - npc_id: 45473
+    chat_timing: 0
+    note: "巴土瑟(出現時)"
+    start_delay_time: 0
+    chat_id1: "$339"
+    chat_interval: 0
+    is_shout: true
+    is_world_chat: false
+    is_repeat: true
+    repeat_interval: 20000
+
+  - npc_id: 45488
+    chat_timing: 0
+    note: "卡士伯(出現時)"
+    start_delay_time: 5000
+    chat_id1: "$340"
+    chat_interval: 0
+    is_shout: true
+    is_world_chat: false
+    is_repeat: true
+    repeat_interval: 20000
+
+  - npc_id: 45492
+    chat_timing: 1
+    note: "庫曼(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3943"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45497
+    chat_timing: 0
+    note: "馬庫爾(出現時)"
+    start_delay_time: 10000
+    chat_id1: "$341"
+    chat_interval: 0
+    is_shout: true
+    is_world_chat: false
+    is_repeat: true
+    repeat_interval: 20000
+
+  - npc_id: 45545
+    chat_timing: 0
+    note: "黑長者(出現時)"
+    start_delay_time: 0
+    chat_id1: "$993"
+    chat_interval: 0
+    is_shout: true
+    is_world_chat: false
+    is_repeat: true
+    repeat_interval: 10000
+
+  - npc_id: 45545
+    chat_timing: 1
+    note: "黑長者(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$995"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45548
+    chat_timing: 1
+    note: "豪勢(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$4030"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45573
+    chat_timing: 0
+    note: "巴風特(出現時)"
+    start_delay_time: 0
+    chat_id1: "$825"
+    chat_interval: 0
+    is_shout: true
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45574
+    chat_timing: 1
+    note: "親衛隊長．凱特(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3938"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45577
+    chat_timing: 1
+    note: "突擊旅長．闇黑劍士(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3892"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45585
+    chat_timing: 1
+    note: "暗殺團長．布雷哲(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3939"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45588
+    chat_timing: 1
+    note: "魔獸師長．辛克萊(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3901"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45600
+    chat_timing: 0
+    note: "克特(出現時)"
+    start_delay_time: 0
+    chat_id1: "$275"
+    chat_id2: "$279"
+    chat_id3: "$281"
+    chat_id4: "$285"
+    chat_id5: "$287"
+    chat_interval: 5000
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45600
+    chat_timing: 1
+    note: "克特(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$302"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45602
+    chat_timing: 1
+    note: "魔法團長．卡勒米爾(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3903"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45607
+    chat_timing: 1
+    note: "魔獸團長．凱巴勒(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3900"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45608
+    chat_timing: 1
+    note: "傭兵隊長．麥帕斯托(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3930"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45612
+    chat_timing: 1
+    note: "神官長．邦妮(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3912"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45615
+    chat_timing: 1
+    note: "冥法團長．可利波斯(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3917"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45648
+    chat_timing: 1
+    note: "暗殺軍王．史雷佛(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3940"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45676
+    chat_timing: 1
+    note: "冥法軍王．海露拜(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3923"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45844
+    chat_timing: 1
+    note: "魔獸軍王．巴蘭卡(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3895"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45863
+    chat_timing: 1
+    note: "法令軍王．蕾雅(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3908"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45931
+    chat_timing: 1
+    note: "水之精靈(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$5167"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45935
+    chat_timing: 0
+    note: "受詛咒的 梅杜莎(出現時)"
+    start_delay_time: 0
+    chat_id1: "$5169"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 10000
+
+  - npc_id: 45941
+    chat_timing: 1
+    note: "受詛咒的巫女莎爾(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$5166"
+    chat_interval: 0
+    is_shout: true
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45942
+    chat_timing: 0
+    note: "受詛咒的 水精靈王(出現時)"
+    start_delay_time: 0
+    chat_id1: "$5170"
+    chat_interval: 0
+    is_shout: true
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 10000
+
+  - npc_id: 45943
+    chat_timing: 1
+    note: "卡普(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$5165"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45955
+    chat_timing: 1
+    note: "長老．琪娜(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$4625"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45959
+    chat_timing: 1
+    note: "長老．艾迪爾(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$4626"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 45963
+    chat_timing: 1
+    note: "副神官．卡山德拉(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$3888"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 46083
+    chat_timing: 0
+    note: "巡邏兵 2(出現時)"
+    start_delay_time: 0
+    chat_id1: "$5016"
+    chat_interval: 0
+    is_shout: true
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 46098
+    chat_timing: 0
+    note: "巡邏兵 2(出現時)"
+    start_delay_time: 0
+    chat_id1: "$5014"
+    chat_interval: 0
+    is_shout: true
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 46157
+    chat_timing: 1
+    note: "妖魔密使(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$6127"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 46158
+    chat_timing: 1
+    note: "妖魔密使(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$6127"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 46159
+    chat_timing: 1
+    note: "妖魔密使(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$6127"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 81175
+    chat_timing: 0
+    note: "通緝犯庫傑(出現時)"
+    start_delay_time: 0
+    chat_id1: "$5325"
+    chat_interval: 0
+    is_shout: true
+    is_world_chat: false
+    is_repeat: true
+    repeat_interval: 15000
+
+  - npc_id: 81175
+    chat_timing: 1
+    note: "通緝犯庫傑(死亡時)"
+    start_delay_time: 0
+    chat_id1: "$5327"
+    chat_interval: 0
+    is_shout: false
+    is_world_chat: false
+    is_repeat: false
+    repeat_interval: 0
+
+  - npc_id: 81307
+    chat_timing: 0
+    note: "派報少年(出現時)"
+    start_delay_time: 10000
+    chat_id1: "$8917"
+    chat_id2: "$8918"
+    chat_interval: 3000
+    is_shout: false
+    is_world_chat: false
+    is_repeat: true
+    repeat_interval: 10000
+
+  - npc_id: 81331
+    chat_timing: 0
+    note: "奇諾之監視者(出現時)"
+    start_delay_time: 0
+    chat_id1: "$5765"
+    chat_interval: 0
+    is_shout: true
+    is_world_chat: false
+    is_repeat: true
+    repeat_interval: 15000
+
+  - npc_id: 81332
+    chat_timing: 0
+    note: "被遺棄的肉身(出現時)"
+    start_delay_time: 0
+    chat_id1: "$5766"
+    chat_interval: 0
+    is_shout: true
+    is_world_chat: false
+    is_repeat: true
+    repeat_interval: 15000
+
+  - npc_id: 81333
+    chat_timing: 0
+    note: "被遺棄的肉身(出現時)"
+    start_delay_time: 0
+    chat_id1: "$5768"
+    chat_interval: 0
+    is_shout: true
+    is_world_chat: false
+    is_repeat: true
+    repeat_interval: 15000

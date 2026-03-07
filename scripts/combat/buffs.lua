@@ -145,14 +145,14 @@ BUFF_DEFS = {
     [182] = { dmg_mod = 5 },                                                  -- Burning Slash
     [183] = { ac = 5, dmg_mod = -3 },                                        -- Guard Break (debuff)
 
-    [185] = { str = 3, con = 3, hpr = 3 },                                   -- Awaken Antharas
-    [186] = { dmg_mod = 6, hit_mod = 3, ac = 5 },                            -- Blood Lust
+    [185] = { ac = -3, regist_sustain = 10, exclusions = {190, 195} },         -- Awaken Antharas（安塔瑞斯覺醒：AC-3, 持傷抗+10）
+    [186] = { dmg_mod = 6, hit_mod = 3, ac = 5, brave_speed = 1 },            -- Blood Lust（血之渴望：DMG+6, HIT+3, AC+5, 勇敢速度+1）
     [188] = { str = -5, intel = -5 },                                         -- Horror of Death (debuff)
     [189] = { ac = -5 },                                                      -- Shock Skin (+ reflect flag)
-    [190] = { intel = 3, wis = 3, mpr = 3 },                                 -- Awaken Fafurion
+    [190] = { regist_freeze = 10, exclusions = {185, 195} },                  -- Awaken Fafurion（法利昂覺醒：凍結抗+10）
     [191] = { brave_speed = 4 },                                              -- Underground Path
     [193] = { str = -1, con = -1, dex = -1, wis = -1, intel = -1 },          -- Fear (debuff)
-    [195] = { str = 5, max_hp = 100 },                                       -- Awaken Valakas
+    [195] = { hit_mod = 5, regist_stun = 10, exclusions = {185, 190} },       -- Awaken Valakas（巴拉卡斯覺醒：HIT+5, 暈眩抗+10）
 
     -- ==================== Illusionist Skills (201-220) ====================
 
@@ -172,6 +172,16 @@ BUFF_DEFS = {
     [217] = { str = -1, con = -1, dex = -1, wis = -1, intel = -1 },         -- Panic (debuff)
 
     [219] = { dmg_mod = 10, bow_dmg = 10, exclusions = {204, 209, 214} },   -- Illusion Avatar
+
+    -- ==================== Dragon Eye 龍之眼 (6683-6689) ====================
+
+    [6683] = { dmg_mod = 2, regist_stun = 3 },                               -- 火龍之眼（Valakas）
+    [6684] = { regist_stone = 3, dodge = 1 },                                 -- 地龍之眼（Antharas）
+    [6685] = { regist_freeze = 3 },                                           -- 水龍之眼（Fafurion）
+    [6686] = { regist_sleep = 3, magic_critical = 2 },                        -- 風龍之眼（Lindvior）
+    [6687] = { dmg_mod = 2, dodge = 1, magic_critical = 2 },                  -- 生命之眼（Life）
+    [6688] = { regist_blind = 3, dodge = 1 },                                 -- 誕生之眼（Birth）
+    [6689] = { regist_sustain = 3, magic_critical = 2, dodge = 1 },           -- 形象之眼（Figure）
 }
 
 ---------------------------------------------------------------------

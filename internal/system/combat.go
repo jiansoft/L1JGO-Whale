@@ -6,6 +6,7 @@ import (
 
 	"github.com/l1jgo/server/internal/core/event"
 	coresys "github.com/l1jgo/server/internal/core/system"
+	"github.com/l1jgo/server/internal/data"
 	"github.com/l1jgo/server/internal/handler"
 	"github.com/l1jgo/server/internal/scripting"
 	"github.com/l1jgo/server/internal/world"
@@ -213,6 +214,9 @@ func (s *CombatSystem) processMeleeAttack(sessID uint64, targetID int32) *handle
 		// 受傷累加仇恨（Java: L1HateList.add）
 		AddHate(npc, sessID, damage)
 
+		// 被攻擊聊天（Java: ChatTiming=UNDERATTACK，首次被攻擊時觸發）
+		StartNpcChat(npc, data.ChatTimingUnderAttack, s.deps.NpcChats)
+
 		// 廣播 HP 條更新
 		hpRatio := int16(0)
 		if npc.MaxHP > 0 {
@@ -299,6 +303,11 @@ func (s *CombatSystem) processRangedAttack(sessID uint64, targetID int32) *handl
 	}
 
 	player.Heading = CalcHeading(player.X, player.Y, npc.X, npc.Y)
+
+	// 木人特殊處理 — 遠程攻擊也只播放動畫，不造成傷害
+	if npc.Impl == "L1Scarecrow" {
+		return s.processScarecrowHit(player, npc, ws)
+	}
 
 	// 從背包找到並消耗箭矢
 	arrow := FindArrow(player, s.deps)
@@ -401,6 +410,9 @@ func (s *CombatSystem) processRangedAttack(sessID uint64, targetID int32) *handl
 		// 受傷累加仇恨
 		AddHate(npc, sessID, damage)
 
+		// 被攻擊聊天（Java: ChatTiming=UNDERATTACK，首次被攻擊時觸發）
+		StartNpcChat(npc, data.ChatTimingUnderAttack, s.deps.NpcChats)
+
 		hpRatio := int16(0)
 		if npc.MaxHP > 0 {
 			hpRatio = int16((npc.HP * 100) / npc.MaxHP)
@@ -422,6 +434,9 @@ func (s *CombatSystem) processRangedAttack(sessID uint64, targetID int32) *handl
 // 回傳 NpcKillResult 供 CombatSystem 發出事件。
 func handleNpcDeath(npc *world.NpcInfo, killer *world.PlayerInfo, nearby []*world.PlayerInfo, deps *handler.Deps) *handler.NpcKillResult {
 	npc.Dead = true
+
+	// 死亡聊天（Java: ChatTiming=DEAD）
+	StartNpcChat(npc, data.ChatTimingDead, deps.NpcChats)
 
 	// 從 NPC AOI 網格移除（死亡 NPC 不阻擋）
 	deps.World.NpcDied(npc)
@@ -496,8 +511,11 @@ func handleNpcDeath(npc *world.NpcInfo, killer *world.PlayerInfo, nearby []*worl
 	// 清空仇恨列表（防止殘留影響重生）
 	ClearHateList(npc)
 
+	// 群體隊長死亡處理（Java: L1MobGroupInfo.removeMember）
+	handleMobGroupDeath(npc)
+
 	// 設定重生計時器（ticks: delay_seconds * 5，200ms tick）
-	if npc.RespawnDelay > 0 {
+	if npc.RespawnDelay > 0 && !npc.IsMinion {
 		npc.RespawnTimer = npc.RespawnDelay * 5
 	}
 
@@ -529,6 +547,47 @@ func handleNpcDeath(npc *world.NpcInfo, killer *world.PlayerInfo, nearby []*worl
 	}
 
 	return killResult
+}
+
+// ==================== 群體死亡處理 ====================
+
+// handleMobGroupDeath 處理群體成員死亡。
+// Java: L1MobGroupInfo.removeMember — 隊長死亡時：
+//   - removeGroupOnDeath=true → 解散群體，所有隊員禁止重生
+//   - removeGroupOnDeath=false → 自動晉升下一個成員為隊長
+func handleMobGroupDeath(npc *world.NpcInfo) {
+	gi := npc.GroupInfo
+	if gi == nil {
+		return
+	}
+
+	// 從成員列表移除死者
+	for i, m := range gi.Members {
+		if m == npc {
+			gi.Members = append(gi.Members[:i], gi.Members[i+1:]...)
+			break
+		}
+	}
+	npc.GroupInfo = nil
+
+	// 不是隊長 → 單純移除即可
+	if gi.Leader != npc {
+		return
+	}
+
+	if gi.RemoveGroupOnDeath {
+		// 解散群體：所有隊員清除群體關聯、禁止重生
+		for _, m := range gi.Members {
+			m.GroupInfo = nil
+			m.IsMinion = true    // 確保不重生
+			m.RespawnDelay = 0   // 額外保險
+		}
+	} else {
+		// 自動晉升：第一個存活成員成為新隊長
+		if len(gi.Members) > 0 {
+			gi.Leader = gi.Members[0]
+		}
+	}
 }
 
 // ==================== 經驗值與升級 ====================
@@ -676,6 +735,12 @@ func (s *CombatSystem) processScarecrowHit(player *world.PlayerInfo, npc *world.
 	}
 
 	// 不扣血、不加仇恨、不檢查死亡 — 木人是不朽的
+
+	// Java: level < 5 的新手打木人可獲得少量經驗
+	if player.Level < 5 && damage > 0 {
+		addExp(player, 1, s.deps)
+	}
+
 	return nil
 }
 

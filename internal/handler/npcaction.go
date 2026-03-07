@@ -84,9 +84,19 @@ func HandleNpcAction(sess *net.Session, r *packet.Reader, deps *Deps) {
 
 	switch lowerAction {
 	case "buy":
-		handleShopBuy(sess, npc.NpcID, objID, deps)
+		if npc.Impl == "L1Cn" {
+			handleCnShopBuy(sess, npc.NpcID, objID, deps)
+		} else {
+			handleShopBuy(sess, npc.NpcID, objID, deps)
+		}
 	case "sell":
-		handleShopSell(sess, npc.NpcID, objID, deps)
+		if npc.Impl == "L1Cn" {
+			handleCnShopSell(sess, npc.NpcID, objID, deps)
+		} else {
+			handleShopSell(sess, npc.NpcID, objID, deps)
+		}
+	case "poweritem":
+		handlePowerItemList(sess, npc.NpcID, objID, deps)
 	case "buyskill":
 		openSpellShop(sess, deps)
 	case "teleporturl", "teleporturla", "teleporturlb", "teleporturlc",
@@ -209,6 +219,15 @@ func HandleNpcAction(sess *net.Session, r *packet.Reader, deps *Deps) {
 		if polyID := deps.NpcServices.GetPolyForm(lowerAction); polyID > 0 {
 			handleNpcPoly(sess, player, polyID, deps)
 			return
+		}
+
+		// 物品升級合成（火神煉化合成系統 DB 化）
+		// Java: L1UpgradeItem — 依 NPC ID + 動作字串查找升級定義
+		if deps.ItemUpgrades != nil {
+			if upg := deps.ItemUpgrades.Get(npc.NpcID, action); upg != nil {
+				handleItemUpgrade(sess, player, upg, deps)
+				return
+			}
 		}
 
 		// 火神系統配方（NPC 專屬，action = A-Z, a1-a17）
@@ -695,6 +714,13 @@ func handleYesNoResponse(sess *net.Session, player *world.PlayerInfo, accepted b
 	switch msgType {
 	case 252: // Trade confirmation
 		handleTradeYesNo(sess, player, data, accepted, deps)
+	case 729: // Call Clan（呼喚盟友）— 玩家接受盟主呼喚後傳送到盟主位置
+		if accepted {
+			caller := deps.World.GetByCharID(data)
+			if caller != nil && caller.ClanID == player.ClanID {
+				TeleportPlayer(sess, player, caller.X, caller.Y, caller.MapID, 5, deps)
+			}
+		}
 	}
 }
 
@@ -1440,5 +1466,151 @@ func handleSlotNpc(sess *net.Session, player *world.PlayerInfo, npcObjID int32, 
 		player.PendingYesNoType = 3590
 		player.PendingYesNoData = 85
 		sendYesNoDialog(sess, 3590)
+	}
+}
+
+// ---------- 物品升級合成系統 ----------
+
+// handleItemUpgrade 處理物品升級合成。
+// Java: L1UpgradeItem — 驗證材料 → 消耗 → 機率判定 → 給予/刪除/失敗。
+func handleItemUpgrade(sess *net.Session, player *world.PlayerInfo, upg *data.ItemUpgrade, deps *Deps) {
+	// 1. 驗證主物品
+	mainItem := player.Inv.FindByItemID(upg.MainItemID)
+	if mainItem == nil || mainItem.Count < upg.MainItemCount {
+		SendSystemMessage(sess, "缺少必要的主要材料。")
+		return
+	}
+
+	// 2. 驗證需求材料
+	for i, needID := range upg.NeedItemIDs {
+		if i >= len(upg.NeedCounts) {
+			break
+		}
+		needItem := player.Inv.FindByItemID(needID)
+		if needItem == nil || needItem.Count < upg.NeedCounts[i] {
+			SendSystemMessage(sess, "缺少必要的材料。")
+			return
+		}
+	}
+
+	// 3. 計算加成材料機率
+	bonusChance := 0
+	plusItems := make([]*world.InvItem, 0) // 持有的加成材料
+	for i, plusID := range upg.PlusItemIDs {
+		if i >= len(upg.PlusCounts) || i >= len(upg.PlusAddChance) {
+			break
+		}
+		pi := player.Inv.FindByItemID(plusID)
+		if pi != nil && pi.Count >= upg.PlusCounts[i] {
+			bonusChance += upg.PlusAddChance[i]
+			plusItems = append(plusItems, pi)
+		}
+	}
+
+	// 4. 消耗主物品
+	removed := player.Inv.RemoveItem(mainItem.ObjectID, upg.MainItemCount)
+	if removed {
+		sendRemoveInventoryItem(sess, mainItem.ObjectID)
+	} else {
+		sendItemCountUpdate(sess, mainItem)
+	}
+
+	// 5. 消耗需求材料
+	for i, needID := range upg.NeedItemIDs {
+		if i >= len(upg.NeedCounts) {
+			break
+		}
+		needItem := player.Inv.FindByItemID(needID)
+		if needItem == nil {
+			continue
+		}
+		r := player.Inv.RemoveItem(needItem.ObjectID, upg.NeedCounts[i])
+		if r {
+			sendRemoveInventoryItem(sess, needItem.ObjectID)
+		} else {
+			sendItemCountUpdate(sess, needItem)
+		}
+	}
+
+	// 6. 消耗加成材料
+	for i, pi := range plusItems {
+		if i >= len(upg.PlusCounts) {
+			break
+		}
+		r := player.Inv.RemoveItem(pi.ObjectID, upg.PlusCounts[i])
+		if r {
+			sendRemoveInventoryItem(sess, pi.ObjectID)
+		} else {
+			sendItemCountUpdate(sess, pi)
+		}
+	}
+
+	player.Dirty = true
+
+	// 7. 機率判定
+	totalChance := upg.UpgradeChance + bonusChance
+	roll := rand.Intn(100)
+	if roll < totalChance {
+		// 成功 → 給予新物品
+		upgradeSuccess(sess, player, upg, deps)
+	} else {
+		// 失敗 → 判定是否刪除（原物品已消耗）
+		if upg.DeleteChance > 0 && rand.Intn(100) < upg.DeleteChance {
+			upgradeDelete(sess, player, upg, deps)
+		} else {
+			upgradeFailure(sess, player, upg, deps)
+		}
+	}
+}
+
+// upgradeSuccess 升級成功：給予新物品 + 顯示成功 HTML。
+func upgradeSuccess(sess *net.Session, player *world.PlayerInfo, upg *data.ItemUpgrade, deps *Deps) {
+	if upg.NewItemID > 0 {
+		itemInfo := deps.Items.Get(upg.NewItemID)
+		if itemInfo != nil {
+			stackable := itemInfo.Stackable || upg.NewItemID == world.AdenaItemID
+			existing := player.Inv.FindByItemID(upg.NewItemID)
+			wasExisting := existing != nil && stackable
+
+			invItem := player.Inv.AddItem(upg.NewItemID, 1, itemInfo.Name, itemInfo.InvGfx,
+				itemInfo.Weight, stackable, byte(itemInfo.Bless))
+			invItem.UseType = itemInfo.UseTypeID
+			invItem.Identified = true
+
+			if wasExisting {
+				sendItemCountUpdate(sess, invItem)
+			} else {
+				sendAddItem(sess, invItem)
+			}
+			sendWeightUpdate(sess, player)
+		}
+	}
+
+	if upg.SuccessHTML != "" {
+		sendHypertext(sess, 0, upg.SuccessHTML)
+	} else {
+		SendSystemMessage(sess, "升級成功！")
+	}
+}
+
+// upgradeFailure 升級失敗（不刪除）：顯示失敗 HTML。
+func upgradeFailure(sess *net.Session, player *world.PlayerInfo, upg *data.ItemUpgrade, deps *Deps) {
+	_ = player // 保留參數方便未來擴充
+	_ = deps
+	if upg.FailureHTML != "" {
+		sendHypertext(sess, 0, upg.FailureHTML)
+	} else {
+		SendSystemMessage(sess, "升級失敗，材料已消耗。")
+	}
+}
+
+// upgradeDelete 升級大失敗（刪除原物品）：顯示刪除 HTML。
+func upgradeDelete(sess *net.Session, player *world.PlayerInfo, upg *data.ItemUpgrade, deps *Deps) {
+	_ = player
+	_ = deps
+	if upg.DeleteHTML != "" {
+		sendHypertext(sess, 0, upg.DeleteHTML)
+	} else {
+		SendSystemMessage(sess, "升級失敗，材料已被破壞。")
 	}
 }

@@ -1,6 +1,7 @@
 package system
 
 import (
+	"math/rand"
 	"time"
 
 	coresys "github.com/l1jgo/server/internal/core/system"
@@ -15,10 +16,11 @@ import (
 type NpcRespawnSystem struct {
 	world *world.State
 	maps  *data.MapDataTable
+	deps  *handler.Deps
 }
 
-func NewNpcRespawnSystem(ws *world.State, maps *data.MapDataTable) *NpcRespawnSystem {
-	return &NpcRespawnSystem{world: ws, maps: maps}
+func NewNpcRespawnSystem(ws *world.State, maps *data.MapDataTable, deps *handler.Deps) *NpcRespawnSystem {
+	return &NpcRespawnSystem{world: ws, maps: maps, deps: deps}
 }
 
 func (s *NpcRespawnSystem) Phase() coresys.Phase { return coresys.PhaseUpdate }
@@ -89,6 +91,11 @@ func (s *NpcRespawnSystem) respawnNpc(npc *world.NpcInfo) {
 	npc.PoisonDmgTimer = 0
 	npc.PoisonAttackerSID = 0
 
+	// 重置聊天計時器（重生後重新觸發出現聊天）
+	StopNpcChat(npc)
+	npc.ChatFirstAttack = false
+	npc.ChatAppearStarted = false
+
 	// Set tile as blocked (map passability for NPC pathfinding)
 	if s.maps != nil {
 		s.maps.SetImpassable(npc.MapID, npc.X, npc.Y, true)
@@ -102,4 +109,108 @@ func (s *NpcRespawnSystem) respawnNpc(npc *world.NpcInfo) {
 	for _, viewer := range nearby {
 		sendNpcPack(viewer.Session, npc)
 	}
+
+	// 群體隊長重生：重新生成隊員（Java: L1MobGroupSpawn.doSpawn）
+	if npc.MobGroupID > 0 && s.deps.MobGroups != nil && s.deps.Npcs != nil {
+		group := s.deps.MobGroups.Get(npc.MobGroupID)
+		if group != nil {
+			s.respawnMobGroup(npc, group)
+		}
+	}
+}
+
+// respawnMobGroup 隊長重生時重新生成群體隊員。
+func (s *NpcRespawnSystem) respawnMobGroup(leader *world.NpcInfo, group *data.MobGroup) {
+	groupInfo := &world.MobGroupInfo{
+		Leader:             leader,
+		Members:            []*world.NpcInfo{leader},
+		RemoveGroupOnDeath: group.RemoveGroupIfLeaderDie,
+	}
+	leader.GroupInfo = groupInfo
+
+	for _, minion := range group.Minions {
+		if minion.NpcID == 0 || minion.Count == 0 {
+			continue
+		}
+		mTmpl := s.deps.Npcs.Get(minion.NpcID)
+		if mTmpl == nil {
+			continue
+		}
+		for j := 0; j < minion.Count; j++ {
+			mx := leader.X + int32(rand.Intn(5)) - 2
+			my := leader.Y + int32(rand.Intn(5)) - 2
+
+			mob := s.createMinion(mTmpl, mx, my, leader)
+			s.world.AddNpc(mob)
+			if s.maps != nil {
+				s.maps.SetImpassable(mob.MapID, mob.X, mob.Y, true)
+			}
+			groupInfo.Members = append(groupInfo.Members, mob)
+
+			// 通知附近玩家
+			nearby := s.world.GetNearbyPlayersAt(mob.X, mob.Y, mob.MapID)
+			for _, viewer := range nearby {
+				sendNpcPack(viewer.Session, mob)
+			}
+		}
+	}
+}
+
+// createMinion 從模板建立隊員 NPC。
+func (s *NpcRespawnSystem) createMinion(tmpl *data.NpcTemplate, x, y int32, leader *world.NpcInfo) *world.NpcInfo {
+	atkSpeed := tmpl.AtkSpeed
+	moveSpeed := tmpl.PassiveSpeed
+	if s.deps.SprTable != nil {
+		gfx := int(tmpl.GfxID)
+		if tmpl.AtkSpeed != 0 {
+			if v := s.deps.SprTable.GetAttackSpeed(gfx, data.ActAttack); v > 0 {
+				atkSpeed = int16(v)
+			}
+		}
+		if tmpl.PassiveSpeed != 0 {
+			if v := s.deps.SprTable.GetMoveSpeed(gfx, data.ActWalk); v > 0 {
+				moveSpeed = int16(v)
+			}
+		}
+	}
+	mob := &world.NpcInfo{
+		ID:           world.NextNpcID(),
+		NpcID:        tmpl.NpcID,
+		Impl:         tmpl.Impl,
+		GfxID:        tmpl.GfxID,
+		Name:         tmpl.Name,
+		NameID:       tmpl.NameID,
+		Level:        tmpl.Level,
+		X:            x,
+		Y:            y,
+		MapID:        leader.MapID,
+		Heading:      leader.Heading,
+		HP:           tmpl.HP,
+		MaxHP:        tmpl.HP,
+		MP:           tmpl.MP,
+		MaxMP:        tmpl.MP,
+		AC:           tmpl.AC,
+		STR:          tmpl.STR,
+		DEX:          tmpl.DEX,
+		Exp:          tmpl.Exp,
+		Lawful:       tmpl.Lawful,
+		Size:         tmpl.Size,
+		MR:           tmpl.MR,
+		Undead:       tmpl.Undead,
+		Agro:         tmpl.Agro,
+		AtkDmg:       int32(tmpl.Level) + int32(tmpl.STR)/3,
+		Ranged:       tmpl.Ranged,
+		AtkSpeed:     atkSpeed,
+		MoveSpeed:    moveSpeed,
+		PoisonAtk:    tmpl.PoisonAtk,
+		FireRes:      tmpl.FireRes,
+		WaterRes:     tmpl.WaterRes,
+		WindRes:      tmpl.WindRes,
+		EarthRes:     tmpl.EarthRes,
+		SpawnX:       leader.SpawnX,
+		SpawnY:       leader.SpawnY,
+		SpawnMapID:   leader.SpawnMapID,
+		IsMinion:     true,
+	}
+	return mob
 }

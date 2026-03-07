@@ -416,6 +416,13 @@ type Deps struct {
 	WeaponSkills  *data.WeaponSkillTable
 	FireCrystals  *data.FireCrystalTable
 	Ranking       RankingChecker // filled after RankingSystem is created
+	ItemBoxes     *data.ItemBoxTable
+	ItemUpgrades  *data.ItemUpgradeTable
+	ItemVIPs      *data.ItemVIPTable
+	NpcChats      *data.NpcChatTable
+	MobGroups     *data.MobGroupTable
+	ShopCn        *data.ShopCnTable
+	PowerItems    *data.PowerItemTable
 }
 
 // RegisterAll registers all packet handlers into the registry.
@@ -591,6 +598,17 @@ func RegisterAll(reg *packet.Registry, deps *Deps) {
 	reg.Register(packet.C_OPCODE_PERSONAL_SHOP, inWorldStates,
 		func(sess any, r *packet.Reader) {
 			HandleSelectList(sess.(*net.Session), r, deps)
+		},
+	)
+	// 個人商店（擺攤）
+	reg.Register(packet.C_OPCODE_SHOP, inWorldStates,
+		func(sess any, r *packet.Reader) {
+			HandleShop(sess.(*net.Session), r, deps)
+		},
+	)
+	reg.Register(packet.C_OPCODE_QUERY_PERSONAL_SHOP, inWorldStates,
+		func(sess any, r *packet.Reader) {
+			HandleQueryPrivateShop(sess.(*net.Session), r, deps)
 		},
 	)
 	// Ship transport

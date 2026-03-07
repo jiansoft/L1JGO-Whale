@@ -47,12 +47,17 @@ type NpcInfo struct {
 	AtkSpeed   int16 // attack animation speed (ms, 0 = default)
 	MoveSpeed  int16 // passive/move speed (ms, 0 = default)
 	PoisonAtk  byte  // 怪物施毒能力（從模板載入）: 0=無, 1=傷害毒, 2=沉默毒, 4=麻痺毒
+	FireRes    int16 // 火抗
+	WaterRes   int16 // 水抗
+	WindRes    int16 // 風抗
+	EarthRes   int16 // 地抗
 
 	// Spawn data for respawning
 	SpawnX       int32
 	SpawnY       int32
 	SpawnMapID   int16
-	RespawnDelay int // seconds
+	RespawnDelay int   // seconds
+	MobGroupID   int32 // 群體 ID（隊長記憶，重生時重新建立群體）
 
 	// State
 	Dead         bool
@@ -80,6 +85,28 @@ type NpcInfo struct {
 	PoisonDmgAmt      int32  // 每次扣血量（0=無毒）
 	PoisonDmgTimer    int    // 距下次扣血的 tick 計數（每 15 tick 扣一次）
 	PoisonAttackerSID uint64 // 施毒者 SessionID（仇恨歸屬用）
+
+	// NPC 聊天計時器（Java: L1NpcChatTimer）
+	ChatTiming        int    // 目前啟用的聊天時機（0=出現, 1=死亡, 4=被攻擊）
+	ChatDelayTicks    int    // 首次延遲剩餘 ticks（0=已開始）
+	ChatStep          int    // 目前播放到第幾個 chatId (0-based)
+	ChatIntervalTicks int    // 對話間隔剩餘 ticks
+	ChatRepeatTicks   int    // 重複間隔剩餘 ticks
+	ChatActive        bool   // 聊天計時器是否啟用
+	ChatFirstAttack   bool   // 是否已觸發過首次被攻擊聊天
+	ChatAppearStarted bool   // 是否已嘗試過出現聊天（防重複啟動）
+
+	// 怪物群體系統（Java: L1MobGroupInfo）
+	GroupInfo    *MobGroupInfo // 所屬群體資訊（nil=不屬於任何群體）
+	IsMinion     bool          // true=隊員（不獨立重生）
+}
+
+// MobGroupInfo 怪物群體運行時狀態。
+// Java: L1MobGroupInfo — 記錄群體成員、隊長、解散規則。
+type MobGroupInfo struct {
+	Leader               *NpcInfo   // 隊長 NPC
+	Members              []*NpcInfo // 所有成員（含隊長）
+	RemoveGroupOnDeath   bool       // 隊長死亡時是否解散群體
 }
 
 // HasDebuff 檢查 NPC 是否有指定 debuff。

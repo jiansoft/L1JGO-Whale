@@ -84,6 +84,8 @@ const (
 	S_OPCODE_BOARD                  byte = 68  // S_Board (bulletin board post list)
 	S_OPCODE_BOARDREAD              byte = 148 // S_BoardRead (bulletin board post content)
 	S_OPCODE_MAIL                   byte = 186 // S_Mail (mail system)
+	S_OPCODE_NPCSHOUT               byte = 161 // S_NpcChat / S_NpcChatShouting / S_SystemMessage（NPC 聊天 type=0/2/3）
+	S_OPCODE_PRIVATESHOPLIST        byte = 140 // S_PrivateShop（個人商店商品清單）
 )
 
 // ---------- Client Opcodes (V381) ----------
@@ -110,6 +112,7 @@ const (
 	C_OPCODE_LEAVE_PARTY             byte = 33
 	C_OPCODE_DIALOG                  byte = 34
 	C_OPCODE_ADD_XCHG                byte = 37
+	C_OPCODE_SHOP                    byte = 38  // C_Shop — 開設/取消個人商店
 	C_OPCODE_BUY_SPELL               byte = 39
 	C_OPCODE_CHAT                    byte = 40
 	C_OPCODE_OPEN                    byte = 41

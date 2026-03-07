@@ -109,6 +109,8 @@ func HandleGMCommand(sess *net.Session, player *world.PlayerInfo, text string, d
 		gmSlotExpand(sess, args)
 	case "slotexpand2":
 		gmSlotExpand2(sess, args)
+	case "time":
+		gmTime(sess, player, args, deps)
 	default:
 		gmMsg(sess, "\\f3未知的GM指令: ."+cmd+"  輸入 .help 查看指令列表")
 	}
@@ -620,6 +622,10 @@ func gmSpawn(sess *net.Session, player *world.PlayerInfo, args []string, deps *D
 			AtkSpeed:     atkSpeed,
 			MoveSpeed:    moveSpeed,
 			PoisonAtk:    tmpl.PoisonAtk,
+			FireRes:      tmpl.FireRes,
+			WaterRes:     tmpl.WaterRes,
+			WindRes:      tmpl.WindRes,
+			EarthRes:     tmpl.EarthRes,
 			SpawnX:       x,
 			SpawnY:       y,
 			SpawnMapID:   player.MapID,
@@ -1243,6 +1249,39 @@ func gmClearWall(sess *net.Session, player *world.PlayerInfo, deps *Deps) {
 	gmMsgf(sess, "已清除 %d 個測試牆壁", removed)
 }
 
+// gmTime 顯示或設定遊戲時間。
+// 用法: .time          — 查看當前遊戲時間
+//
+//	.time set <小時>  — 強制設定遊戲時間（0-23）
+func gmTime(sess *net.Session, _ *world.PlayerInfo, args []string, deps *Deps) {
+	if len(args) >= 2 && strings.ToLower(args[0]) == "set" {
+		hour, err := strconv.Atoi(args[1])
+		if err != nil || hour < 0 || hour > 23 {
+			gmMsg(sess, "\\f3用法: .time set <0-23>")
+			return
+		}
+		world.SetGameTimeOffset(hour)
+		// 廣播新的 S_GameTime 給所有在線玩家
+		gt := world.GameTimeNow()
+		deps.World.AllPlayers(func(p *world.PlayerInfo) {
+			sendGameTime(p.Session, gt.Seconds())
+		})
+		dayNight := "白天"
+		if gt.IsNight() {
+			dayNight = "夜晚"
+		}
+		gmMsgf(sess, "遊戲時間已設為 %02d:%02d (%s)", gt.Hour(), gt.Minute(), dayNight)
+		return
+	}
+
+	gt := world.GameTimeNow()
+	dayNight := "白天"
+	if gt.IsNight() {
+		dayNight = "夜晚"
+	}
+	gmMsgf(sess, "遊戲時間: %02d:%02d (%s)", gt.Hour(), gt.Minute(), dayNight)
+}
+
 func gmWeather(sess *net.Session, _ *world.PlayerInfo, args []string, deps *Deps) {
 	if len(args) < 1 {
 		gmMsg(sess, ".weather <0-3, 17-19>  (0=clear, 1-3=snow, 17-19=rain)")
@@ -1384,6 +1423,10 @@ func gmStressTest(sess *net.Session, player *world.PlayerInfo, args []string, de
 			AtkSpeed:     atkSpeed,
 			MoveSpeed:    moveSpeed,
 			PoisonAtk:    tmpl.PoisonAtk,
+			FireRes:      tmpl.FireRes,
+			WaterRes:     tmpl.WaterRes,
+			WindRes:      tmpl.WindRes,
+			EarthRes:     tmpl.EarthRes,
 			SpawnX:       x,
 			SpawnY:       y,
 			SpawnMapID:   player.MapID,

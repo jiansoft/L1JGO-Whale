@@ -64,6 +64,12 @@ type InvItem struct {
 	DmgMagicExpiry int   // ticks remaining (0 = no effect)
 	AcByMagic      int16 // AC bonus from BLESSED_ARMOR (skill 21), typically 3 (applied as -3 AC)
 	AcMagicExpiry  int   // ticks remaining (0 = no effect)
+
+	// 元素屬性強化（Java: L1ItemInstance.attrEnchantKind / attrEnchantLevel）
+	// Kind: 0=無, 1=地, 2=火, 4=水, 8=風
+	// Level: 0-5（強化階段）
+	AttrEnchantKind  int8
+	AttrEnchantLevel int8
 }
 
 // Inventory holds a player's in-memory item list.

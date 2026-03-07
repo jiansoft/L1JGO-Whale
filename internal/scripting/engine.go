@@ -350,6 +350,10 @@ type BuffEffect struct {
 	BowHit, BowDmg                      int
 	Dodge                               int
 	FireRes, WaterRes, WindRes, EarthRes int
+	RegistSustain, RegistFreeze         int
+	RegistStun, RegistStone             int
+	RegistBlind, RegistSleep            int
+	MagicCritical                       int
 	Exclusions                          []int
 	MoveSpeed                           int  // 1=haste, 2=slow
 	BraveSpeed                          int  // 4=brave/holy walk
@@ -405,7 +409,14 @@ func (e *Engine) GetBuffEffect(skillID, targetLevel int) *BuffEffect {
 		MPR:        lInt(rt, "mpr"),
 		BowHit:     lInt(rt, "bow_hit"),
 		BowDmg:     lInt(rt, "bow_dmg"),
-		Dodge:      lInt(rt, "dodge"),
+		Dodge:         lInt(rt, "dodge"),
+		RegistSustain: lInt(rt, "regist_sustain"),
+		RegistFreeze:  lInt(rt, "regist_freeze"),
+		RegistStun:    lInt(rt, "regist_stun"),
+		RegistStone:   lInt(rt, "regist_stone"),
+		RegistBlind:   lInt(rt, "regist_blind"),
+		RegistSleep:   lInt(rt, "regist_sleep"),
+		MagicCritical: lInt(rt, "magic_critical"),
 		FireRes:    lInt(rt, "fire_res"),
 		WaterRes:   lInt(rt, "water_res"),
 		WindRes:    lInt(rt, "wind_res"),
@@ -841,12 +852,18 @@ func (e *Engine) CalcEnchant(ctx EnchantContext) EnchantResult {
 // MobSkillEntry holds a single mob skill passed into AI context.
 type MobSkillEntry struct {
 	SkillID       int
+	Type          int // 1=物理, 2=魔法, 3=召喚
 	MpConsume     int
 	TriggerRandom int
 	TriggerHP     int
 	TriggerRange  int
 	ActID         int
-	GfxID         int // mob-specific override for spell effect (0 = use skill's CastGfx)
+	GfxID         int   // mob-specific override for spell effect (0 = use skill's CastGfx)
+	Leverage      int   // 物理技能傷害倍率（type 1 用，damage = STR * leverage / 10）
+	ChangeTarget  int   // 0=攻擊目標, 1=不變, 2=自己, 3=隨機
+	SummonID      int32 // 召喚 NPC ID（type 3 用）
+	SummonMin     int   // 召喚最小數量
+	SummonMax     int   // 召喚最大數量
 }
 
 // AIContext holds pre-packed data for NPC AI decisions.
@@ -885,11 +902,16 @@ type AIContext struct {
 
 // AICommand is a single action returned by Lua AI.
 type AICommand struct {
-	Type    string // "attack", "ranged_attack", "skill", "move_toward", "wander", "lose_aggro", "idle"
-	SkillID int
-	ActID   int
-	GfxID   int // mob-specific spell effect override (0 = use skill's CastGfx)
-	Dir     int // heading 0-7 for wander (-1 = continue current)
+	Type         string // "attack", "ranged_attack", "skill", "move_toward", "wander", "lose_aggro", "idle", "flee", "summon"
+	SkillID      int
+	ActID        int
+	GfxID        int   // mob-specific spell effect override (0 = use skill's CastGfx)
+	Leverage     int   // 物理技能傷害倍率（type 1 用）
+	Dir          int   // heading 0-7 for wander (-1 = continue current)
+	ChangeTarget int   // 0/1=攻擊目標, 2=自己
+	SummonID     int32 // 召喚 NPC ID
+	SummonMin    int
+	SummonMax    int
 }
 
 // RunNpcAI calls Lua npc_ai(ctx) and returns a list of commands.
@@ -952,6 +974,12 @@ func (e *Engine) RunNpcAI(ctx AIContext) []AICommand {
 		row.RawSetString("trigger_range", lua.LNumber(sk.TriggerRange))
 		row.RawSetString("act_id", lua.LNumber(sk.ActID))
 		row.RawSetString("gfx_id", lua.LNumber(sk.GfxID))
+		row.RawSetString("leverage", lua.LNumber(sk.Leverage))
+		row.RawSetString("type", lua.LNumber(sk.Type))
+		row.RawSetString("change_target", lua.LNumber(sk.ChangeTarget))
+		row.RawSetString("summon_id", lua.LNumber(sk.SummonID))
+		row.RawSetString("summon_min", lua.LNumber(sk.SummonMin))
+		row.RawSetString("summon_max", lua.LNumber(sk.SummonMax))
 		skillsTbl.RawSetInt(i+1, row)
 	}
 	t.RawSetString("skills", skillsTbl)
@@ -978,11 +1006,16 @@ func (e *Engine) RunNpcAI(ctx AIContext) []AICommand {
 	rt.ForEach(func(_, v lua.LValue) {
 		if row, ok := v.(*lua.LTable); ok {
 			cmds = append(cmds, AICommand{
-				Type:    lStr(row, "type"),
-				SkillID: lInt(row, "skill_id"),
-				ActID:   lInt(row, "act_id"),
-				GfxID:   lInt(row, "gfx_id"),
-				Dir:     lInt(row, "dir"),
+				Type:         lStr(row, "type"),
+				SkillID:      lInt(row, "skill_id"),
+				ActID:        lInt(row, "act_id"),
+				GfxID:        lInt(row, "gfx_id"),
+				Leverage:     lInt(row, "leverage"),
+				Dir:          lInt(row, "dir"),
+				ChangeTarget: lInt(row, "change_target"),
+				SummonID:     int32(lInt(row, "summon_id")),
+				SummonMin:    lInt(row, "summon_min"),
+				SummonMax:    lInt(row, "summon_max"),
 			})
 		}
 	})

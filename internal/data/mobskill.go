@@ -9,17 +9,21 @@ import (
 
 // MobSkill represents a single skill entry for an NPC.
 type MobSkill struct {
-	ActNo         int `yaml:"act_no"`
-	Type          int `yaml:"type"`
-	MpConsume     int `yaml:"mp_consume"`
-	TriggerRandom int `yaml:"trigger_random"` // probability 0-100
-	TriggerHP     int `yaml:"trigger_hp"`     // HP% threshold (0 = always)
-	TriggerRange  int `yaml:"trigger_range"`  // negative = within N tiles
-	SkillID       int `yaml:"skill_id"`
-	ActID         int `yaml:"act_id"`         // animation GFX
-	Leverage      int `yaml:"leverage"`       // damage multiplier (0 = use skill damage)
-	GfxID         int `yaml:"gfx_id"`
-	SkillArea     int `yaml:"skill_area"`
+	ActNo         int   `yaml:"act_no"`
+	Type          int   `yaml:"type"`           // 1=物理, 2=魔法, 3=召喚
+	MpConsume     int   `yaml:"mp_consume"`
+	TriggerRandom int   `yaml:"trigger_random"` // probability 0-100
+	TriggerHP     int   `yaml:"trigger_hp"`     // HP% threshold (0 = always)
+	TriggerRange  int   `yaml:"trigger_range"`  // negative = within N tiles
+	SkillID       int   `yaml:"skill_id"`
+	ActID         int   `yaml:"act_id"`         // animation GFX
+	Leverage      int   `yaml:"leverage"`       // damage multiplier (0 = use skill damage)
+	GfxID         int   `yaml:"gfx_id"`
+	SkillArea     int   `yaml:"skill_area"`
+	ChangeTarget  int   `yaml:"change_target"`  // 0=攻擊目標, 2=自己, 3=隨機
+	SummonID      int32 `yaml:"summon_id"`      // 召喚 NPC ID（type 3 用）
+	SummonMin     int   `yaml:"summon_min"`     // 召喚最小數量
+	SummonMax     int   `yaml:"summon_max"`     // 召喚最大數量
 }
 
 type mobSkillEntry struct {

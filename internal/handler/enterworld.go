@@ -279,6 +279,10 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 	// --- 恢復 buff 圖示（必須在所有初始化封包之後）---
 	sendRestoredBuffIcons(player, deps)
 
+	// 光源（Java C_LoginToServer: pc.turnOnOffLight()）
+	player.LightSize = CalcPlayerLight(player)
+	sendLight(sess, player.CharID, player.LightSize)
+
 	// S_GameTime — 最後發送，避免干擾客戶端初始化
 	sendGameTime(sess, world.GameTimeNow().Seconds())
 }
@@ -324,6 +328,8 @@ func loadInventoryFromDB(player *world.PlayerInfo, deps *Deps) {
 				invItem.Identified = row.Identified
 				invItem.UseType = itemInfo.UseTypeID
 				invItem.Durability = int8(row.Durability)
+				invItem.AttrEnchantKind = int8(row.AttrEnchantKind)
+				invItem.AttrEnchantLevel = int8(row.AttrEnchantLevel)
 				if row.Equipped && row.EquipSlot > 0 {
 					invItem.Equipped = true
 					slot := world.EquipSlot(row.EquipSlot)

@@ -28,6 +28,13 @@ end
 
 -- AI logic when NPC has a target
 function ai_with_target(ctx)
+    -- 非戰鬥 NPC（鹿/兔等）：無攻擊力 + 有移動力 + 低等級 → 逃跑
+    if ctx.atk_speed == 0 and ctx.move_speed > 0 and ctx.level <= 90 then
+        if ctx.target_dist > 17 then return {{ type = "lose_aggro" }} end
+        if ctx.can_move then return {{ type = "flee" }} end
+        return {{ type = "idle" }}
+    end
+
     -- Target too far: lose aggro
     if ctx.target_dist > 15 then
         return {{ type = "lose_aggro" }}
@@ -97,7 +104,8 @@ function try_use_skill(ctx)
         end
 
         -- Range check (trigger_range is negative: within abs(trigger_range) tiles)
-        if ok then
+        -- change_target == 2（自我施法）跳過距離檢查
+        if ok and (sk.change_target or 0) ~= 2 then
             local sk_range = math.abs(sk.trigger_range)
             if sk_range > 0 and ctx.target_dist > sk_range then
                 ok = false
@@ -116,11 +124,25 @@ function try_use_skill(ctx)
 
         -- Passed all checks
         if ok then
+            -- type 3 = 召喚技能
+            if sk.type == 3 and sk.summon_id > 0 then
+                return {
+                    type = "summon",
+                    skill_id = sk.skill_id,
+                    gfx_id = sk.gfx_id,
+                    summon_id = sk.summon_id,
+                    summon_min = sk.summon_min,
+                    summon_max = sk.summon_max,
+                }
+            end
+
             return {
                 type = "skill",
                 skill_id = sk.skill_id,
                 act_id = sk.act_id,
                 gfx_id = sk.gfx_id,
+                leverage = sk.leverage or 0,
+                change_target = sk.change_target or 0,
             }
         end
     end

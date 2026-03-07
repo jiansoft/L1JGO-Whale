@@ -151,6 +151,25 @@ type ItemInfo struct {
 	AddSP  int
 	MDef   int
 
+	// Element resistance (weapon + armor)
+	DefFire  int
+	DefWater int
+	DefWind  int
+	DefEarth int
+
+	// Status resistance (weapon + armor)
+	RegistStun    int
+	RegistStone   int
+	RegistSleep   int
+	RegistFreeze  int
+	RegistSustain int
+	RegistBlind   int
+
+	// Special combat (weapon + armor)
+	DmgReduction   int // 傷害減免
+	DoubleDmgChance int // 雙擊率
+	Greater        int // 飾品加成類型 (0=耐性, 1=熱情, 2=意志)
+
 	// Meta
 	SafeEnchant int
 	Bless       int
@@ -259,6 +278,17 @@ type weaponEntry struct {
 	AddMPR          int    `yaml:"add_mpr"`
 	AddSP           int    `yaml:"add_sp"`
 	MDef            int    `yaml:"m_def"`
+	DefFire         int    `yaml:"defense_fire"`
+	DefWater        int    `yaml:"defense_water"`
+	DefWind         int    `yaml:"defense_wind"`
+	DefEarth        int    `yaml:"defense_earth"`
+	RegistStun      int    `yaml:"regist_stun"`
+	RegistStone     int    `yaml:"regist_stone"`
+	RegistSleep     int    `yaml:"regist_sleep"`
+	RegistFreeze    int    `yaml:"regist_freeze"`
+	RegistSustain   int    `yaml:"regist_sustain"`
+	RegistBlind     int    `yaml:"regist_blind"`
+	DoubleDmgChance int    `yaml:"double_dmg_chance"`
 	Bless           int    `yaml:"bless"`
 	Tradeable       bool   `yaml:"tradeable"`
 	MinLevel        int    `yaml:"min_level"`
@@ -320,6 +350,17 @@ func loadWeapons(t *ItemTable, path string) error {
 			AddMPR:          w.AddMPR,
 			AddSP:           w.AddSP,
 			MDef:            w.MDef,
+			DefFire:         w.DefFire,
+			DefWater:        w.DefWater,
+			DefWind:         w.DefWind,
+			DefEarth:        w.DefEarth,
+			RegistStun:      w.RegistStun,
+			RegistStone:     w.RegistStone,
+			RegistSleep:     w.RegistSleep,
+			RegistFreeze:    w.RegistFreeze,
+			RegistSustain:   w.RegistSustain,
+			RegistBlind:     w.RegistBlind,
+			DoubleDmgChance: w.DoubleDmgChance,
 		}
 	}
 	return nil
@@ -361,6 +402,19 @@ type armorEntry struct {
 	DmgModifier     int    `yaml:"dmg_modifier"`
 	BowHitModifier  int    `yaml:"bow_hit_modifier"`
 	BowDmgModifier  int    `yaml:"bow_dmg_modifier"`
+	DefFire         int    `yaml:"defense_fire"`
+	DefWater        int    `yaml:"defense_water"`
+	DefWind         int    `yaml:"defense_wind"`
+	DefEarth        int    `yaml:"defense_earth"`
+	RegistStun      int    `yaml:"regist_stun"`
+	RegistStone     int    `yaml:"regist_stone"`
+	RegistSleep     int    `yaml:"regist_sleep"`
+	RegistFreeze    int    `yaml:"regist_freeze"`
+	RegistSustain   int    `yaml:"regist_sustain"`
+	RegistBlind     int    `yaml:"regist_blind"`
+	DmgReduction    int    `yaml:"dmg_reduction"`
+	DoubleDmgChance int    `yaml:"double_dmg_chance"`
+	Greater         int    `yaml:"greater"`
 	Bless           int    `yaml:"bless"`
 	Tradeable       bool   `yaml:"tradeable"`
 	MinLevel        int    `yaml:"min_level"`
@@ -422,6 +476,19 @@ func loadArmors(t *ItemTable, path string) error {
 			AddMPR:          a.AddMPR,
 			AddSP:           a.AddSP,
 			MDef:            a.MDef,
+			DefFire:         a.DefFire,
+			DefWater:        a.DefWater,
+			DefWind:         a.DefWind,
+			DefEarth:        a.DefEarth,
+			RegistStun:      a.RegistStun,
+			RegistStone:     a.RegistStone,
+			RegistSleep:     a.RegistSleep,
+			RegistFreeze:    a.RegistFreeze,
+			RegistSustain:   a.RegistSustain,
+			RegistBlind:     a.RegistBlind,
+			DmgReduction:    a.DmgReduction,
+			DoubleDmgChance: a.DoubleDmgChance,
+			Greater:         a.Greater,
 		}
 	}
 	return nil

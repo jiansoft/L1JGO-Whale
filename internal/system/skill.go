@@ -533,10 +533,14 @@ func (s *SkillSystem) executeAttackSkill(sess *net.Session, player *world.Player
 			AttackerHP:         int(player.HP),
 			AttackerMaxHP:      int(player.MaxHP),
 			AttackerMagicLevel: calcMagicLevel(int(player.ClassType), int(player.Level)),
-			TargetAC:           int(n.AC),
-			TargetLevel:        int(n.Level),
-			TargetMR:           int(n.MR),
-			TargetMP:           int(n.MP),
+			TargetAC:       int(n.AC),
+			TargetLevel:    int(n.Level),
+			TargetMR:       int(n.MR),
+			TargetFireRes:  int(n.FireRes),
+			TargetWaterRes: int(n.WaterRes),
+			TargetWindRes:  int(n.WindRes),
+			TargetEarthRes: int(n.EarthRes),
+			TargetMP:       int(n.MP),
 		}
 	}
 
@@ -548,6 +552,18 @@ func (s *SkillSystem) executeAttackSkill(sess *net.Session, player *world.Player
 	}
 
 	res := s.deps.Scripting.CalcSkillDamage(buildCtx(npc))
+
+	// 心靈破壞（207）：特殊傷害公式 SP × 3.8（Java: MIND_BREAK.java）
+	if skill.SkillID == 207 {
+		res.Damage = int(float64(player.SP) * 3.8)
+		res.DrainMP = 5 // 強制扣除目標 5 MP
+	}
+
+	// 三重矢（132）：強制 3 次命中
+	if skill.SkillID == 132 && res.HitCount < 3 {
+		res.HitCount = 3
+	}
+
 	hits := []hitTarget{{npc: npc, dmg: int32(res.Damage), hitCount: res.HitCount, drainMP: int32(res.DrainMP)}}
 
 	if skill.Area > 0 {
@@ -675,6 +691,48 @@ func (s *SkillSystem) executeAttackSkill(sess *net.Session, player *world.Player
 				t.npc.AddDebuff(skill.SkillID, (dur+1)*5)
 				handler.BroadcastToPlayers(nearby, handler.BuildPoison(t.npc.ID, 2))
 			}
+		}
+	}
+
+	// 奪命之雷（192）：傷害後束縛 NPC（Java: THUNDER_GRAB.java — S_Paralysis type 6）
+	if skill.SkillID == 192 {
+		for _, t := range hits {
+			if t.npc.Dead || t.npc.Paralyzed {
+				continue
+			}
+			if s.checkNpcMRResist(player, t.npc, 192) {
+				dur := world.RandInt(4) + 1 // 1-4 秒
+				t.npc.Paralyzed = true
+				t.npc.AddDebuff(192, dur*5)
+			}
+		}
+	}
+
+	// 骷髏毀壞（208）：傷害後暈眩 NPC（Java: BONE_BREAK.java — S_Paralysis type 5）
+	if skill.SkillID == 208 {
+		for _, t := range hits {
+			if t.npc.Dead || t.npc.Paralyzed {
+				continue
+			}
+			if s.checkNpcMRResist(player, t.npc, 208) {
+				dur := world.RandInt(2) + 1 // 1-2 秒
+				t.npc.Paralyzed = true
+				t.npc.AddDebuff(208, dur*5)
+			}
+		}
+	}
+
+	// 混亂（202）：傷害後沉默 NPC（Java: CONFUSION.java — 設定 SILENCE 效果）
+	if skill.SkillID == 202 {
+		for _, t := range hits {
+			if t.npc.Dead || t.npc.HasDebuff(202) {
+				continue
+			}
+			dur := skill.BuffDuration
+			if dur <= 0 {
+				dur = 8
+			}
+			t.npc.AddDebuff(202, dur*5)
 		}
 	}
 }
@@ -908,6 +966,82 @@ func (s *SkillSystem) executeBuffSkill(sess *net.Session, player *world.PlayerIn
 
 	case 153: // 魔法消除 — 解除 buff
 		s.cancelAllBuffs(target)
+
+	case 167: // 風之枷鎖 — 降低目標攻擊速度
+		// Java: WIND_SHACKLE.java — 不可重複施加；發送 S_PacketBoxWindShackle
+		if target.HasBuff(167) {
+			return // 已有效果，不重複
+		}
+		s.applyBuffEffect(target, skill)
+		handler.SendWindShackle(target.Session, target.CharID, skill.BuffDuration)
+		handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(target.CharID, skill.CastGfx))
+		return
+	}
+
+	// 覺醒系統（185/190/195）：再施放同一覺醒 → 解除；互斥由 buffs.lua exclusions 處理
+	if skill.SkillID == 185 || skill.SkillID == 190 || skill.SkillID == 195 {
+		if target.HasBuff(skill.SkillID) {
+			// 再施放 → 解除覺醒（Java: toggle off）
+			s.removeBuffAndRevert(target, skill.SkillID)
+			// 法利昂（190）解除時連帶清除 Physical Power（169）
+			if skill.SkillID == 190 {
+				s.removeBuffAndRevert(target, 169)
+			}
+			// 播放解除 GFX
+			if skill.CastGfx > 0 {
+				handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(target.CharID, skill.CastGfx))
+			}
+			handler.SendPlayerStatus(target.Session, target)
+			return
+		}
+		// 首次施放覺醒 → 走正常流程（exclusions 會先清除其他覺醒）
+		s.applyBuffEffect(target, skill)
+		if skill.CastGfx > 0 {
+			handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(target.CharID, skill.CastGfx))
+		}
+		// 法利昂（190）啟動時同時設定 Physical Power（169）timer
+		if skill.SkillID == 190 {
+			if sk169 := s.deps.Skills.Get(169); sk169 != nil {
+				s.applyBuffEffect(target, sk169)
+			}
+		}
+		handler.SendPlayerStatus(target.Session, target)
+		if skill.SysMsgHappen > 0 {
+			handler.SendServerMessage(target.Session, uint16(skill.SysMsgHappen))
+		}
+		return
+	}
+
+	// 呼喚盟友（116）：發送 S_Message_YN(729) 給目標盟友（Java: CALL_CLAN.java）
+	if skill.SkillID == 116 {
+		if target.CharID == player.CharID || player.ClanID == 0 || player.ClanID != target.ClanID {
+			handler.SendServerMessage(sess, skillMsgCastFail)
+			return
+		}
+		target.PendingYesNoType = 729
+		target.PendingYesNoData = player.CharID
+		handler.SendYesNoDialog(target.Session, 729, player.Name)
+		handler.BroadcastToPlayers(nearby, handler.BuildActionGfx(player.CharID, byte(skill.ActionID)))
+		return
+	}
+
+	// 援護盟友（118）：傳送到目標盟友位置（Java: RUN_CLAN.java）
+	if skill.SkillID == 118 {
+		if target.CharID == player.CharID || player.ClanID == 0 || player.ClanID != target.ClanID {
+			handler.SendServerMessage(sess, skillMsgCastFail)
+			return
+		}
+		// 檢查地圖可逃離
+		if s.deps.MapData != nil {
+			if mi := s.deps.MapData.GetInfo(player.MapID); mi != nil && !mi.Escapable {
+				handler.SendServerMessage(sess, 79) // "此處無法傳送"
+				handler.SendParalysis(sess, handler.TeleportUnlock)
+				return
+			}
+		}
+		handler.BroadcastToPlayers(nearby, handler.BuildActionGfx(player.CharID, byte(skill.ActionID)))
+		handler.TeleportPlayer(sess, player, target.X, target.Y, target.MapID, 5, s.deps)
+		return
 	}
 
 	// 治療效果
@@ -1394,13 +1528,24 @@ func (s *SkillSystem) executeSelfSkill(sess *net.Session, player *world.PlayerIn
 			sendMpUpdate(sess, player)
 		}
 
+	case 186: // 血之渴望 — 自身 buff + 勇敢速度（Java: BLOODLUST.java）
+		// 與暴風疾走/聖潔之行等互斥（由 buffs.lua 無 exclusions，brave_speed 會覆蓋）
+		s.applyBuffEffect(player, skill)
+		if skill.CastGfx > 0 {
+			handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(player.CharID, skill.CastGfx))
+		}
+		handler.SendPlayerStatus(player.Session, player)
+		if skill.SysMsgHappen > 0 {
+			handler.SendServerMessage(sess, uint16(skill.SysMsgHappen))
+		}
+
 	case 172: // 暴風疾走
 		for _, conflictID := range []int32{
 			handler.SkillStatusBrave, handler.SkillStatusElfBrave,
 			42,  // HOLY_WALK
 			101, // MOVING_ACCELERATION
 			150, // WIND_WALK
-			52,  // BLOODLUST
+			186, // BLOOD_LUST
 		} {
 			s.removeBuffAndRevert(player, conflictID)
 		}
@@ -1486,9 +1631,13 @@ func (s *SkillSystem) executeSelfSkill(sess *net.Session, player *world.PlayerIn
 				AttackerDmgMod:     int(player.DmgMod),
 				AttackerHitMod:     int(player.HitMod),
 				AttackerMagicLevel: calcMagicLevel(int(player.ClassType), int(player.Level)),
-				TargetAC:           int(npc.AC),
-				TargetLevel:        int(npc.Level),
-				TargetMR:           int(npc.MR),
+				TargetAC:       int(npc.AC),
+				TargetLevel:    int(npc.Level),
+				TargetMR:       int(npc.MR),
+				TargetFireRes:  int(npc.FireRes),
+				TargetWaterRes: int(npc.WaterRes),
+				TargetWindRes:  int(npc.WindRes),
+				TargetEarthRes: int(npc.EarthRes),
 			}
 			res := s.deps.Scripting.CalcSkillDamage(ctx)
 			dmg := int32(res.Damage)
@@ -1944,6 +2093,13 @@ func (s *SkillSystem) applyBuffEffect(target *world.PlayerInfo, skill *data.Skil
 		buff.DeltaBowHit = int16(eff.BowHit)
 		buff.DeltaBowDmg = int16(eff.BowDmg)
 		buff.DeltaDodge = int16(eff.Dodge)
+		buff.DeltaRegistSustain = int16(eff.RegistSustain)
+		buff.DeltaRegistFreeze = int16(eff.RegistFreeze)
+		buff.DeltaRegistStun = int16(eff.RegistStun)
+		buff.DeltaRegistStone = int16(eff.RegistStone)
+		buff.DeltaRegistBlind = int16(eff.RegistBlind)
+		buff.DeltaRegistSleep = int16(eff.RegistSleep)
+		buff.DeltaMagicCritical = int16(eff.MagicCritical)
 		buff.DeltaFireRes = int16(eff.FireRes)
 		buff.DeltaWaterRes = int16(eff.WaterRes)
 		buff.DeltaWindRes = int16(eff.WindRes)
@@ -1968,6 +2124,13 @@ func (s *SkillSystem) applyBuffEffect(target *world.PlayerInfo, skill *data.Skil
 		target.BowHitMod += buff.DeltaBowHit
 		target.BowDmgMod += buff.DeltaBowDmg
 		target.Dodge += buff.DeltaDodge
+		target.RegistSustain += buff.DeltaRegistSustain
+		target.RegistFreeze += buff.DeltaRegistFreeze
+		target.RegistStun += buff.DeltaRegistStun
+		target.RegistStone += buff.DeltaRegistStone
+		target.RegistBlind += buff.DeltaRegistBlind
+		target.RegistSleep += buff.DeltaRegistSleep
+		target.MagicCritical += buff.DeltaMagicCritical
 		target.FireRes += buff.DeltaFireRes
 		target.WaterRes += buff.DeltaWaterRes
 		target.WindRes += buff.DeltaWindRes
@@ -1996,6 +2159,10 @@ func (s *SkillSystem) applyBuffEffect(target *world.PlayerInfo, skill *data.Skil
 			buff.SetBraveSpeed = byte(eff.BraveSpeed)
 			target.BraveSpeed = byte(eff.BraveSpeed)
 			s.sendBraveToAll(target, byte(eff.BraveSpeed), uint16(skill.BuffDuration))
+		}
+		// Dodge 變化通知（龍之眼等）
+		if buff.DeltaDodge > 0 {
+			handler.SendDodgeIcon(target.Session, target.Dodge, true)
 		}
 		if eff.Invisible {
 			buff.SetInvisible = true
@@ -2037,6 +2204,11 @@ func (s *SkillSystem) applyBuffEffect(target *world.PlayerInfo, skill *data.Skil
 	}
 
 	s.sendBuffIcon(target, skill.SkillID, uint16(skill.BuffDuration))
+
+	// 日光術（技能 2）：上 buff 後更新光源
+	if skill.SkillID == 2 {
+		handler.UpdatePlayerLight(target, s.deps.World)
+	}
 }
 
 // ApplyNpcDebuff NPC 對玩家施放 debuff 技能（麻痺/睡眠/減速等）。
@@ -2158,6 +2330,15 @@ func (s *SkillSystem) removeBuffAndRevert(target *world.PlayerInfo, skillID int3
 	if old != nil {
 		s.revertBuffStats(target, old)
 		s.cancelBuffIcon(target, skillID)
+		// 日光術（技能 2）：buff 被取消後更新光源
+		if skillID == 2 {
+			handler.UpdatePlayerLight(target, s.deps.World)
+		}
+		// 風之枷鎖（技能 167）：buff 被取消後清除客戶端效果
+		if skillID == 167 {
+			handler.SendWindShackle(target.Session, target.CharID, 0)
+		}
+
 		if s.deps.Skills != nil {
 			if sk := s.deps.Skills.Get(skillID); sk != nil && sk.SysMsgStop > 0 {
 				handler.SendServerMessage(target.Session, uint16(sk.SysMsgStop))
@@ -2203,6 +2384,17 @@ func (s *SkillSystem) revertBuffStats(target *world.PlayerInfo, buff *world.Acti
 	target.WindRes -= buff.DeltaWindRes
 	target.EarthRes -= buff.DeltaEarthRes
 	target.Dodge -= buff.DeltaDodge
+	// Dodge 減少通知（龍之眼解除等）
+	if buff.DeltaDodge > 0 && target.Session != nil {
+		handler.SendDodgeIcon(target.Session, target.Dodge, false)
+	}
+	target.RegistSustain -= buff.DeltaRegistSustain
+	target.RegistFreeze -= buff.DeltaRegistFreeze
+	target.RegistStun -= buff.DeltaRegistStun
+	target.RegistStone -= buff.DeltaRegistStone
+	target.RegistBlind -= buff.DeltaRegistBlind
+	target.RegistSleep -= buff.DeltaRegistSleep
+	target.MagicCritical -= buff.DeltaMagicCritical
 	if target.HP > target.MaxHP && target.MaxHP > 0 {
 		target.HP = target.MaxHP
 	}
@@ -2393,6 +2585,21 @@ func (s *SkillSystem) tickPlayerBuffs(p *world.PlayerInfo) {
 			// 負重強化到期：更新負重顯示
 			if skillID == 14 || skillID == 218 {
 				handler.SendWeightUpdate(p.Session, p)
+			}
+
+			// 日光術（技能 2）：到期後更新光源
+			if skillID == 2 {
+				handler.UpdatePlayerLight(p, s.deps.World)
+			}
+
+			// 風之枷鎖（技能 167）：到期後清除客戶端效果
+			if skillID == 167 {
+				handler.SendWindShackle(p.Session, p.CharID, 0)
+			}
+
+			// 法利昂覺醒（190）到期時連帶清除 Physical Power（169）
+			if skillID == 190 {
+				s.removeBuffAndRevert(p, 169)
 			}
 
 			if s.deps.Skills != nil {

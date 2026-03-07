@@ -34,6 +34,10 @@ type NpcTemplate struct {
 	Agro         bool   `yaml:"agro"`
 	Tameable     bool   `yaml:"tameable"`
 	PoisonAtk    byte   `yaml:"poison_atk"` // 毒攻擊類型: 0=無, 1=傷害毒, 2=沉默毒, 4=麻痺毒
+	FireRes      int16  `yaml:"fire_res"`   // 火抗
+	WaterRes     int16  `yaml:"water_res"`  // 水抗
+	WindRes      int16  `yaml:"wind_res"`   // 風抗
+	EarthRes     int16  `yaml:"earth_res"`  // 地抗
 }
 
 // SpawnEntry defines where and how many NPCs to spawn.
@@ -46,7 +50,8 @@ type SpawnEntry struct {
 	RandomX      int32 `yaml:"randomx"`
 	RandomY      int32 `yaml:"randomy"`
 	Heading      int16 `yaml:"heading"`
-	RespawnDelay int   `yaml:"respawn_delay"` // seconds
+	RespawnDelay int   `yaml:"respawn_delay"`  // seconds
+	MobGroupID   int32 `yaml:"mob_group_id"`   // 怪物群體 ID（0=無群體）
 }
 
 type npcListFile struct {

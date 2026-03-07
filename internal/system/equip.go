@@ -459,6 +459,20 @@ func applyEquipStats(player *world.PlayerInfo, items *data.ItemTable, armorSets 
 	player.SP += int16(neo.AddSP - old.AddSP)
 	player.MR += int16(neo.MDef - old.MDef)
 
+	// 元素抗性
+	player.FireRes += int16(neo.DefFire - old.DefFire)
+	player.WaterRes += int16(neo.DefWater - old.DefWater)
+	player.WindRes += int16(neo.DefWind - old.DefWind)
+	player.EarthRes += int16(neo.DefEarth - old.DefEarth)
+
+	// 狀態抗性
+	player.RegistStun += int16(neo.RegistStun - old.RegistStun)
+	player.RegistStone += int16(neo.RegistStone - old.RegistStone)
+	player.RegistSleep += int16(neo.RegistSleep - old.RegistSleep)
+	player.RegistFreeze += int16(neo.RegistFreeze - old.RegistFreeze)
+	player.RegistSustain += int16(neo.RegistSustain - old.RegistSustain)
+	player.RegistBlind += int16(neo.RegistBlind - old.RegistBlind)
+
 	if player.HP > player.MaxHP {
 		player.HP = player.MaxHP
 	}
@@ -515,6 +529,23 @@ func calcEquipStats(player *world.PlayerInfo, items *data.ItemTable, armorSets *
 		stats.AddMPR += info.AddMPR
 		stats.AddSP += info.AddSP
 		stats.MDef += info.MDef
+
+		// 元素抗性
+		stats.DefFire += info.DefFire
+		stats.DefWater += info.DefWater
+		stats.DefWind += info.DefWind
+		stats.DefEarth += info.DefEarth
+
+		// 狀態抗性
+		stats.RegistStun += info.RegistStun
+		stats.RegistStone += info.RegistStone
+		stats.RegistSleep += info.RegistSleep
+		stats.RegistFreeze += info.RegistFreeze
+		stats.RegistSustain += info.RegistSustain
+		stats.RegistBlind += info.RegistBlind
+
+		// 傷害減免
+		stats.DmgReduction += info.DmgReduction
 	}
 	// 套裝加成
 	if player.ActiveSetID > 0 && armorSets != nil {

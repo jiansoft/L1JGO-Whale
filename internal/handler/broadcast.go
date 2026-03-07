@@ -32,7 +32,7 @@ func sendOwnCharPackPlayer(sess *net.Session, p *world.PlayerInfo) {
 	w.WriteH(uint16(PlayerGfx(p)))
 	w.WriteC(p.CurrentWeapon)
 	w.WriteC(byte(p.Heading))
-	w.WriteC(0)           // light size
+	w.WriteC(p.LightSize) // light size
 	w.WriteC(p.MoveSpeed) // move speed
 	w.WriteD(1)           // unknown (always 1)
 	w.WriteH(uint16(p.Lawful))
@@ -75,7 +75,7 @@ func SendPutObject(viewer *net.Session, p *world.PlayerInfo) {
 	w.WriteH(uint16(PlayerGfx(p))) // use polymorph GFX if active
 	w.WriteC(p.CurrentWeapon)    // current weapon visual
 	w.WriteC(byte(p.Heading))
-	w.WriteC(0)                  // light size
+	w.WriteC(p.LightSize)        // light size
 	w.WriteC(p.MoveSpeed)        // move speed: 0=normal, 1=haste
 	w.WriteD(1)                  // unknown (always 1)
 	w.WriteH(uint16(p.Lawful))
@@ -157,6 +157,52 @@ func sendWeather(sess *net.Session, weather byte) {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_WEATHER)
 	w.WriteC(weather)
 	sess.Send(w.Bytes())
+}
+
+// sendLight 發送 S_Light (opcode 40) — 角色光源大小。
+// Java S_Light: writeC(opcode) + writeD(objID) + writeC(lightSize)
+// lightSize: 0=無光, 14=日光術, 最大值=亮光圈半徑
+func sendLight(sess *net.Session, objID int32, lightSize byte) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_CHANGE_LIGHT)
+	w.WriteD(objID)
+	w.WriteC(lightSize)
+	sess.Send(w.Bytes())
+}
+
+// BuildLight 建構 S_Light 封包位元組（廣播用）。
+func BuildLight(objID int32, lightSize byte) []byte {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_CHANGE_LIGHT)
+	w.WriteD(objID)
+	w.WriteC(lightSize)
+	return w.Bytes()
+}
+
+// CalcPlayerLight 計算玩家光源大小（Java turnOnOffLight 邏輯）。
+// 優先級：日光術(14) > 道具光源(未實作) > 0
+func CalcPlayerLight(p *world.PlayerInfo) byte {
+	// 技能 2（日光術）= lightSize 14
+	if p.HasBuff(2) {
+		return 14
+	}
+	// TODO: 道具光源（type2=0, type=2, isLighting 的物品 lightRange）
+	return 0
+}
+
+// UpdatePlayerLight 重新計算並廣播玩家光源。
+func UpdatePlayerLight(p *world.PlayerInfo, ws *world.State) {
+	newLight := CalcPlayerLight(p)
+	if newLight == p.LightSize {
+		return
+	}
+	p.LightSize = newLight
+
+	// 發送給自己
+	sendLight(p.Session, p.CharID, newLight)
+
+	// 廣播給附近玩家
+	nearby := ws.GetNearbyPlayers(p.X, p.Y, p.MapID, p.SessionID)
+	data := BuildLight(p.CharID, newLight)
+	BroadcastToPlayers(nearby, data)
 }
 
 // sendGameTime sends S_GameTime (opcode 123) — current game time in seconds.
@@ -795,6 +841,33 @@ func SendGreenMessage(sess *net.Session, msg string) {
 func SendPacketBoxHpMsg(sess *net.Session) {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_EVENT)
 	w.WriteC(31) // MSG_FEEL_GOOD
+	sess.Send(w.Bytes())
+}
+
+// SendWindShackle 發送風之枷鎖 debuff 效果（降低攻擊速度）。
+// Java: S_PacketBoxWindShackle — opcode 250, sub 44, [D objID][H time>>2]。
+// time 為秒數；time=0 表示移除效果。
+func SendWindShackle(sess *net.Session, charID int32, durationSec int) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_EVENT)
+	w.WriteC(44) // WIND_SHACKLE
+	w.WriteD(charID)
+	// Java: time >> 2（將毫秒除以 4）。Go 傳入秒數，需轉換：秒 * 1000 / 4 = 秒 * 250
+	t := durationSec * 250
+	w.WriteH(uint16(t))
+	sess.Send(w.Bytes())
+}
+
+// SendDodgeIcon 發送 S_PacketBoxIcon1 閃避率圖示更新。
+// Java: S_PacketBoxIcon1 — opcode 250, subcode 0x58（增加）或 0x65（減少）。
+// dodge 為當前總閃避值。increase=true 為增加通知，false 為減少通知。
+func SendDodgeIcon(sess *net.Session, dodge int16, increase bool) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_EVENT)
+	if increase {
+		w.WriteC(0x58) // dodge up
+	} else {
+		w.WriteC(0x65) // dodge down
+	}
+	w.WriteH(uint16(dodge))
 	sess.Send(w.Bytes())
 }
 

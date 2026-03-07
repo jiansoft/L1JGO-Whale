@@ -1,6 +1,13 @@
 package world
 
-import "time"
+import (
+	"sync/atomic"
+	"time"
+)
+
+// gameTimeOffsetSec 是 GM 強制調整遊戲時間的偏移量（秒）。
+// 透過 atomic 操作，遊戲迴圈讀取不需要鎖。
+var gameTimeOffsetSec atomic.Int64
 
 // L1J game time runs at 6x real time, with a base epoch.
 // Reference: l1j_java L1GameTime.java, L1GameTimeClock.java
@@ -21,8 +28,28 @@ type GameTime struct {
 func GameTimeNow() GameTime {
 	t1 := time.Now().UnixMilli() - baseTimeMillis
 	t2 := int((t1 * 6) / 1000)
+	t2 += int(gameTimeOffsetSec.Load())
 	t2 -= t2 % 3 // align to 3-second boundary (matches Java)
 	return GameTime{seconds: t2}
+}
+
+// SetGameTimeOffset 設定遊戲時間偏移量，使當前遊戲時間跳到指定小時。
+func SetGameTimeOffset(targetHour int) {
+	// 先算出無偏移的當前遊戲時間
+	t1 := time.Now().UnixMilli() - baseTimeMillis
+	rawSec := int((t1 * 6) / 1000)
+	rawSec -= rawSec % 3
+
+	gt := time.Unix(int64(rawSec), 0).UTC()
+	curHour := gt.Hour()
+
+	// 計算需要偏移多少秒（遊戲秒）才能讓小時變成 targetHour
+	diff := targetHour - curHour
+	if diff < 0 {
+		diff += 24
+	}
+	offsetSec := diff * 3600 // 遊戲內每小時 = 3600 遊戲秒
+	gameTimeOffsetSec.Store(int64(offsetSec))
 }
 
 // Seconds returns the raw game-time value for S_GameTime packet.

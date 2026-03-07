@@ -188,7 +188,13 @@ func run() error {
 	}
 	printStat("精靈動作", sprTable.Count())
 
-	npcCount := spawnNpcs(worldState, npcTable, spawnList, mapDataTable, sprTable, log)
+	mobGroupTable, err := data.LoadMobGroupTable("data/yaml/mobgroup_list.yaml")
+	if err != nil {
+		return fmt.Errorf("load mob group: %w", err)
+	}
+	printStat("怪物群體", mobGroupTable.Count())
+
+	npcCount := spawnNpcs(worldState, npcTable, spawnList, mapDataTable, sprTable, mobGroupTable, log)
 	printStat("NPC 生成", npcCount)
 
 	npcActionTable, err := data.LoadNpcActionTable("data/yaml/npc_action_list.yaml")
@@ -335,6 +341,30 @@ func run() error {
 	doorCount := spawnDoors(worldState, doorTable)
 	printStat("門", doorCount)
 
+	itemBoxTable, err := data.LoadItemBoxTable("data/yaml/item_box.yaml")
+	if err != nil {
+		return fmt.Errorf("load item box: %w", err)
+	}
+	printStat("物品箱", itemBoxTable.Count())
+
+	itemUpgradeTable, err := data.LoadItemUpgradeTable("data/yaml/item_upgrade.yaml")
+	if err != nil {
+		return fmt.Errorf("load item upgrade: %w", err)
+	}
+	printStat("物品升級", itemUpgradeTable.Count())
+
+	itemVIPTable, err := data.LoadItemVIPTable("data/yaml/item_vip.yaml")
+	if err != nil {
+		return fmt.Errorf("load item vip: %w", err)
+	}
+	printStat("VIP物品", itemVIPTable.Count())
+
+	npcChatTable, err := data.LoadNpcChatTable("data/yaml/npc_chat.yaml")
+	if err != nil {
+		return fmt.Errorf("load npc chat: %w", err)
+	}
+	printStat("NPC聊天", npcChatTable.Count())
+
 	// 5b. Initialize Lua scripting engine
 	luaEngine, err := scripting.NewEngine("scripts", log)
 	if err != nil {
@@ -418,6 +448,11 @@ func run() error {
 		Dolls:         dollTable,
 		TeleportPages: teleportPageTable,
 		WeaponSkills:  weaponSkillTable,
+		ItemBoxes:     itemBoxTable,
+		ItemUpgrades:  itemUpgradeTable,
+		ItemVIPs:      itemVIPTable,
+		NpcChats:      npcChatTable,
+		MobGroups:     mobGroupTable,
 	}
 	handler.RegisterAll(pktReg, deps)
 	handler.SetShowNpcID(cfg.Debug.ShowNpcID)
@@ -518,7 +553,7 @@ func run() error {
 	summonSys := system.NewSummonSystem(deps)
 	deps.Summon = summonSys
 	runner.Register(system.NewBuffTickSystem(worldState, deps))
-	runner.Register(system.NewNpcRespawnSystem(worldState, mapDataTable))
+	runner.Register(system.NewNpcRespawnSystem(worldState, mapDataTable, deps))
 	runner.Register(system.NewNpcAISystem(worldState, deps))
 	runner.Register(system.NewCompanionAISystem(worldState, deps))
 	// Phase 3: Post-update
@@ -532,6 +567,7 @@ func run() error {
 	dragonDoorSys := system.NewDragonDoorSystem(worldState, deps)
 	deps.DragonDoor = dragonDoorSys
 	runner.Register(dragonDoorSys)
+	runner.Register(system.NewNpcChatSystem(worldState, deps))
 	runner.Register(system.NewGroundItemSystem(worldState))
 	runner.Register(system.NewPartyRefreshSystem(worldState, deps, 10)) // 10 ticks = 2 seconds
 	rankingSys := system.NewRankingSystem(worldState, deps)
@@ -634,7 +670,7 @@ func loadClans(ctx context.Context, ws *world.State, clanRepo *persist.ClanRepo)
 
 // spawnNpcs creates NPC instances from spawn list and adds them to world state.
 // sprTable may be nil (speeds fall back to YAML template values).
-func spawnNpcs(ws *world.State, npcTable *data.NpcTable, spawns []data.SpawnEntry, maps *data.MapDataTable, sprTable *data.SprTable, log *zap.Logger) int {
+func spawnNpcs(ws *world.State, npcTable *data.NpcTable, spawns []data.SpawnEntry, maps *data.MapDataTable, sprTable *data.SprTable, mobGroups *data.MobGroupTable, log *zap.Logger) int {
 	total := 0
 	for _, spawn := range spawns {
 		tmpl := npcTable.Get(spawn.NpcID)
@@ -652,67 +688,124 @@ func spawnNpcs(ws *world.State, npcTable *data.NpcTable, spawns []data.SpawnEntr
 				y += int32(rand.Intn(int(spawn.RandomY*2+1))) - spawn.RandomY
 			}
 
-			// Resolve animation-based speeds from SprTable (mirrors Java L1NpcInstance.initStats).
-			// Only override when the template marks the action as enabled (non-zero).
-			atkSpeed := tmpl.AtkSpeed
-			moveSpeed := tmpl.PassiveSpeed
-			if sprTable != nil {
-				gfx := int(tmpl.GfxID)
-				if tmpl.AtkSpeed != 0 {
-					if v := sprTable.GetAttackSpeed(gfx, data.ActAttack); v > 0 {
-						atkSpeed = int16(v)
-					}
-				}
-				if tmpl.PassiveSpeed != 0 {
-					if v := sprTable.GetMoveSpeed(gfx, data.ActWalk); v > 0 {
-						moveSpeed = int16(v)
-					}
-				}
-			}
-
-			npc := &world.NpcInfo{
-				ID:           world.NextNpcID(),
-				NpcID:        tmpl.NpcID,
-				Impl:         tmpl.Impl,
-				GfxID:        tmpl.GfxID,
-				Name:         tmpl.Name,
-				NameID:       tmpl.NameID,
-				Level:        tmpl.Level,
-				X:            x,
-				Y:            y,
-				MapID:        spawn.MapID,
-				Heading:      spawn.Heading,
-				HP:           tmpl.HP,
-				MaxHP:        tmpl.HP,
-				MP:           tmpl.MP,
-				MaxMP:        tmpl.MP,
-				AC:           tmpl.AC,
-				STR:          tmpl.STR,
-				DEX:          tmpl.DEX,
-				Exp:          tmpl.Exp,
-				Lawful:       tmpl.Lawful,
-				Size:         tmpl.Size,
-				MR:           tmpl.MR,
-				Undead:       tmpl.Undead,
-				Agro:         tmpl.Agro,
-				AtkDmg:       int32(tmpl.Level) + int32(tmpl.STR)/3,
-				Ranged:       tmpl.Ranged,
-				AtkSpeed:     atkSpeed,
-				MoveSpeed:    moveSpeed,
-				PoisonAtk:    tmpl.PoisonAtk,
-				SpawnX:       x,
-				SpawnY:       y,
-				SpawnMapID:   spawn.MapID,
-				RespawnDelay: spawn.RespawnDelay,
-			}
-			ws.AddNpc(npc)
+			leader := createNpcFromTemplate(tmpl, x, y, spawn.MapID, spawn.Heading, spawn.RespawnDelay, sprTable)
+			leader.MobGroupID = spawn.MobGroupID
+			ws.AddNpc(leader)
 			if maps != nil {
-				maps.SetImpassable(npc.MapID, npc.X, npc.Y, true)
+				maps.SetImpassable(leader.MapID, leader.X, leader.Y, true)
 			}
 			total++
+
+			// 群體生成（Java: L1MobGroupSpawn.doSpawn）
+			if spawn.MobGroupID > 0 && mobGroups != nil {
+				group := mobGroups.Get(spawn.MobGroupID)
+				if group != nil {
+					total += spawnMobGroup(ws, leader, group, npcTable, maps, sprTable)
+				}
+			}
 		}
 	}
 	return total
+}
+
+// createNpcFromTemplate 從模板建立 NPC 實體。
+func createNpcFromTemplate(tmpl *data.NpcTemplate, x, y int32, mapID, heading int16, respawnDelay int, sprTable *data.SprTable) *world.NpcInfo {
+	atkSpeed := tmpl.AtkSpeed
+	moveSpeed := tmpl.PassiveSpeed
+	if sprTable != nil {
+		gfx := int(tmpl.GfxID)
+		if tmpl.AtkSpeed != 0 {
+			if v := sprTable.GetAttackSpeed(gfx, data.ActAttack); v > 0 {
+				atkSpeed = int16(v)
+			}
+		}
+		if tmpl.PassiveSpeed != 0 {
+			if v := sprTable.GetMoveSpeed(gfx, data.ActWalk); v > 0 {
+				moveSpeed = int16(v)
+			}
+		}
+	}
+	return &world.NpcInfo{
+		ID:           world.NextNpcID(),
+		NpcID:        tmpl.NpcID,
+		Impl:         tmpl.Impl,
+		GfxID:        tmpl.GfxID,
+		Name:         tmpl.Name,
+		NameID:       tmpl.NameID,
+		Level:        tmpl.Level,
+		X:            x,
+		Y:            y,
+		MapID:        mapID,
+		Heading:      heading,
+		HP:           tmpl.HP,
+		MaxHP:        tmpl.HP,
+		MP:           tmpl.MP,
+		MaxMP:        tmpl.MP,
+		AC:           tmpl.AC,
+		STR:          tmpl.STR,
+		DEX:          tmpl.DEX,
+		Exp:          tmpl.Exp,
+		Lawful:       tmpl.Lawful,
+		Size:         tmpl.Size,
+		MR:           tmpl.MR,
+		Undead:       tmpl.Undead,
+		Agro:         tmpl.Agro,
+		AtkDmg:       int32(tmpl.Level) + int32(tmpl.STR)/3,
+		Ranged:       tmpl.Ranged,
+		AtkSpeed:     atkSpeed,
+		MoveSpeed:    moveSpeed,
+		PoisonAtk:    tmpl.PoisonAtk,
+		FireRes:      tmpl.FireRes,
+		WaterRes:     tmpl.WaterRes,
+		WindRes:      tmpl.WindRes,
+		EarthRes:     tmpl.EarthRes,
+		SpawnX:       x,
+		SpawnY:       y,
+		SpawnMapID:   mapID,
+		RespawnDelay: respawnDelay,
+	}
+}
+
+// spawnMobGroup 生成怪物群體的隊員。
+// Java: L1MobGroupSpawn.doSpawn — 在 leader 周圍 ±2 格生成 minion。
+func spawnMobGroup(ws *world.State, leader *world.NpcInfo, group *data.MobGroup, npcTable *data.NpcTable, maps *data.MapDataTable, sprTable *data.SprTable) int {
+	groupInfo := &world.MobGroupInfo{
+		Leader:             leader,
+		Members:            []*world.NpcInfo{leader},
+		RemoveGroupOnDeath: group.RemoveGroupIfLeaderDie,
+	}
+	leader.GroupInfo = groupInfo
+
+	spawned := 0
+	for _, minion := range group.Minions {
+		if minion.NpcID == 0 || minion.Count == 0 {
+			continue
+		}
+		mTmpl := npcTable.Get(minion.NpcID)
+		if mTmpl == nil {
+			continue
+		}
+		for j := 0; j < minion.Count; j++ {
+			// Java: leader 座標 ±2 格（random.nextInt(5) - 2）
+			mx := leader.X + int32(rand.Intn(5)) - 2
+			my := leader.Y + int32(rand.Intn(5)) - 2
+
+			mob := createNpcFromTemplate(mTmpl, mx, my, leader.MapID, leader.Heading, 0, sprTable)
+			mob.IsMinion = true      // 隊員不獨立重生
+			mob.GroupInfo = groupInfo // 回指群體資訊
+			mob.SpawnX = leader.SpawnX
+			mob.SpawnY = leader.SpawnY
+			mob.SpawnMapID = leader.SpawnMapID
+
+			ws.AddNpc(mob)
+			if maps != nil {
+				maps.SetImpassable(mob.MapID, mob.X, mob.Y, true)
+			}
+			groupInfo.Members = append(groupInfo.Members, mob)
+			spawned++
+		}
+	}
+	return spawned
 }
 
 // spawnDoors creates door instances from door spawn data and adds them to world state.

@@ -5,7 +5,7 @@
 -- Timer durations (in ticks, 200ms per tick)
 local PK_TIMERS = {
     pink_name_ticks = 900,     -- 180 seconds (3 minutes)
-    wanted_ticks    = 432000,  -- 24 hours
+    wanted_ticks    = 18000,   -- 1 hour (Java: 3600000ms)
 }
 
 -- PK count thresholds

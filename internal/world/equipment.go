@@ -155,6 +155,23 @@ type EquipStats struct {
 	AddMPR    int
 	AddSP     int
 	MDef      int
+
+	// 元素抗性
+	DefFire  int
+	DefWater int
+	DefWind  int
+	DefEarth int
+
+	// 狀態抗性
+	RegistStun    int
+	RegistStone   int
+	RegistSleep   int
+	RegistFreeze  int
+	RegistSustain int
+	RegistBlind   int
+
+	// 傷害減免
+	DmgReduction int
 }
 
 // IsAccessorySlot returns true for slots where enchant level does NOT affect AC.

@@ -8,17 +8,19 @@ import (
 
 // ItemRow represents a persisted inventory item.
 type ItemRow struct {
-	ID         int32
-	CharID     int32
-	ItemID     int32
-	Count      int32
-	EnchantLvl int16
-	Bless      int16
-	Equipped   bool
-	Identified bool
-	EquipSlot  int16
-	ObjID      int32 // persisted ObjectID for shortcut bar stability
-	Durability int16 // weapon durability (0=perfect, higher=more damaged, range 0-127)
+	ID               int32
+	CharID           int32
+	ItemID           int32
+	Count            int32
+	EnchantLvl       int16
+	Bless            int16
+	Equipped         bool
+	Identified       bool
+	EquipSlot        int16
+	ObjID            int32 // persisted ObjectID for shortcut bar stability
+	Durability       int16 // weapon durability (0=perfect, higher=more damaged, range 0-127)
+	AttrEnchantKind  int16 // 元素屬性種類 (0=無, 1=地, 2=火, 4=水, 8=風)
+	AttrEnchantLevel int16 // 元素屬性強化階段 (0-5)
 }
 
 type ItemRepo struct {
@@ -33,7 +35,8 @@ func NewItemRepo(db *DB) *ItemRepo {
 func (r *ItemRepo) LoadByCharID(ctx context.Context, charID int32) ([]ItemRow, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		`SELECT id, char_id, item_id, count, enchant_lvl, bless, equipped, identified, equip_slot, obj_id,
-		        COALESCE(durability, 0)
+		        COALESCE(durability, 0),
+		        COALESCE(attr_enchant_kind, 0), COALESCE(attr_enchant_level, 0)
 		 FROM character_items WHERE char_id = $1`, charID,
 	)
 	if err != nil {
@@ -48,6 +51,7 @@ func (r *ItemRepo) LoadByCharID(ctx context.Context, charID int32) ([]ItemRow, e
 			&it.ID, &it.CharID, &it.ItemID, &it.Count,
 			&it.EnchantLvl, &it.Bless, &it.Equipped, &it.Identified, &it.EquipSlot,
 			&it.ObjID, &it.Durability,
+			&it.AttrEnchantKind, &it.AttrEnchantLevel,
 		); err != nil {
 			return nil, err
 		}
@@ -93,10 +97,11 @@ func (r *ItemRepo) SaveInventory(ctx context.Context, charID int32, inv *world.I
 			}
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO character_items (char_id, item_id, count, enchant_lvl, bless, equipped, identified, equip_slot, obj_id, durability)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+			`INSERT INTO character_items (char_id, item_id, count, enchant_lvl, bless, equipped, identified, equip_slot, obj_id, durability, attr_enchant_kind, attr_enchant_level)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 			charID, item.ItemID, item.Count, int16(item.EnchantLvl), int16(item.Bless),
 			item.Equipped, item.Identified, equipSlot, item.ObjectID, int16(item.Durability),
+			int16(item.AttrEnchantKind), int16(item.AttrEnchantLevel),
 		); err != nil {
 			return err
 		}

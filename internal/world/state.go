@@ -59,7 +59,14 @@ type PlayerInfo struct {
 	WaterRes   int16 // water resistance
 	WindRes    int16 // wind resistance
 	EarthRes   int16 // earth resistance
-	Dodge      int16 // dodge bonus
+	Dodge         int16 // dodge bonus
+	RegistSustain int16 // 持續傷害抗性
+	RegistFreeze  int16 // 凍結抗性
+	RegistStun    int16 // 暈眩抗性
+	RegistStone   int16 // 石化抗性
+	RegistBlind   int16 // 失明抗性
+	RegistSleep   int16 // 睡眠抗性
+	MagicCritical int16 // 魔法爆擊加成
 	Food         int16 // satiety 0-225 (225=full); sent in S_STATUS
 	FoodFullTime int64 // 飽食度達 225 的時刻（Unix 秒）；-1=未滿（Java: _h_time，生存吶喊用）
 	PKCount       int32 // PK kill count
@@ -142,6 +149,17 @@ type PlayerInfo struct {
 	TradeItems      []*InvItem // items offered in trade
 	TradeGold       int32      // gold offered in trade
 
+	// 個人商店（擺攤）
+	PrivateShop       bool                 // true = 正在擺攤中
+	ShopSellList      []*PrivateShopSell   // 出售清單
+	ShopBuyList       []*PrivateShopBuy    // 收購清單
+	ShopChat          []byte               // 商店標語（Big5 原始位元組）
+	ShopTradingLocked bool                 // true = 有人正在購買中，防止併發
+	ShopPartnerCount  int                  // 對方商店的商品數量快取（Java: partnersPrivateShopItemCount）
+
+	// 光源（Java turnOnOffLight: 0=無光, 14=日光術, 最大值=角色周圍亮光圈半徑）
+	LightSize byte
+
 	// --- 中毒系統（Java L1Poison）---
 	// PoisonType: 0=無, 1=傷害毒, 2=沉默毒, 3=麻痺毒延遲中, 4=麻痺毒已麻痺
 	PoisonType      byte
@@ -189,6 +207,8 @@ type PlayerInfo struct {
 	// 火神精煉：當玩家開啟精煉介面時，記住 NPC 物件 ID，以便 C_Result 攔截。
 	// 0 = 未開啟精煉介面。
 	FireSmithNpcObjID int32
+	CnShopNpcID       int32 // 最近瀏覽的寄賣商城 NPC ID（購買時用於查詢商品）
+	PowerItemNpcID    int32 // 最近瀏覽的強化物品商店 NPC ID
 
 	// Paginated teleport (Npc_Teleport): current browsing state
 	TelePage     int    // current page (0-based)
@@ -214,6 +234,10 @@ type PlayerInfo struct {
 	MapTimerGroupIdx  int         // 當前所在限時地圖組 OrderID（-1 或 0 = 不在限時地圖）
 	MapTimerRemaining int         // 剩餘秒數（runtime 快取）
 	MapTimerTickAcc   int         // tick 累加器（每 5 tick = 1 秒）
+
+	// VIP 物品系統：已啟用的 VIP 物品 objectID，按 type 分組（同 type 只能一個）。
+	// key=VIP type, value=InvItem.ObjectID
+	ActiveVIP map[int]int32
 
 	// Dirty flag for batch persistence. Set to true when any persisted state
 	// changes (position, HP/MP, exp, inventory, buffs). PersistenceSystem only
@@ -243,6 +267,24 @@ type WarehouseCache struct {
 	Weight     int32
 }
 
+// PrivateShopSell 個人商店出售清單項目。
+type PrivateShopSell struct {
+	ItemObjectID int32 // 出售物品的 ObjectID
+	SellTotal    int32 // 預計出售的總數量
+	SellPrice    int32 // 單價
+	SoldCount    int32 // 已出售的累計數量
+}
+
+// PrivateShopBuy 個人商店收購清單項目。
+type PrivateShopBuy struct {
+	ItemObjectID int32 // 背包中作為「樣本」的物品 ObjectID
+	ItemID       int32 // 物品模板 ID（驗證用）
+	EnchantLvl   int8  // 要求的強化等級
+	BuyTotal     int32 // 預計收購的總數量
+	BuyPrice     int32 // 收購單價
+	BoughtCount  int32 // 已收購的累計數量
+}
+
 // ActiveBuff tracks a single active buff/debuff on a player.
 type ActiveBuff struct {
 	SkillID      int32
@@ -269,7 +311,14 @@ type ActiveBuff struct {
 	DeltaWaterRes int16
 	DeltaWindRes  int16
 	DeltaEarthRes int16
-	DeltaDodge    int16
+	DeltaDodge         int16
+	DeltaRegistSustain int16
+	DeltaRegistFreeze  int16
+	DeltaRegistStun    int16
+	DeltaRegistStone   int16
+	DeltaRegistBlind   int16
+	DeltaRegistSleep   int16
+	DeltaMagicCritical int16
 	// Special flags for non-stat effects
 	SetMoveSpeed  byte // if > 0, the buff set MoveSpeed to this value
 	SetBraveSpeed byte // if > 0, the buff set BraveSpeed to this value

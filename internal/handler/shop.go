@@ -16,6 +16,18 @@ func HandleBuySell(sess *net.Session, r *packet.Reader, deps *Deps) {
 	resultType := r.ReadC()
 	count := int(r.ReadH())
 
+	// 強化物品商店攔截（resultType 12 = S_PowerItemList type）
+	if resultType == 12 {
+		player := deps.World.GetBySession(sess.ID)
+		if player != nil {
+			pNpc := deps.World.GetNpc(npcObjID)
+			if pNpc != nil {
+				handlePowerItemBuy(sess, r, count, player, pNpc, deps)
+			}
+		}
+		return
+	}
+
 	// Warehouse operations (resultType 2-9) route through warehouse handler.
 	// Must check BEFORE NPC/shop lookup — warehouse NPCs have no shop data.
 	if resultType >= 2 {
@@ -38,6 +50,27 @@ func HandleBuySell(sess *net.Session, r *packet.Reader, deps *Deps) {
 
 	npc := deps.World.GetNpc(npcObjID)
 	if npc == nil {
+		// 目標不是 NPC → 檢查是否為個人商店玩家
+		shopPlayer := deps.World.GetByCharID(npcObjID)
+		if shopPlayer != nil && shopPlayer.PrivateShop {
+			switch resultType {
+			case 0:
+				HandlePrivateShopBuy(sess, r, count, player, shopPlayer, deps)
+			case 1:
+				HandlePrivateShopSell(sess, r, count, player, shopPlayer, deps)
+			}
+		}
+		return
+	}
+
+	// 寄賣商城 NPC 路由
+	if npc.Impl == "L1Cn" {
+		switch resultType {
+		case 0:
+			handleCnBuyResult(sess, r, count, player, npc, deps)
+		case 1:
+			handleCnSellResult(sess, r, count, player, npc, deps)
+		}
 		return
 	}
 
