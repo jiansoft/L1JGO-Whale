@@ -86,7 +86,7 @@ func HandleBuySell(sess *net.Session, r *packet.Reader, deps *Deps) {
 	switch resultType {
 	case 0:
 		// Buy from NPC — player purchases items
-		deps.Shop.BuyFromNpc(sess, r, count, player, shop)
+		deps.Shop.BuyFromNpc(sess, r, count, player, shop, npc)
 	case 1:
 		// Sell to NPC — player sells items
 		deps.Shop.SellToNpc(sess, r, count, player, shop)

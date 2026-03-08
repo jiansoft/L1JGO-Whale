@@ -294,5 +294,13 @@ func (r *ClanRepo) MaxEmblemID(ctx context.Context) (int32, error) {
 	return maxID, err
 }
 
+// UpdateHasCastle 更新公會的城堡持有狀態。
+func (r *ClanRepo) UpdateHasCastle(ctx context.Context, clanID int32, castleID int32) error {
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE clans SET has_castle = $1 WHERE clan_id = $2`,
+		castleID, clanID)
+	return err
+}
+
 // ErrInsufficientGold is returned when the player doesn't have enough gold.
 var ErrInsufficientGold = errors.New("insufficient gold")

@@ -215,12 +215,7 @@ func handleSurvivalShout(sess *net.Session, player *world.PlayerInfo, deps *Deps
 		return
 	}
 
-	// 消耗飽食度
-	player.Food = 0
-	player.FoodFullTime = -1
-	SendFoodUpdate(sess, player.Food)
-
-	// 回復 HP
+	// 委派給 ClanSystem 處理飽食度消耗 + HP 回復
 	deps.Clan.HealMember(sess, player, addHP)
 
 	// 特效音效（Java: S_SkillSound(4013)）

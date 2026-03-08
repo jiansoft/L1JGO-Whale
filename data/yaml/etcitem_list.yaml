@@ -46045,3 +46045,26 @@ items:
     delay_id: 7
     delay_time: 30000
     food_volume: 0
+  - item_id: 82500
+    name: 炸彈
+    item_type: other
+    use_type: normal
+    material: iron
+    weight: 1000
+    inv_gfx: 592
+    grd_gfx: 22
+    itemdesc_id: 0
+    stackable: true
+    max_charge_count: 0
+    dmg_small: 0
+    dmg_large: 0
+    min_level: 0
+    max_level: 0
+    loc_x: 0
+    loc_y: 0
+    map_id: 0
+    bless: 1
+    tradeable: true
+    delay_id: 0
+    delay_time: 0
+    food_volume: 0

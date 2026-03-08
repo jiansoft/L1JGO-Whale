@@ -178,3 +178,10 @@ func (m *ClanManager) RemoveMember(clanID, charID int32) {
 	delete(clan.Members, charID)
 	delete(m.playerClan, charID)
 }
+
+// ForEach 遍歷所有公會。
+func (m *ClanManager) ForEach(fn func(*ClanInfo)) {
+	for _, clan := range m.clans {
+		fn(clan)
+	}
+}

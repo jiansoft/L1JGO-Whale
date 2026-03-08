@@ -288,7 +288,7 @@ func HandleChangeDirection(sess *net.Session, r *packet.Reader, deps *Deps) {
 	if player == nil {
 		return
 	}
-	player.Heading = heading
+	deps.World.ChangePlayerHeading(player, heading)
 
 	// 廣播方向變更給附近玩家
 	nearby := deps.World.GetNearbyPlayers(player.X, player.Y, player.MapID, sess.ID)

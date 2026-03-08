@@ -1,0 +1,27 @@
+# 攻城戰勝利禮物（Java: server_castle_war_gift）
+# 攻城戰結束時發放給守城方在線公會成員
+gifts:
+  - castle_id: 1
+    items:
+      - { item_id: 56329, count: 1 }
+  - castle_id: 2
+    items:
+      - { item_id: 56329, count: 1 }
+  - castle_id: 3
+    items:
+      - { item_id: 56329, count: 1 }
+  - castle_id: 4
+    items:
+      - { item_id: 56329, count: 1 }
+  - castle_id: 5
+    items:
+      - { item_id: 56329, count: 1 }
+  - castle_id: 6
+    items:
+      - { item_id: 56329, count: 1 }
+  - castle_id: 7
+    items:
+      - { item_id: 56329, count: 1 }
+  - castle_id: 8
+    items:
+      - { item_id: 56329, count: 1 }

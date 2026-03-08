@@ -29,6 +29,7 @@ func (s *BuffTickSystem) Update(_ time.Duration) {
 		tickItemMagicEnchants(p, s.deps)
 		TickPlayerPoison(p, s.deps)
 		TickPlayerCurse(p, s.deps)
+		TickCatapultSilence(p)
 		if len(p.ActiveBuffs) < prevBuffCount {
 			p.Dirty = true
 		}

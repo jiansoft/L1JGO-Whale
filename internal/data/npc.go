@@ -38,6 +38,7 @@ type NpcTemplate struct {
 	WaterRes     int16  `yaml:"water_res"`  // 水抗
 	WindRes      int16  `yaml:"wind_res"`   // 風抗
 	EarthRes     int16  `yaml:"earth_res"`  // 地抗
+	LightSize    int16  `yaml:"light_size"` // 光源半徑（0=無光源）
 }
 
 // SpawnEntry defines where and how many NPCs to spawn.
@@ -106,6 +107,27 @@ func LoadSpawnList(path string) ([]SpawnEntry, error) {
 		return nil, fmt.Errorf("parse spawn_list: %w", err)
 	}
 	return f.Spawns, nil
+}
+
+// LightSpawnEntry 路燈生成點位（夜晚生成光源 NPC）。
+type LightSpawnEntry struct {
+	NpcID int32 `yaml:"npc_id"`
+	X     int32 `yaml:"x"`
+	Y     int32 `yaml:"y"`
+	MapID int16 `yaml:"map_id"`
+}
+
+// LoadLightSpawnList 從 YAML 載入路燈生成點位。
+func LoadLightSpawnList(path string) ([]LightSpawnEntry, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read light_spawn_list: %w", err)
+	}
+	var entries []LightSpawnEntry
+	if err := yaml.Unmarshal(raw, &entries); err != nil {
+		return nil, fmt.Errorf("parse light_spawn_list: %w", err)
+	}
+	return entries, nil
 }
 
 // NpcAction holds dialog data for an NPC (which HTML to show on click).

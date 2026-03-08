@@ -134,6 +134,20 @@ func (s *CombatSystem) processMeleeAttack(sessID uint64, targetID int32) *handle
 		return s.processScarecrowHit(player, npc, ws)
 	}
 
+	// 守護塔攻擊前檢查（Java: L1TowerInstance — 必須在攻城戰中且已宣戰）
+	if npc.Impl == "L1Tower" && s.deps.Castle != nil {
+		if !s.deps.Castle.CanDamageTower(player, npc) {
+			return nil
+		}
+	}
+
+	// 投石車攻擊前檢查（Java: L1CatapultInstance.receiveDamage — 攻城中 + 宣戰方）
+	if npc.Impl == "L1Catapult" && s.deps.Castle != nil {
+		if !s.deps.Castle.CanDamageCatapult(player, npc) {
+			return nil
+		}
+	}
+
 	// 從裝備武器取得傷害
 	weaponDmg := 4 // 空手傷害
 	targetSize := npc.Size
@@ -311,6 +325,20 @@ func (s *CombatSystem) processRangedAttack(sessID uint64, targetID int32) *handl
 		return s.processScarecrowHit(player, npc, ws)
 	}
 
+	// 守護塔攻擊前檢查（遠程同樣適用）
+	if npc.Impl == "L1Tower" && s.deps.Castle != nil {
+		if !s.deps.Castle.CanDamageTower(player, npc) {
+			return nil
+		}
+	}
+
+	// 投石車攻擊前檢查（遠程同樣適用）
+	if npc.Impl == "L1Catapult" && s.deps.Castle != nil {
+		if !s.deps.Castle.CanDamageCatapult(player, npc) {
+			return nil
+		}
+	}
+
 	// 從背包找到並消耗箭矢
 	arrow := FindArrow(player, s.deps)
 	if arrow == nil {
@@ -439,6 +467,36 @@ func (s *CombatSystem) processRangedAttack(sessID uint64, targetID int32) *handl
 func handleNpcDeath(npc *world.NpcInfo, killer *world.PlayerInfo, nearby []*world.PlayerInfo, deps *handler.Deps) *handler.NpcKillResult {
 	npc.Dead = true
 
+	// 守護塔死亡 → 生成王冠（Java: L1TowerInstance.Death）
+	if npc.Impl == "L1Tower" && deps.Castle != nil {
+		deps.Castle.OnTowerDeath(npc)
+		// 塔不給經驗、不掉落、不重生
+		deps.World.NpcDied(npc)
+		if deps.MapData != nil {
+			deps.MapData.SetImpassable(npc.MapID, npc.X, npc.Y, false)
+		}
+		for _, viewer := range nearby {
+			handler.SendActionGfx(viewer.Session, npc.ID, 8)
+			handler.SendNpcDeadPack(viewer.Session, npc)
+		}
+		npc.DeleteTimer = 50
+		return nil
+	}
+
+	// 投石車死亡（Java: L1CatapultInstance — 不給經驗、不掉落、不重生）
+	if npc.Impl == "L1Catapult" {
+		deps.World.NpcDied(npc)
+		if deps.MapData != nil {
+			deps.MapData.SetImpassable(npc.MapID, npc.X, npc.Y, false)
+		}
+		for _, viewer := range nearby {
+			handler.SendActionGfx(viewer.Session, npc.ID, 8)
+			handler.SendNpcDeadPack(viewer.Session, npc)
+		}
+		npc.DeleteTimer = 50
+		return nil
+	}
+
 	// 死亡聊天（Java: ChatTiming=DEAD）
 	StartNpcChat(npc, data.ChatTimingDead, deps.NpcChats)
 
@@ -508,8 +566,8 @@ func handleNpcDeath(npc *world.NpcInfo, killer *world.PlayerInfo, nearby []*worl
 		// 善惡值只給 killer（最高仇恨者）
 		deps.PvP.AddLawfulFromNpc(killer, npc.Lawful)
 
-		// 掉落物只給 killer
-		handler.GiveDrops(killer, npc.NpcID, deps)
+		// 掉落物品（支援自動分配隊伍）
+		handler.GiveDrops(killer, npc, deps)
 	}
 
 	// 清空仇恨列表（防止殘留影響重生）
@@ -754,7 +812,7 @@ func (s *CombatSystem) processScarecrowHit(player *world.PlayerInfo, npc *world.
 // 注意：L1Scarecrow 雖可攻擊但在 processMeleeAttack 中特殊處理，不經此判斷。
 func isAttackableNpc(impl string) bool {
 	switch impl {
-	case "L1Monster", "L1Guard", "L1Guardian", "L1Scarecrow":
+	case "L1Monster", "L1Guard", "L1Guardian", "L1Scarecrow", "L1Catapult":
 		return true
 	}
 	return false

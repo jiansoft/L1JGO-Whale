@@ -31,11 +31,13 @@ func HandleShop(sess *net.Session, r *packet.Reader, deps *Deps) {
 	case 0:
 		openPrivateShop(sess, r, player, deps)
 	case 1:
-		closePrivateShop(player, deps)
+		if deps.PrivShop != nil {
+			deps.PrivShop.CloseShop(player)
+		}
 	}
 }
 
-// openPrivateShop 開設個人商店。
+// openPrivateShop 解析開設商店封包並委派給 PrivateShopSystem。
 func openPrivateShop(sess *net.Session, r *packet.Reader, player *world.PlayerInfo, deps *Deps) {
 	// 讀取出售清單
 	sellCount := int(r.ReadH())
@@ -118,13 +120,13 @@ func openPrivateShop(sess *net.Session, r *packet.Reader, player *world.PlayerIn
 	// 讀取商店標語（Big5 位元組）
 	shopChat := r.ReadBytes(r.Remaining())
 
+	if deps.PrivShop == nil {
+		return
+	}
+
 	if !tradable {
 		// 有不可交易物品 → 取消擺攤
-		player.PrivateShop = false
-		player.ShopSellList = nil
-		player.ShopBuyList = nil
-		nearby := deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
-		BroadcastToPlayers(nearby, BuildActionGfx(player.CharID, 3)) // 取消動作
+		deps.PrivShop.CancelShopNotTradable(player)
 		return
 	}
 
@@ -132,30 +134,8 @@ func openPrivateShop(sess *net.Session, r *packet.Reader, player *world.PlayerIn
 		return
 	}
 
-	// 設定擺攤狀態
-	player.PrivateShop = true
-	player.ShopSellList = sellList
-	player.ShopBuyList = buyList
-	player.ShopChat = shopChat
-
-	nearby := deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
-
-	// 廣播擺攤動作 + 標語（Java: S_DoActionShop — opcode 158, action 70, + shopChat）
-	BroadcastToPlayers(nearby, BuildActionGfx(player.CharID, 3)) // 先取消原有動作
-	shopData := buildShopAction(player.CharID, shopChat)
-	BroadcastToPlayers(nearby, shopData)
-}
-
-// closePrivateShop 取消個人商店。
-func closePrivateShop(player *world.PlayerInfo, deps *Deps) {
-	player.PrivateShop = false
-	player.ShopSellList = nil
-	player.ShopBuyList = nil
-	player.ShopChat = nil
-	player.ShopTradingLocked = false
-
-	nearby := deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
-	BroadcastToPlayers(nearby, BuildActionGfx(player.CharID, 3)) // 取消動作
+	// 委派給 PrivateShopSystem 設定擺攤狀態
+	deps.PrivShop.SetupShop(player, sellList, buyList, shopChat)
 }
 
 // validateShopItem 驗證物品是否可在個人商店中出售。
@@ -299,100 +279,17 @@ func sendPrivateShopBuyList(sess *net.Session, viewer, shopPlayer *world.PlayerI
 //
 //	for count: readD(order) + readD(buyCount)
 func HandlePrivateShopBuy(sess *net.Session, r *packet.Reader, itemCount int, player *world.PlayerInfo, shopPlayer *world.PlayerInfo, deps *Deps) {
-	if shopPlayer.ShopTradingLocked {
-		return // 另一玩家正在交易中
-	}
-	shopPlayer.ShopTradingLocked = true
-	defer func() { shopPlayer.ShopTradingLocked = false }()
-
-	sellList := shopPlayer.ShopSellList
-	if len(sellList) == 0 {
-		return
-	}
-
-	// 驗證商品數量一致性（Java: getPartnersPrivateShopItemCount）
-	if player.ShopPartnerCount != len(sellList) {
-		return
-	}
-
+	// 解析封包中的訂單列表
+	orders := make([]ShopBuyOrder, 0, itemCount)
 	for n := 0; n < itemCount; n++ {
 		order := int(r.ReadD())
 		count := r.ReadD()
-
-		if order < 0 || order >= len(sellList) || count <= 0 {
-			continue
-		}
-
-		pssl := sellList[order]
-		remaining := pssl.SellTotal - pssl.SoldCount
-		if count > remaining {
-			count = remaining
-		}
-		if count <= 0 {
-			continue
-		}
-
-		item := shopPlayer.Inv.FindByObjectID(pssl.ItemObjectID)
-		if item == nil {
-			sendServerMessage(sess, 989) // 無法交易
-			continue
-		}
-
-		// 價格溢位保護（Java: price * count > 2000000000）
-		totalPrice := int64(pssl.SellPrice) * int64(count)
-		if totalPrice > 2_000_000_000 {
-			SendServerMessageArgs(sess, 904, "2000000000")
-			return
-		}
-		price := int32(totalPrice)
-
-		// 驗證買方金幣
-		buyerAdena := player.Inv.GetAdena()
-		if buyerAdena < price {
-			sendServerMessage(sess, 189) // 金幣不足
-			continue
-		}
-
-		// 驗證賣方物品數量
-		if item.Count < count {
-			sendServerMessage(sess, 989) // 無法交易
-			continue
-		}
-
-		// 驗證買方背包容量
-		if !item.Stackable && player.Inv.Size()+int(count) > world.MaxInventorySize {
-			sendServerMessage(sess, 270) // 背包過重
-			break
-		}
-
-		// 執行物品轉移：賣方 → 買方
-		transferShopItem(shopPlayer, player, item, count, deps)
-
-		// 執行金幣轉移：買方 → 賣方
-		transferShopGold(player, shopPlayer, price, deps)
-
-		// 通知商店玩家：出售成功（Java: S_ServerMessage 877）
-		itemName := item.Name
-		if count > 1 {
-			itemName = fmt.Sprintf("%s (%d)", item.Name, count)
-		}
-		SendServerMessageArgs(shopPlayer.Session, 877, player.Name, itemName)
-
-		// 更新售出累計
-		pssl.SoldCount += count
+		orders = append(orders, ShopBuyOrder{Order: order, Count: count})
 	}
 
-	// 清理已售完的項目（從末尾向前刪除）
-	for i := len(sellList) - 1; i >= 0; i-- {
-		if sellList[i].SoldCount >= sellList[i].SellTotal {
-			sellList = append(sellList[:i], sellList[i+1:]...)
-		}
-	}
-	shopPlayer.ShopSellList = sellList
-
-	// 如果所有商品都售完，自動關閉商店
-	if len(sellList) == 0 && len(shopPlayer.ShopBuyList) == 0 {
-		closePrivateShop(shopPlayer, deps)
+	// 委派給 PrivateShopSystem 執行業務邏輯
+	if deps.PrivShop != nil {
+		deps.PrivShop.ExecuteBuy(player, shopPlayer, orders)
 	}
 }
 
@@ -401,110 +298,24 @@ func HandlePrivateShopBuy(sess *net.Session, r *packet.Reader, itemCount int, pl
 // Java 參考: C_Result.mode_sellpc
 // 封包格式：for count: readD(itemObjID) + readD(sellCount) + readC(order)
 func HandlePrivateShopSell(sess *net.Session, r *packet.Reader, itemCount int, player *world.PlayerInfo, shopPlayer *world.PlayerInfo, deps *Deps) {
-	if shopPlayer.ShopTradingLocked {
-		return
-	}
-	shopPlayer.ShopTradingLocked = true
-	defer func() { shopPlayer.ShopTradingLocked = false }()
-
-	buyList := shopPlayer.ShopBuyList
-	if len(buyList) == 0 {
-		return
-	}
-
+	// 解析封包中的訂單列表
+	orders := make([]ShopSellOrder, 0, itemCount)
 	for n := 0; n < itemCount; n++ {
 		itemObjID := r.ReadD()
 		count := r.ReadD()
 		order := int(r.ReadC())
-
-		if order < 0 || order >= len(buyList) || count <= 0 {
-			continue
-		}
-
-		psbl := buyList[order]
-		remaining := psbl.BuyTotal - psbl.BoughtCount
-		if count > remaining {
-			count = remaining
-		}
-		if count <= 0 {
-			continue
-		}
-
-		// 驗證玩家背包中的物品
-		item := player.Inv.FindByObjectID(itemObjID)
-		if item == nil {
-			continue
-		}
-
-		// 驗證物品種類和強化等級匹配（防作弊）
-		if item.ItemID != psbl.ItemID || item.EnchantLvl != psbl.EnchantLvl {
-			return // 可能作弊
-		}
-
-		// 驗證物品數量
-		if item.Count < count {
-			sendServerMessage(sess, 989)
-			continue
-		}
-
-		// 價格計算
-		totalPrice := int64(psbl.BuyPrice) * int64(count)
-		if totalPrice > 2_000_000_000 {
-			SendServerMessageArgs(sess, 904, "2000000000")
-			return
-		}
-		price := int32(totalPrice)
-
-		// 驗證商店玩家金幣
-		shopAdena := shopPlayer.Inv.GetAdena()
-		if shopAdena < price {
-			sendServerMessage(sess, 189) // 金幣不足
-			break
-		}
-
-		// 驗證商店玩家背包容量
-		if !item.Stackable && shopPlayer.Inv.Size()+int(count) > world.MaxInventorySize {
-			sendServerMessage(sess, 271) // 對方背包過重
-			break
-		}
-
-		// 執行物品轉移：賣方（玩家）→ 商店玩家
-		transferShopItem(player, shopPlayer, item, count, deps)
-
-		// 執行金幣轉移：商店玩家 → 玩家
-		transferShopGold(shopPlayer, player, price, deps)
-
-		// 更新收購累計
-		psbl.BoughtCount += count
+		orders = append(orders, ShopSellOrder{ItemObjID: itemObjID, Count: count, Order: order})
 	}
 
-	// 清理已收購完的項目
-	for i := len(buyList) - 1; i >= 0; i-- {
-		if buyList[i].BoughtCount >= buyList[i].BuyTotal {
-			buyList = append(buyList[:i], buyList[i+1:]...)
-		}
-	}
-	shopPlayer.ShopBuyList = buyList
-
-	// 所有商品收購完成 → 自動關閉商店
-	if len(shopPlayer.ShopSellList) == 0 && len(buyList) == 0 {
-		closePrivateShop(shopPlayer, deps)
+	// 委派給 PrivateShopSystem 執行業務邏輯
+	if deps.PrivShop != nil {
+		deps.PrivShop.ExecuteSell(player, shopPlayer, orders)
 	}
 }
 
-// transferShopItem 從來源玩家背包移動物品到目標玩家背包。
-func transferShopItem(from, to *world.PlayerInfo, item *world.InvItem, count int32, deps *Deps) {
-	deps.PrivShop.TransferItem(from, to, item, count)
-}
-
-// transferShopGold 轉移金幣。
-func transferShopGold(from, to *world.PlayerInfo, amount int32, deps *Deps) {
-	deps.PrivShop.TransferGold(from, to, amount)
-}
-
-// buildShopAction 建構擺攤動作封包（Java: S_DoActionShop）。
+// BuildShopAction 建構擺攤動作封包（Java: S_DoActionShop）。
 // 格式：opcode 158 + writeD(objectID) + writeC(70) + writeByte(shopChat)
-func buildShopAction(charID int32, shopChat []byte) []byte {
+func BuildShopAction(charID int32, shopChat []byte) []byte {
 	w := packet.NewWriterWithOpcode(packet.S_OPCODE_ACTION)
 	w.WriteD(charID)
 	w.WriteC(70) // 擺攤動作代碼

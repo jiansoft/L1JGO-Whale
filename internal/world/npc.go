@@ -21,8 +21,9 @@ type NpcInfo struct {
 	ID      int32 // unique object ID (from NextNpcID)
 	NpcID   int32 // template ID
 	Impl    string // L1Monster, L1Merchant, L1Guard, etc.
-	GfxID   int32
-	Name    string
+	GfxID     int32
+	LightSize byte // 光源半徑（路燈 NPC 用，0=無光源）
+	Name      string
 	NameID  string // client string table key (e.g. "$936")
 	Level   int16
 	X       int32
@@ -98,6 +99,10 @@ type NpcInfo struct {
 	ChatActive        bool   // 聊天計時器是否啟用
 	ChatFirstAttack   bool   // 是否已觸發過首次被攻擊聊天
 	ChatAppearStarted bool   // 是否已嘗試過出現聊天（防重複啟動）
+
+	// 投石車砲彈冷卻（Java: L1CatapultInstance）
+	ShellDamageTime  int64 // 上次普通砲彈發射 Unix 秒
+	ShellSilenceTime int64 // 上次沉默砲彈發射 Unix 秒
 
 	// 怪物群體系統（Java: L1MobGroupInfo）
 	GroupInfo    *MobGroupInfo // 所屬群體資訊（nil=不屬於任何群體）

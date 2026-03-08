@@ -69,6 +69,7 @@ type PlayerInfo struct {
 	MagicCritical int16 // 魔法爆擊加成
 	Food         int16 // satiety 0-225 (225=full); sent in S_STATUS
 	FoodFullTime int64 // 飽食度達 225 的時刻（Unix 秒）；-1=未滿（Java: _h_time，生存吶喊用）
+	AccessLevel   int16 // GM 等級（0=一般玩家, ≥200=GM）
 	PKCount       int32 // PK kill count
 	KillCount     int32 // PvP 擊殺累計（排名用）
 	DeathCount    int32 // PvP 死亡累計（排名用）
@@ -178,6 +179,9 @@ type PlayerInfo struct {
 	PoisonDmgTimer  int    // 傷害毒：距下次扣血的 tick 計數（每 15 tick 扣一次）
 	PoisonDmgAmount int16  // 傷害毒每次扣血量（NPC攻擊:20, 毒咒:5）
 	PoisonAttacker  uint64 // 施毒者 SessionID（傷害毒歸屬用）
+
+	// 投石車沉默砲彈到期時間（Unix 秒，0=無效）
+	CatapultSilenceEnd int64
 
 	// --- 詛咒麻痺系統（Java L1CurseParalysis，與毒系統獨立）---
 	// CurseType: 0=無, 1=詛咒延遲中, 2=詛咒已麻痺
@@ -693,6 +697,11 @@ func (s *State) GetNearbyPlayers(x, y int32, mapID int16, excludeSession uint64)
 		}
 	}
 	return result
+}
+
+// ChangePlayerHeading 更新玩家朝向。
+func (s *State) ChangePlayerHeading(player *PlayerInfo, heading int16) {
+	player.Heading = heading
 }
 
 // PlayerCount returns the number of players in-world.

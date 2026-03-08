@@ -1,6 +1,8 @@
 package system
 
 import (
+	"time"
+
 	"github.com/l1jgo/server/internal/handler"
 	"github.com/l1jgo/server/internal/world"
 )
@@ -20,6 +22,18 @@ import (
 //   0 = 無詛咒
 //   1 = 詛咒延遲中（灰色色調，可移動，25 tick = 5 秒後轉階段二）
 //   2 = 詛咒已麻痺（灰色色調，不可移動，20 tick = 4 秒後解除）
+
+// TickCatapultSilence 每 tick 檢查投石車沉默砲彈到期。
+// 由 BuffTickSystem (Phase 2) 呼叫。
+func TickCatapultSilence(p *world.PlayerInfo) {
+	if p.CatapultSilenceEnd > 0 && time.Now().Unix() >= p.CatapultSilenceEnd {
+		p.CatapultSilenceEnd = 0
+		// 只有在不是沉默毒的情況下才解除沉默
+		if p.PoisonType != 2 {
+			p.Silenced = false
+		}
+	}
+}
 
 // TickPlayerPoison 每 tick 處理玩家的中毒狀態計時。
 // 由 BuffTickSystem (Phase 2) 呼叫。

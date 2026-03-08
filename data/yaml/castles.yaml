@@ -1,0 +1,111 @@
+# 城堡靜態地理資料（Java L1CastleLocation.java 對照）
+# war_area: 攻城戰範圍
+# tower: 守護塔位置
+# inner_map: 內城地圖 ID（0=無）
+# getback_town: 攻城戰開始時非城盟玩家傳送到的城鎮 town_id
+# catapults: 投石車位置列表（side: attack=攻擊方, defence=防守方）
+# sub_towers: 副塔位置（僅亞丁城有）
+castles:
+  - id: 1
+    name: 肯特
+    war_area: { x1: 33089, x2: 33219, y1: 32717, y2: 32827, map: 4 }
+    tower: { x: 33168, y: 32779, map: 4 }
+    inner_map: 15
+    getback_town: 1
+    catapults:
+      - { x: 33093, y: 32780, map: 4, side: attack }
+      - { x: 33093, y: 32755, map: 4, side: attack }
+      - { x: 33130, y: 32779, map: 4, side: defence }
+      - { x: 33130, y: 32748, map: 4, side: defence }
+    gate_npcs: [70656, 70549, 70985]
+
+  - id: 2
+    name: 妖魔
+    war_area: { x1: 32750, x2: 32850, y1: 32220, y2: 32350, map: 4 }
+    tower: { x: 32798, y: 32285, map: 4 }
+    inner_map: 260
+    getback_town: 9
+    catapults:
+      - { x: 32778, y: 32331, map: 4, side: attack }
+      - { x: 32804, y: 32331, map: 4, side: attack }
+      - { x: 32798, y: 32298, map: 4, side: defence }
+    gate_npcs: []
+
+  - id: 3
+    name: 風木
+    war_area: { x1: 32571, x2: 32721, y1: 33350, y2: 33460, map: 4 }
+    tower: { x: 32623, y: 33379, map: 4 }
+    inner_map: 29
+    getback_town: 4
+    catapults: []
+    gate_npcs: []
+
+  - id: 4
+    name: 奇巖
+    war_area: { x1: 33559, x2: 33686, y1: 32615, y2: 32755, map: 4 }
+    tower: { x: 33631, y: 32678, map: 4 }
+    inner_map: 52
+    getback_town: 3
+    catapults:
+      - { x: 33642, y: 32748, map: 4, side: attack }
+      - { x: 33619, y: 32748, map: 4, side: attack }
+      - { x: 33652, y: 32715, map: 4, side: defence }
+      - { x: 33621, y: 32715, map: 4, side: defence }
+    gate_npcs: []
+
+  - id: 5
+    name: 海音
+    war_area: { x1: 33458, x2: 33583, y1: 33315, y2: 33490, map: 4 }
+    tower: { x: 33524, y: 33396, map: 4 }
+    inner_map: 64
+    getback_town: 5
+    catapults: []
+    gate_npcs: []
+
+  - id: 6
+    name: 侏儒
+    war_area: { x1: 32755, x2: 32870, y1: 32790, y2: 32920, map: 66 }
+    tower: { x: 32826, y: 32822, map: 66 }
+    inner_map: 0
+    getback_town: 7
+    catapults: []
+    gate_npcs: []
+
+  - id: 7
+    name: 亞丁
+    war_area: { x1: 34007, x2: 34162, y1: 33172, y2: 33332, map: 4 }
+    tower: { x: 34090, y: 33260, map: 4 }
+    inner_map: 300
+    getback_town: 6
+    catapults: []
+    sub_towers:
+      - { x: 34057, y: 33291, map: 4, name: 青 }
+      - { x: 34123, y: 33291, map: 4, name: 赤 }
+      - { x: 34057, y: 33230, map: 4, name: 綠 }
+      - { x: 34123, y: 33230, map: 4, name: 白 }
+    gate_npcs: []
+
+  - id: 8
+    name: 狄亞得
+    war_area: { x1: 32888, x2: 33070, y1: 32839, y2: 32953, map: 320 }
+    tower: { x: 33032, y: 32896, map: 320 }
+    inner_map: 330
+    getback_town: 10
+    catapults: []
+    gate_npcs: []
+
+# NPC 城鎮 → 城堡映射（Java L1CastleLocation.getCastleIdByNpcid）
+# town_id → castle_id 的映射關係
+town_castle_map:
+  1: 1   # TOWNID_KENT → 肯特城
+  2: 1   # TOWNID_GLUDIO → 肯特城
+  9: 2   # TOWNID_ORCISH_FOREST → 妖魔城
+  8: 3   # TOWNID_SILVER_KNIGHT_TOWN → 風木城
+  4: 3   # TOWNID_WINDAWOOD → 風木城
+  0: 4   # TOWNID_TALKING_ISLAND → 奇巖城
+  3: 4   # TOWNID_GIRAN → 奇巖城
+  5: 5   # TOWNID_HEINE → 海音城
+  7: 6   # TOWNID_WERLDAN → 侏儒城
+  11: 6  # TOWNID_OREN → 侏儒城
+  6: 7   # TOWNID_ADEN → 亞丁城
+  10: 8  # TOWNID_OUM_DUNGEON → 狄亞得要塞

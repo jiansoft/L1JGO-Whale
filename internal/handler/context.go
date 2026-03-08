@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"time"
+
 	"github.com/l1jgo/server/internal/config"
 	"github.com/l1jgo/server/internal/core/event"
 	"github.com/l1jgo/server/internal/data"
@@ -215,8 +217,8 @@ type MailManager interface {
 
 // ShopManager 處理 NPC 商店交易邏輯（購買/販賣）。由 system.ShopSystem 實作。
 type ShopManager interface {
-	// BuyFromNpc 處理玩家從 NPC 購買物品。
-	BuyFromNpc(sess *net.Session, r *packet.Reader, count int, player *world.PlayerInfo, shop *data.Shop)
+	// BuyFromNpc 處理玩家從 NPC 購買物品。npc 用於稅金計算（城堡/城鎮歸屬）。
+	BuyFromNpc(sess *net.Session, r *packet.Reader, count int, player *world.PlayerInfo, shop *data.Shop, npc *world.NpcInfo)
 	// SellToNpc 處理玩家向 NPC 販賣物品。
 	SellToNpc(sess *net.Session, r *packet.Reader, count int, player *world.PlayerInfo, shop *data.Shop)
 }
@@ -359,8 +361,8 @@ type ItemUseManager interface {
 	UseHomeScroll(sess *net.Session, player *world.PlayerInfo, item *world.InvItem)
 	// UseFixedTeleportScroll 處理指定傳送卷軸使用。
 	UseFixedTeleportScroll(sess *net.Session, player *world.PlayerInfo, item *world.InvItem, itemInfo *data.ItemInfo)
-	// GiveDrops 為擊殺的 NPC 擲骰掉落物品。
-	GiveDrops(killer *world.PlayerInfo, npcID int32)
+	// GiveDrops 為擊殺的 NPC 擲骰掉落物品（支援自動分配隊伍）。
+	GiveDrops(killer *world.PlayerInfo, npc *world.NpcInfo)
 	// ApplyHaste 套用加速效果。
 	ApplyHaste(sess *net.Session, player *world.PlayerInfo, durationSec int, gfxID int32)
 	// BroadcastEffect 向自己和附近玩家廣播特效。
@@ -465,6 +467,29 @@ type PrivateShopManager interface {
 	TransferItem(from, to *world.PlayerInfo, item *world.InvItem, count int32)
 	// TransferGold 轉移金幣。
 	TransferGold(from, to *world.PlayerInfo, amount int32)
+	// SetupShop 開設個人商店（設定出售/收購清單 + 廣播擺攤動作）。
+	SetupShop(player *world.PlayerInfo, sellList []*world.PrivateShopSell, buyList []*world.PrivateShopBuy, shopChat []byte)
+	// CloseShop 關閉個人商店（清除狀態 + 廣播取消動作）。
+	CloseShop(player *world.PlayerInfo)
+	// CancelShopNotTradable 因不可交易物品取消商店設置。
+	CancelShopNotTradable(player *world.PlayerInfo)
+	// ExecuteBuy 執行從個人商店購買物品（業務驗證 + 物品/金幣轉移 + 售完清理）。
+	ExecuteBuy(buyer *world.PlayerInfo, shopPlayer *world.PlayerInfo, orders []ShopBuyOrder)
+	// ExecuteSell 執行向個人商店出售物品（業務驗證 + 物品/金幣轉移 + 收購完成清理）。
+	ExecuteSell(seller *world.PlayerInfo, shopPlayer *world.PlayerInfo, orders []ShopSellOrder)
+}
+
+// ShopBuyOrder 從個人商店購買的單筆訂單（封包解析結果）。
+type ShopBuyOrder struct {
+	Order int   // 商品索引
+	Count int32 // 購買數量
+}
+
+// ShopSellOrder 向個人商店出售的單筆訂單（封包解析結果）。
+type ShopSellOrder struct {
+	ItemObjID int32 // 賣方物品 ObjectID
+	Count     int32 // 出售數量
+	Order     int   // 收購清單索引
 }
 
 // FishingManager 處理釣魚邏輯（開始/結束/tick）。由 system.FishingSystem 實作。
@@ -527,6 +552,98 @@ type CharResetManager interface {
 type QuestActionHandler interface {
 	// ExecuteQuestAction 執行任務動作（驗證條件 → 消耗道具 → 給予獎勵 → 推進步驟）。
 	ExecuteQuestAction(sess *net.Session, player *world.PlayerInfo, objID int32, npcID int32, action string) bool
+}
+
+// CastleManager 處理城堡管理邏輯（稅率/寶庫/攻城戰排程）。由 system.CastleSystem 實作。
+type CastleManager interface {
+	// GetCastle 取得城堡運行時狀態。
+	GetCastle(castleID int32) *CastleInfo
+	// GetCastleByOwnerClan 依城主公會 ID 取得城堡（0=無城堡）。
+	GetCastleByOwnerClan(clanID int32) *CastleInfo
+	// SetTaxRate 設定城堡稅率（10-50）。
+	SetTaxRate(sess *net.Session, player *world.PlayerInfo, castleID int32, rate int32)
+	// Deposit 存入金幣到城堡寶庫。
+	Deposit(sess *net.Session, player *world.PlayerInfo, castleID int32, amount int32)
+	// Withdraw 從城堡寶庫領出金幣。
+	Withdraw(sess *net.Session, player *world.PlayerInfo, castleID int32, amount int32)
+	// GetTaxRate 取得城堡當前稅率（緩存值）。
+	GetTaxRate(castleID int32) int32
+	// GetCastleIDByNpcLocation 依 NPC 座標查詢所屬城堡 ID。
+	GetCastleIDByNpcLocation(x, y int32, mapID int16) int32
+	// IsWarNow 指定城堡是否在攻城戰中。
+	IsWarNow(castleID int32) bool
+	// IsAnyWarNow 是否有任何城堡在攻城戰中。
+	IsAnyWarNow() bool
+	// CheckInWarArea 檢查座標是否在攻城戰區域中。
+	CheckInWarArea(castleID int32, x, y int32, mapID int16) bool
+	// TickWar 攻城戰排程 tick（由主迴圈每 tick 呼叫）。
+	TickWar()
+	// AddPublicMoney 增加城堡寶庫金額（用於稅收自動存入）。
+	AddPublicMoney(castleID int32, amount int64)
+	// TransferCastle 轉移城堡主權（攻城勝利時呼叫）。
+	TransferCastle(castleID int32, newClanID int32)
+	// OnTowerDeath 守護塔被摧毀時呼叫：在塔座標生成王冠。
+	OnTowerDeath(npc *world.NpcInfo)
+	// HandleCrownClick 玩家點擊王冠：城堡主權轉移。
+	HandleCrownClick(sess *net.Session, player *world.PlayerInfo, npc *world.NpcInfo)
+	// CanDamageTower 檢查是否可以攻擊守護塔（必須在攻城戰中且宣戰方）。
+	CanDamageTower(player *world.PlayerInfo, npc *world.NpcInfo) bool
+	// CanDamageCatapult 檢查是否可以攻擊投石車（必須在攻城戰中且宣戰方）。
+	CanDamageCatapult(player *world.PlayerInfo, npc *world.NpcInfo) bool
+	// SpawnWarFlags 攻城戰開始時生成戰爭旗。
+	SpawnWarFlags(castleID int32)
+	// ClearWarFlags 攻城戰結束時清除戰爭旗。
+	ClearWarFlags(castleID int32)
+	// SpawnCatapults 生成城堡投石車。
+	SpawnCatapults(castleID int32)
+	// ClearCatapults 清除城堡投石車。
+	ClearCatapults(castleID int32)
+	// HandleCatapultAction 投石車砲彈發射。
+	HandleCatapultAction(sess *net.Session, player *world.PlayerInfo, npc *world.NpcInfo, action string)
+	// IsCatapultAttacker 判斷投石車是否為攻擊方。
+	IsCatapultAttacker(npcID int32) bool
+}
+
+// CastleInfo 城堡運行時狀態。
+type CastleInfo struct {
+	CastleID    int32
+	Name        string
+	TaxRate     int32
+	PublicMoney int64
+	WarTime     time.Time
+	OwnerClanID int32
+	IsWar       bool
+}
+
+// WarManager 處理戰爭邏輯（宣戰/投降/休戰/攻城勝利）。由 system.WarSystem 實作。
+type WarManager interface {
+	// DeclareWar 宣戰。
+	DeclareWar(sess *net.Session, player *world.PlayerInfo, targetClanName string)
+	// SurrenderWar 投降。
+	SurrenderWar(sess *net.Session, player *world.PlayerInfo, targetClanName string)
+	// CeaseWar 休戰。
+	CeaseWar(sess *net.Session, player *world.PlayerInfo, targetClanName string)
+	// WinCastleWar 攻城勝利（王冠被取得時呼叫）。
+	WinCastleWar(winnerClanName string, castleID int32)
+	// CeaseCastleWar 攻城戰時間到（防禦方勝利）。
+	CeaseCastleWar(castleID int32)
+	// IsWar 兩個公會是否在戰爭中。
+	IsWar(clan1, clan2 string) bool
+	// IsClanInWar 公會是否在任何戰爭中。
+	IsClanInWar(clanName string) bool
+	// GetActiveWars 取得所有進行中的戰爭。
+	GetActiveWars() []*ActiveWar
+	// CheckCastleWar 登入時通知攻城戰狀態。
+	CheckCastleWar(sess *net.Session)
+}
+
+// ActiveWar 進行中的戰爭狀態。
+type ActiveWar struct {
+	WarType       int       // 1=攻城, 2=模擬戰, 3=血盟決鬥
+	DefenceClan   string
+	AttackClans   map[string]bool
+	CastleID      int32
+	StartTime     time.Time
 }
 
 // TrapTriggerer 處理陷阱觸發邏輯（傷害/治療/中毒/技能/傳送）。由 system.TrapSystem 實作。
@@ -635,6 +752,11 @@ type Deps struct {
 	PrivShop      PrivateShopManager   // 個人商店交易（filled after PrivateShopSystem is created）
 	Fishing       FishingManager       // 釣魚邏輯（filled after FishingSystem is created）
 	MapTimer      MapTimerManager      // 限時地圖計時（filled after MapTimerSystem is created）
+	Castles       *data.CastleTable    // 城堡靜態地理資料
+	WarGifts      *data.WarGiftTable   // 攻城戰禮物資料
+	CastleRepo    *persist.CastleRepo  // 城堡動態狀態持久化
+	Castle        CastleManager        // 城堡管理邏輯（filled after CastleSystem is created）
+	War           WarManager           // 戰爭管理邏輯（filled after WarSystem is created）
 }
 
 // RegisterAll registers all packet handlers into the registry.
@@ -921,6 +1043,30 @@ func RegisterAll(reg *packet.Registry, deps *Deps) {
 
 	// Warehouse: all warehouse ops go through C_BUY_SELL (opcode 161) with resultType 2-9.
 	// C_DEPOSIT(56) and C_WITHDRAW(44) are castle treasury opcodes, not warehouse.
+
+	// Castle treasury
+	reg.Register(packet.C_OPCODE_TAX, inWorldStates,
+		func(sess any, r *packet.Reader) {
+			HandleTaxRate(sess.(*net.Session), r, deps)
+		},
+	)
+	reg.Register(packet.C_OPCODE_DEPOSIT, inWorldStates,
+		func(sess any, r *packet.Reader) {
+			HandleCastleDeposit(sess.(*net.Session), r, deps)
+		},
+	)
+	reg.Register(packet.C_OPCODE_WITHDRAW, inWorldStates,
+		func(sess any, r *packet.Reader) {
+			HandleCastleWithdraw(sess.(*net.Session), r, deps)
+		},
+	)
+
+	// War（宣戰/投降/休戰）
+	reg.Register(packet.C_OPCODE_WAR, inWorldStates,
+		func(sess any, r *packet.Reader) {
+			HandleWar(sess.(*net.Session), r, deps)
+		},
+	)
 
 	// Party
 	// C_WHO_PARTY (230) = C_CreateParty in Java — party invite

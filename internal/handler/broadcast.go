@@ -3,7 +3,6 @@ package handler
 import (
 	"fmt"
 	"sync/atomic"
-	"time"
 
 	"github.com/l1jgo/server/internal/net"
 	"github.com/l1jgo/server/internal/net/packet"
@@ -229,7 +228,7 @@ func SendNpcPack(viewer *net.Session, npc *world.NpcInfo) {
 	w.WriteH(uint16(npc.GfxID))
 	w.WriteC(0)                   // status (0 = normal)
 	w.WriteC(byte(npc.Heading))
-	w.WriteC(0)                   // light
+	w.WriteC(npc.LightSize)       // light
 	w.WriteC(0)                   // move speed
 	w.WriteD(npc.Exp)             // experience reward
 	w.WriteH(0)                   // lawful
@@ -266,7 +265,7 @@ func SendNpcDeadPack(viewer *net.Session, npc *world.NpcInfo) {
 	w.WriteH(uint16(npc.GfxID))
 	w.WriteC(8)                   // status = ACTION_Die（屍體姿態）
 	w.WriteC(byte(npc.Heading))
-	w.WriteC(0)                   // light
+	w.WriteC(npc.LightSize)       // light
 	w.WriteC(0)                   // move speed
 	w.WriteD(npc.Exp)             // exp（Java: 死亡 NPC 仍發 exp）
 	w.WriteH(0)                   // lawful
@@ -429,7 +428,7 @@ func sendPlayerStatus(sess *net.Session, p *world.PlayerInfo) {
 	w.WriteH(uint16(p.MaxMP))
 	w.WriteC(byte(p.AC))
 
-	gameTime := int32(time.Now().Unix())
+	gameTime := int32(world.GameTimeNow().Seconds())
 	gameTime = gameTime - (gameTime%300)
 	w.WriteD(gameTime)
 
@@ -877,4 +876,29 @@ func BroadcastToPlayers(viewers []*world.PlayerInfo, data []byte) {
 	for _, v := range viewers {
 		v.Session.Send(data)
 	}
+}
+
+// SendGmMessage 發送 GM 訊息到指定 session。
+// Java: S_ToGmMessage — 使用 S_OPCODE_NPCSHOUT(161), type=0, npcID=0, \fY 黃色文字前綴。
+func SendGmMessage(sess *net.Session, info string) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_NPCSHOUT)
+	w.WriteC(0) // type=0
+	w.WriteD(0) // npcID=0
+	w.WriteS("\\fY" + info)
+	sess.Send(w.Bytes())
+}
+
+// BroadcastToGMs 廣播訊息給所有線上 GM（AccessLevel >= 200）。
+// 封包格式同 SendGmMessage，序列化一次、發送多次。
+func BroadcastToGMs(ws *world.State, info string) {
+	w := packet.NewWriterWithOpcode(packet.S_OPCODE_NPCSHOUT)
+	w.WriteC(0) // type=0
+	w.WriteD(0) // npcID=0
+	w.WriteS("\\fY" + info)
+	data := w.Bytes()
+	ws.AllPlayers(func(p *world.PlayerInfo) {
+		if p.AccessLevel >= 200 {
+			p.Session.Send(data)
+		}
+	})
 }

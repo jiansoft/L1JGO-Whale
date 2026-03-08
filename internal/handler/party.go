@@ -99,6 +99,9 @@ func HandlePartyControl(sess *net.Session, r *packet.Reader, deps *Deps) {
 		}
 	case 2: // /chatparty — 查看聊天隊伍成員
 		deps.Party.ShowChatPartyInfo(sess, player)
+	case 3: // 聊天組隊邀請（Java: C_ChatParty case 3）
+		name := r.ReadS()
+		deps.Party.ChatInvite(sess, player, name)
 	}
 }
 

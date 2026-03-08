@@ -62011,6 +62011,7 @@ npcs:
     undead: false
     agro: false
     tameable: false
+    light_size: 14
   - npc_id: 81178
     name: '81178'
     nameid: ''
@@ -62035,6 +62036,7 @@ npcs:
     undead: false
     agro: false
     tameable: false
+    light_size: 14
   - npc_id: 81179
     name: '81179'
     nameid: ''
@@ -62059,6 +62061,7 @@ npcs:
     undead: false
     agro: false
     tameable: false
+    light_size: 14
   - npc_id: 81180
     name: '81180'
     nameid: ''
@@ -62083,6 +62086,7 @@ npcs:
     undead: false
     agro: false
     tameable: false
+    light_size: 14
   - npc_id: 81181
     name: '81181'
     nameid: ''
@@ -62107,6 +62111,7 @@ npcs:
     undead: false
     agro: false
     tameable: false
+    light_size: 10
   - npc_id: 81182
     name: ''
     nameid: ''
@@ -82391,6 +82396,270 @@ npcs:
     exp: 0
     lawful: 0
     size: ''
+    ranged: 0
+    atk_speed: 0
+    passive_speed: 0
+    undead: false
+    agro: false
+    tameable: false
+  - npc_id: 90327
+    name: 肯特投石器(攻)
+    nameid: '$16784'
+    impl: L1Catapult
+    gfx_id: 12159
+    level: 0
+    hp: 20000
+    mp: 0
+    ac: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    intel: 0
+    mr: 0
+    exp: 0
+    lawful: 0
+    size: large
+    ranged: 0
+    atk_speed: 0
+    passive_speed: 0
+    undead: false
+    agro: false
+    tameable: false
+  - npc_id: 90328
+    name: 肯特投石器(攻)
+    nameid: '$16784'
+    impl: L1Catapult
+    gfx_id: 12159
+    level: 0
+    hp: 20000
+    mp: 0
+    ac: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    intel: 0
+    mr: 0
+    exp: 0
+    lawful: 0
+    size: large
+    ranged: 0
+    atk_speed: 0
+    passive_speed: 0
+    undead: false
+    agro: false
+    tameable: false
+  - npc_id: 90329
+    name: 肯特投石器(防)
+    nameid: '$16784'
+    impl: L1Catapult
+    gfx_id: 12001
+    level: 0
+    hp: 20000
+    mp: 0
+    ac: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    intel: 0
+    mr: 0
+    exp: 0
+    lawful: 0
+    size: large
+    ranged: 0
+    atk_speed: 0
+    passive_speed: 0
+    undead: false
+    agro: false
+    tameable: false
+  - npc_id: 90330
+    name: 肯特投石器(防)
+    nameid: '$16784'
+    impl: L1Catapult
+    gfx_id: 12001
+    level: 0
+    hp: 20000
+    mp: 0
+    ac: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    intel: 0
+    mr: 0
+    exp: 0
+    lawful: 0
+    size: large
+    ranged: 0
+    atk_speed: 0
+    passive_speed: 0
+    undead: false
+    agro: false
+    tameable: false
+  - npc_id: 90331
+    name: 奇巖投石器(攻)
+    nameid: '$16784'
+    impl: L1Catapult
+    gfx_id: 12161
+    level: 0
+    hp: 20000
+    mp: 0
+    ac: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    intel: 0
+    mr: 0
+    exp: 0
+    lawful: 0
+    size: large
+    ranged: 0
+    atk_speed: 0
+    passive_speed: 0
+    undead: false
+    agro: false
+    tameable: false
+  - npc_id: 90332
+    name: 奇巖投石器(攻)
+    nameid: '$16784'
+    impl: L1Catapult
+    gfx_id: 12161
+    level: 0
+    hp: 20000
+    mp: 0
+    ac: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    intel: 0
+    mr: 0
+    exp: 0
+    lawful: 0
+    size: large
+    ranged: 0
+    atk_speed: 0
+    passive_speed: 0
+    undead: false
+    agro: false
+    tameable: false
+  - npc_id: 90333
+    name: 奇巖投石器(防)
+    nameid: '$16784'
+    impl: L1Catapult
+    gfx_id: 11999
+    level: 0
+    hp: 20000
+    mp: 0
+    ac: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    intel: 0
+    mr: 0
+    exp: 0
+    lawful: 0
+    size: large
+    ranged: 0
+    atk_speed: 0
+    passive_speed: 0
+    undead: false
+    agro: false
+    tameable: false
+  - npc_id: 90334
+    name: 奇巖投石器(防)
+    nameid: '$16784'
+    impl: L1Catapult
+    gfx_id: 11999
+    level: 0
+    hp: 20000
+    mp: 0
+    ac: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    intel: 0
+    mr: 0
+    exp: 0
+    lawful: 0
+    size: large
+    ranged: 0
+    atk_speed: 0
+    passive_speed: 0
+    undead: false
+    agro: false
+    tameable: false
+  - npc_id: 90335
+    name: 妖堡投石器(攻)
+    nameid: '$16784'
+    impl: L1Catapult
+    gfx_id: 12161
+    level: 0
+    hp: 20000
+    mp: 0
+    ac: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    intel: 0
+    mr: 0
+    exp: 0
+    lawful: 0
+    size: large
+    ranged: 0
+    atk_speed: 0
+    passive_speed: 0
+    undead: false
+    agro: false
+    tameable: false
+  - npc_id: 90336
+    name: 妖堡投石器(攻)
+    nameid: '$16784'
+    impl: L1Catapult
+    gfx_id: 12161
+    level: 0
+    hp: 20000
+    mp: 0
+    ac: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    intel: 0
+    mr: 0
+    exp: 0
+    lawful: 0
+    size: large
+    ranged: 0
+    atk_speed: 0
+    passive_speed: 0
+    undead: false
+    agro: false
+    tameable: false
+  - npc_id: 90337
+    name: 妖堡投石器(防)
+    nameid: '$16784'
+    impl: L1Catapult
+    gfx_id: 11999
+    level: 0
+    hp: 20000
+    mp: 0
+    ac: 0
+    str: 0
+    dex: 0
+    con: 0
+    wis: 0
+    intel: 0
+    mr: 0
+    exp: 0
+    lawful: 0
+    size: large
     ranged: 0
     atk_speed: 0
     passive_speed: 0

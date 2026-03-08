@@ -827,10 +827,10 @@ func sendTeleportUnlock(sess *net.Session) {
 
 // ---------- 委派給 ItemUseSystem 的薄層 ----------
 
-// GiveDrops 為擊殺的 NPC 擲骰掉落物品。委派給 ItemUseSystem。
-func GiveDrops(killer *world.PlayerInfo, npcID int32, deps *Deps) {
+// GiveDrops 為擊殺的 NPC 擲骰掉落物品（支援自動分配隊伍）。委派給 ItemUseSystem。
+func GiveDrops(killer *world.PlayerInfo, npc *world.NpcInfo, deps *Deps) {
 	if deps.ItemUse != nil {
-		deps.ItemUse.GiveDrops(killer, npcID)
+		deps.ItemUse.GiveDrops(killer, npc)
 	}
 }
 

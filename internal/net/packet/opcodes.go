@@ -90,6 +90,11 @@ const (
 	S_OPCODE_CLANMATCHING           byte = 0   // S_ClanMatching（血盟配對系統）
 	S_OPCODE_HOUSEMAP               byte = 187 // S_HouseMap（住宅地圖顯示）
 	S_OPCODE_EFFECTLOCATION         byte = 106 // S_EffectLocation（地點動畫效果，陷阱觸發等）
+	S_OPCODE_CASTLEMASTER           byte = 69  // S_CastleMaster（城主皇冠標誌）
+	S_OPCODE_TAXRATE                byte = 185 // S_TaxRate（稅率設定 UI）
+	S_OPCODE_WAR                    byte = 84  // S_War（戰爭狀態訊息）
+	S_OPCODE_WARTIME                byte = 231 // S_WarTime（攻城戰時間選擇）
+	S_OPCODE_DRAWAL                 byte = 141 // S_Drawal（城堡寶庫領出視窗）
 )
 
 // ---------- Client Opcodes (V381) ----------

@@ -975,8 +975,14 @@ func truncateBig5(s string, maxLen int) []byte {
 	return b
 }
 
-// HealMember 處理血盟飽食度 HP 回復。
+// HealMember 處理血盟飽食度 HP 回復（含飽食度消耗）。
 func (s *ClanSystem) HealMember(sess *net.Session, player *world.PlayerInfo, addHP int16) {
+	// 消耗飽食度
+	player.Food = 0
+	player.FoodFullTime = -1
+	handler.SendFoodUpdate(sess, player.Food)
+
+	// 回復 HP
 	player.HP += addHP
 	if player.HP > player.MaxHP {
 		player.HP = player.MaxHP

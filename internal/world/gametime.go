@@ -72,8 +72,9 @@ func (gt GameTime) Minute() int {
 	return gt.calendar().Minute()
 }
 
-// IsNight returns true if the game-time hour is outside 6:00-17:59.
+// IsNight returns true if the game-time hour is outside 6:00-16:59.
+// 3.80C 客戶端在 17:00 開始渲染夜晚（實測確認），與 Java isNight (>=18) 不同。
 func (gt GameTime) IsNight() bool {
 	h := gt.Hour()
-	return h < 6 || h >= 18
+	return h < 6 || h >= 17
 }

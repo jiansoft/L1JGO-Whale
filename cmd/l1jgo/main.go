@@ -39,7 +39,7 @@ func main() {
 func printBanner(serverName string, serverID int) {
 	fmt.Println()
 	fmt.Println("\033[36;1m  ┌───────────────────────────────────────────┐\033[0m")
-	fmt.Println("\033[36;1m  │\033[0m           L1JGO-Whale  v0.3.10           \033[36;1m│\033[0m")
+	fmt.Println("\033[36;1m  │\033[0m           L1JGO-Whale  v0.3.11           \033[36;1m│\033[0m")
 	fmt.Println("\033[36;1m  │\033[0m      天堂 3.80C · Go 遊戲伺服器           \033[36;1m│\033[0m")
 	fmt.Println("\033[36;1m  └───────────────────────────────────────────┘\033[0m")
 	fmt.Println()
@@ -147,6 +147,7 @@ func run() error {
 	mailRepo := persist.NewMailRepo(db)
 	petRepo := persist.NewPetRepo(db)
 	auctionRepo := persist.NewAuctionRepo(db)
+	castleRepo := persist.NewCastleRepo(db)
 
 	// 4a. WAL crash recovery — replay unprocessed economic transactions
 	{
@@ -178,6 +179,12 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("load spawn list: %w", err)
 	}
+
+	lightSpawnList, err := data.LoadLightSpawnList("data/yaml/light_spawn_list.yaml")
+	if err != nil {
+		return fmt.Errorf("load light spawn list: %w", err)
+	}
+	printStat("路燈點位", len(lightSpawnList))
 
 	mapDataTable, err := data.LoadMapData("data/yaml/map_list.yaml", "map")
 	if err != nil {
@@ -400,6 +407,18 @@ func run() error {
 	printStat("陷阱範本", len(trapData.Templates))
 	printStat("陷阱生成點", len(trapData.Spawns))
 
+	castleTable, err := data.LoadCastleTable("data/yaml/castles.yaml")
+	if err != nil {
+		return fmt.Errorf("load castles: %w", err)
+	}
+	printStat("城堡", castleTable.Count())
+
+	warGiftTable, err := data.LoadWarGiftTable("data/yaml/castle_war_gifts.yaml")
+	if err != nil {
+		return fmt.Errorf("load war gifts: %w", err)
+	}
+	printStat("攻城禮物", warGiftTable.Count())
+
 	// 5d-1. 建立陷阱管理器（tile-based O(1) 查詢）
 	trapMgr := world.NewTrapManager(trapData, mapDataTable)
 	printStat("陷阱實例", trapMgr.Count())
@@ -501,6 +520,9 @@ func run() error {
 		ClanMatching:  handler.NewClanMatchingManager(),
 		Alliances:     handler.NewAllianceManager(),
 		TrapMgr:       trapMgr,
+		Castles:       castleTable,
+		WarGifts:      warGiftTable,
+		CastleRepo:    castleRepo,
 	}
 	handler.RegisterAll(pktReg, deps)
 	handler.SetShowNpcID(cfg.Debug.ShowNpcID)
@@ -604,6 +626,17 @@ func run() error {
 	deps.GMCmd = system.NewGMCommandSystem(deps)
 	// 個人商店交易系統（直接呼叫，非 Phase 系統）
 	deps.PrivShop = system.NewPrivateShopSystem(deps)
+	// 城堡管理系統（直接呼叫，非 Phase 系統）
+	castleSys := system.NewCastleSystem(deps)
+	deps.Castle = castleSys
+	// 啟動時生成所有城堡的投石車（Java: ServerWarExecutor 啟動後生成）
+	for _, c := range castleTable.All() {
+		if len(c.Catapults) > 0 {
+			castleSys.SpawnCatapults(c.ID)
+		}
+	}
+	// 戰爭系統（直接呼叫，非 Phase 系統）
+	deps.War = system.NewWarSystem(deps)
 
 	// Phase 2: Game logic
 	combatSys := system.NewCombatSystem(deps)
@@ -635,6 +668,7 @@ func run() error {
 	// Phase 3: Post-update
 	runner.Register(system.NewRegenSystem(worldState, luaEngine, houseTable, cfg))
 	runner.Register(system.NewWeatherSystem(worldState))
+	runner.Register(system.NewLightSpawnSystem(worldState, lightSpawnList, npcTable))
 	mapTimerSys := system.NewMapTimerSystem(worldState, deps)
 	deps.MapTimer = mapTimerSys
 	runner.Register(mapTimerSys)
@@ -656,6 +690,7 @@ func run() error {
 	runner.Register(auctionSys)
 	deps.Fishing = system.NewFishingSystem(deps)
 	runner.Register(system.NewTrapRespawnSystem(trapMgr))
+	runner.Register(system.NewCastleWarTickSystem(deps.Castle))
 	runner.Register(system.NewVisibilitySystem(worldState, deps))
 	// Phase 4: Output — flush buffered packets to TCP
 	runner.Register(system.NewOutputSystem(sessStore))
@@ -843,6 +878,7 @@ func createNpcFromTemplate(tmpl *data.NpcTemplate, x, y int32, mapID, heading in
 		NpcID:        tmpl.NpcID,
 		Impl:         tmpl.Impl,
 		GfxID:        tmpl.GfxID,
+		LightSize:    byte(tmpl.LightSize),
 		Name:         tmpl.Name,
 		NameID:       tmpl.NameID,
 		Level:        tmpl.Level,

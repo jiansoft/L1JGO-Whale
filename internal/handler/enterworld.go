@@ -75,6 +75,7 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 		ElixirStats: ch.ElixirStats,
 		Food:         ch.Food, // 從 DB 載入飽食度
 		FoodFullTime: -1,     // 登入時重置生存吶喊計時（Java: _h_time = -1）
+		AccessLevel: ch.AccessLevel,
 		PKCount:     ch.PKCount,
 		Karma:       ch.Karma,
 		AttackView: true, // Java: is_attack_view 預設啟用浮動傷害數字
@@ -291,6 +292,19 @@ func HandleEnterWorld(sess *net.Session, r *packet.Reader, deps *Deps) {
 	// 光源（Java C_LoginToServer: pc.turnOnOffLight()）
 	player.LightSize = CalcPlayerLight(player)
 	sendLight(sess, player.CharID, player.LightSize)
+
+	// 城主皇冠標誌（Java: C_LoginToServer → S_CastleMaster）
+	if player.ClanID > 0 && deps.Castle != nil {
+		clan := deps.World.Clans.GetClan(player.ClanID)
+		if clan != nil && clan.HasCastle > 0 {
+			SendCastleMaster(sess, clan.HasCastle, player.CharID)
+		}
+	}
+
+	// 攻城戰進行中通知（Java: C_LoginToServer → L1War.checkCastleWar）
+	if deps.War != nil {
+		deps.War.CheckCastleWar(sess)
+	}
 
 	// S_GameTime — 最後發送，避免干擾客戶端初始化
 	sendGameTime(sess, world.GameTimeNow().Seconds())

@@ -21,8 +21,9 @@ func NewShopSystem(deps *handler.Deps) *ShopSystem {
 	return &ShopSystem{deps: deps}
 }
 
-// BuyFromNpc 處理玩家從 NPC 購買物品：扣金幣、給物品、發封包。
-func (s *ShopSystem) BuyFromNpc(sess *net.Session, r *packet.Reader, count int, player *world.PlayerInfo, shop *data.Shop) {
+// BuyFromNpc 處理玩家從 NPC 購買物品：扣金幣（含稅）、給物品、分配稅金到城堡。
+// Java 參考: L1Shop.sellItems + L1TaxCalculator + L1ShopBuyOrderList
+func (s *ShopSystem) BuyFromNpc(sess *net.Session, r *packet.Reader, count int, player *world.PlayerInfo, shop *data.Shop, npc *world.NpcInfo) {
 	if count <= 0 || count > 100 {
 		return
 	}
@@ -87,9 +88,33 @@ func (s *ShopSystem) BuyFromNpc(sess *net.Session, r *packet.Reader, count int, 
 		return
 	}
 
+	// 計算稅金（Java: L1TaxCalculator）
+	var castleID int32
+	var taxRate int32
+	if s.deps.Castle != nil && npc != nil {
+		castleID = s.deps.Castle.GetCastleIDByNpcLocation(npc.X, npc.Y, npc.MapID)
+		if castleID > 0 {
+			taxRate = s.deps.Castle.GetTaxRate(castleID)
+		}
+	}
+
+	// 稅金計算（整數除法，匹配 Java）
+	// 城堡稅 = totalCost × taxRate / 100
+	// 國稅 = 城堡稅 × 10 / 100（即城堡稅的 10%，歸阿頓城堡 #7）
+	// 戰爭稅 = totalCost × 15 / 100（固定 15%）
+	// 迪亞德稅 = 戰爭稅 × 10 / 100（即戰爭稅的 10%，歸迪亞得城堡 #8）
+	castleTax := totalCost * int64(taxRate) / 100
+	nationalTax := castleTax * 10 / 100
+	warTax := totalCost * 15 / 100
+	diadTax := warTax * 10 / 100
+	totalTax := castleTax + warTax // 城堡稅含國稅，戰爭稅含迪亞得稅
+
+	// 玩家需支付 = 原價 + 總稅金
+	totalPayment := totalCost + totalTax
+
 	// 檢查金幣
 	currentGold := int64(player.Inv.GetAdena())
-	if currentGold < totalCost {
+	if currentGold < totalPayment {
 		handler.SendServerMessage(sess, 189) // "金幣不足"
 		return
 	}
@@ -111,15 +136,37 @@ func (s *ShopSystem) BuyFromNpc(sess *net.Session, r *packet.Reader, count int, 
 		return
 	}
 
-	// 扣除金幣
+	// 扣除金幣（含稅）
 	adenaItem := player.Inv.FindByItemID(world.AdenaItemID)
 	if adenaItem != nil {
-		adenaItem.Count -= int32(totalCost)
+		adenaItem.Count -= int32(totalPayment)
 		if adenaItem.Count <= 0 {
 			player.Inv.RemoveItem(adenaItem.ObjectID, 0)
 			handler.SendRemoveInventoryItem(sess, adenaItem.ObjectID)
 		} else {
 			handler.SendItemCountUpdate(sess, adenaItem)
+		}
+	}
+
+	// 分配稅金到各城堡寶庫（Java: L1Shop.payCastleTax/payDiadTax）
+	if s.deps.Castle != nil && totalTax > 0 {
+		// 城堡稅分配
+		netCastleTax := castleTax - nationalTax // 城堡實得 = 城堡稅 - 國稅
+		// 特殊：阿頓(7) 和 迪亞得(8) 的國稅併入城堡稅
+		if castleID == 7 || castleID == 8 {
+			netCastleTax = castleTax
+			nationalTax = 0
+		}
+		if castleID > 0 && netCastleTax > 0 {
+			s.deps.Castle.AddPublicMoney(castleID, netCastleTax)
+		}
+		// 國稅入阿頓（城堡 #7）
+		if nationalTax > 0 {
+			s.deps.Castle.AddPublicMoney(7, nationalTax)
+		}
+		// 戰爭稅中的迪亞德部分入迪亞得（城堡 #8）
+		if diadTax > 0 {
+			s.deps.Castle.AddPublicMoney(8, diadTax)
 		}
 	}
 
@@ -149,7 +196,11 @@ func (s *ShopSystem) BuyFromNpc(sess *net.Session, r *packet.Reader, count int, 
 	}
 	handler.SendWeightUpdate(sess, player)
 
-	s.deps.Log.Info(fmt.Sprintf("商店購買完成  角色=%s  花費=%d  數量=%d", player.Name, totalCost, len(resolved)))
+	if totalTax > 0 {
+		s.deps.Log.Info(fmt.Sprintf("商店購買完成  角色=%s  花費=%d  稅金=%d  城堡=%d", player.Name, totalPayment, totalTax, castleID))
+	} else {
+		s.deps.Log.Info(fmt.Sprintf("商店購買完成  角色=%s  花費=%d  數量=%d", player.Name, totalCost, len(resolved)))
+	}
 }
 
 // SellToNpc 處理玩家向 NPC 販賣物品：移除物品、給金幣、發封包。

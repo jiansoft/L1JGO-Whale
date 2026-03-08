@@ -1,6 +1,8 @@
 package system
 
 import (
+	"fmt"
+
 	"github.com/l1jgo/server/internal/handler"
 	"github.com/l1jgo/server/internal/world"
 )
@@ -14,6 +16,228 @@ type PrivateShopSystem struct {
 // NewPrivateShopSystem 建立個人商店交易系統。
 func NewPrivateShopSystem(deps *handler.Deps) *PrivateShopSystem {
 	return &PrivateShopSystem{deps: deps}
+}
+
+// SetupShop 開設個人商店（設定出售/收購清單 + 廣播擺攤動作）。
+func (s *PrivateShopSystem) SetupShop(player *world.PlayerInfo, sellList []*world.PrivateShopSell, buyList []*world.PrivateShopBuy, shopChat []byte) {
+	player.PrivateShop = true
+	player.ShopSellList = sellList
+	player.ShopBuyList = buyList
+	player.ShopChat = shopChat
+
+	nearby := s.deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
+	handler.BroadcastToPlayers(nearby, handler.BuildActionGfx(player.CharID, 3)) // 先取消原有動作
+	shopData := handler.BuildShopAction(player.CharID, shopChat)
+	handler.BroadcastToPlayers(nearby, shopData)
+}
+
+// CloseShop 關閉個人商店（清除狀態 + 廣播取消動作）。
+func (s *PrivateShopSystem) CloseShop(player *world.PlayerInfo) {
+	player.PrivateShop = false
+	player.ShopSellList = nil
+	player.ShopBuyList = nil
+	player.ShopChat = nil
+	player.ShopTradingLocked = false
+
+	nearby := s.deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
+	handler.BroadcastToPlayers(nearby, handler.BuildActionGfx(player.CharID, 3))
+}
+
+// CancelShopNotTradable 因不可交易物品取消商店設置。
+func (s *PrivateShopSystem) CancelShopNotTradable(player *world.PlayerInfo) {
+	player.PrivateShop = false
+	player.ShopSellList = nil
+	player.ShopBuyList = nil
+
+	nearby := s.deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
+	handler.BroadcastToPlayers(nearby, handler.BuildActionGfx(player.CharID, 3))
+}
+
+// ExecuteBuy 執行從個人商店購買物品（業務驗證 + 物品/金幣轉移 + 售完清理）。
+func (s *PrivateShopSystem) ExecuteBuy(buyer *world.PlayerInfo, shopPlayer *world.PlayerInfo, orders []handler.ShopBuyOrder) {
+	if shopPlayer.ShopTradingLocked {
+		return
+	}
+	shopPlayer.ShopTradingLocked = true
+	defer func() { shopPlayer.ShopTradingLocked = false }()
+
+	sellList := shopPlayer.ShopSellList
+	if len(sellList) == 0 {
+		return
+	}
+
+	// 驗證商品數量一致性（Java: getPartnersPrivateShopItemCount）
+	if buyer.ShopPartnerCount != len(sellList) {
+		return
+	}
+
+	for _, o := range orders {
+		if o.Order < 0 || o.Order >= len(sellList) || o.Count <= 0 {
+			continue
+		}
+
+		pssl := sellList[o.Order]
+		remaining := pssl.SellTotal - pssl.SoldCount
+		count := o.Count
+		if count > remaining {
+			count = remaining
+		}
+		if count <= 0 {
+			continue
+		}
+
+		item := shopPlayer.Inv.FindByObjectID(pssl.ItemObjectID)
+		if item == nil {
+			handler.SendServerMessage(buyer.Session, 989) // 無法交易
+			continue
+		}
+
+		// 價格溢位保護（Java: price * count > 2000000000）
+		totalPrice := int64(pssl.SellPrice) * int64(count)
+		if totalPrice > 2_000_000_000 {
+			handler.SendServerMessageArgs(buyer.Session, 904, "2000000000")
+			return
+		}
+		price := int32(totalPrice)
+
+		// 驗證買方金幣
+		buyerAdena := buyer.Inv.GetAdena()
+		if buyerAdena < price {
+			handler.SendServerMessage(buyer.Session, 189) // 金幣不足
+			continue
+		}
+
+		// 驗證賣方物品數量
+		if item.Count < count {
+			handler.SendServerMessage(buyer.Session, 989) // 無法交易
+			continue
+		}
+
+		// 驗證買方背包容量
+		if !item.Stackable && buyer.Inv.Size()+int(count) > world.MaxInventorySize {
+			handler.SendServerMessage(buyer.Session, 270) // 背包過重
+			break
+		}
+
+		// 執行物品轉移：賣方 → 買方
+		s.TransferItem(shopPlayer, buyer, item, count)
+
+		// 執行金幣轉移：買方 → 賣方
+		s.TransferGold(buyer, shopPlayer, price)
+
+		// 通知商店玩家：出售成功（Java: S_ServerMessage 877）
+		itemName := item.Name
+		if count > 1 {
+			itemName = fmt.Sprintf("%s (%d)", item.Name, count)
+		}
+		handler.SendServerMessageArgs(shopPlayer.Session, 877, buyer.Name, itemName)
+
+		// 更新售出累計
+		pssl.SoldCount += count
+	}
+
+	// 清理已售完的項目（從末尾向前刪除）
+	for i := len(sellList) - 1; i >= 0; i-- {
+		if sellList[i].SoldCount >= sellList[i].SellTotal {
+			sellList = append(sellList[:i], sellList[i+1:]...)
+		}
+	}
+	shopPlayer.ShopSellList = sellList
+
+	// 如果所有商品都售完，自動關閉商店
+	if len(sellList) == 0 && len(shopPlayer.ShopBuyList) == 0 {
+		s.CloseShop(shopPlayer)
+	}
+}
+
+// ExecuteSell 執行向個人商店出售物品（業務驗證 + 物品/金幣轉移 + 收購完成清理）。
+func (s *PrivateShopSystem) ExecuteSell(seller *world.PlayerInfo, shopPlayer *world.PlayerInfo, orders []handler.ShopSellOrder) {
+	if shopPlayer.ShopTradingLocked {
+		return
+	}
+	shopPlayer.ShopTradingLocked = true
+	defer func() { shopPlayer.ShopTradingLocked = false }()
+
+	buyList := shopPlayer.ShopBuyList
+	if len(buyList) == 0 {
+		return
+	}
+
+	for _, o := range orders {
+		if o.Order < 0 || o.Order >= len(buyList) || o.Count <= 0 {
+			continue
+		}
+
+		psbl := buyList[o.Order]
+		remaining := psbl.BuyTotal - psbl.BoughtCount
+		count := o.Count
+		if count > remaining {
+			count = remaining
+		}
+		if count <= 0 {
+			continue
+		}
+
+		// 驗證玩家背包中的物品
+		item := seller.Inv.FindByObjectID(o.ItemObjID)
+		if item == nil {
+			continue
+		}
+
+		// 驗證物品種類和強化等級匹配（防作弊）
+		if item.ItemID != psbl.ItemID || item.EnchantLvl != psbl.EnchantLvl {
+			return // 可能作弊
+		}
+
+		// 驗證物品數量
+		if item.Count < count {
+			handler.SendServerMessage(seller.Session, 989)
+			continue
+		}
+
+		// 價格計算
+		totalPrice := int64(psbl.BuyPrice) * int64(count)
+		if totalPrice > 2_000_000_000 {
+			handler.SendServerMessageArgs(seller.Session, 904, "2000000000")
+			return
+		}
+		price := int32(totalPrice)
+
+		// 驗證商店玩家金幣
+		shopAdena := shopPlayer.Inv.GetAdena()
+		if shopAdena < price {
+			handler.SendServerMessage(seller.Session, 189) // 金幣不足
+			break
+		}
+
+		// 驗證商店玩家背包容量
+		if !item.Stackable && shopPlayer.Inv.Size()+int(count) > world.MaxInventorySize {
+			handler.SendServerMessage(seller.Session, 271) // 對方背包過重
+			break
+		}
+
+		// 執行物品轉移：賣方（玩家）→ 商店玩家
+		s.TransferItem(seller, shopPlayer, item, count)
+
+		// 執行金幣轉移：商店玩家 → 玩家
+		s.TransferGold(shopPlayer, seller, price)
+
+		// 更新收購累計
+		psbl.BoughtCount += count
+	}
+
+	// 清理已收購完的項目
+	for i := len(buyList) - 1; i >= 0; i-- {
+		if buyList[i].BoughtCount >= buyList[i].BuyTotal {
+			buyList = append(buyList[:i], buyList[i+1:]...)
+		}
+	}
+	shopPlayer.ShopBuyList = buyList
+
+	// 所有商品收購完成 → 自動關閉商店
+	if len(shopPlayer.ShopSellList) == 0 && len(buyList) == 0 {
+		s.CloseShop(shopPlayer)
+	}
 }
 
 // TransferItem 從來源玩家背包移動物品到目標玩家背包。

@@ -635,15 +635,23 @@ func (s *ItemUseSystem) UseFixedTeleportScroll(sess *net.Session, player *world.
 
 // ---------- 掉落系統 ----------
 
-// GiveDrops 為擊殺的 NPC 擲骰掉落物品並加入擊殺者背包。
-func (s *ItemUseSystem) GiveDrops(killer *world.PlayerInfo, npcID int32) {
+// lootingRange 自動分配拾取範圍（Java: LOOTING_RANGE = 15 格）。
+const lootingRange = 15
+
+// GiveDrops 為擊殺的 NPC 擲骰掉落物品。
+// 若擊殺者所在隊伍為自動分配模式（PartyTypeAutoShare），
+// 則按仇恨比例加權隨機分配給範圍內的隊伍成員（Java: DropShare.java）。
+func (s *ItemUseSystem) GiveDrops(killer *world.PlayerInfo, npc *world.NpcInfo) {
 	if s.deps.Drops == nil {
 		return
 	}
-	dropList := s.deps.Drops.Get(npcID)
+	dropList := s.deps.Drops.Get(npc.NpcID)
 	if dropList == nil {
 		return
 	}
+
+	// 收集自動分配候選人
+	candidates := s.collectAutoShareCandidates(killer, npc)
 
 	dropRate := s.deps.Config.Rates.DropRate
 	goldRate := s.deps.Config.Rates.GoldRate
@@ -668,10 +676,6 @@ func (s *ItemUseSystem) GiveDrops(killer *world.PlayerInfo, npcID int32) {
 			continue
 		}
 
-		if killer.Inv.IsFull() {
-			break
-		}
-
 		qty := int32(drop.Min)
 		if drop.Max > drop.Min {
 			qty = int32(drop.Min + world.RandInt(drop.Max-drop.Min+1))
@@ -687,54 +691,150 @@ func (s *ItemUseSystem) GiveDrops(killer *world.PlayerInfo, npcID int32) {
 			}
 		}
 
-		itemInfo := s.deps.Items.Get(drop.ItemID)
-		if itemInfo == nil {
+		// 選擇接收者：自動分配 → 加權隨機；否則 → killer
+		receiver := killer
+		if len(candidates) > 1 {
+			receiver = weightedRandomByHate(candidates, npc.HateList)
+		}
+
+		if receiver.Inv.IsFull() {
+			// 接收者背包滿，退回給 killer
+			if receiver.CharID != killer.CharID {
+				receiver = killer
+			}
+			if receiver.Inv.IsFull() {
+				continue // 兩者都滿，跳過
+			}
+		}
+
+		s.giveDropToPlayer(receiver, drop, qty)
+	}
+}
+
+// collectAutoShareCandidates 收集自動分配候選人（同隊伍、同地圖、拾取範圍內、活人）。
+func (s *ItemUseSystem) collectAutoShareCandidates(killer *world.PlayerInfo, npc *world.NpcInfo) []*world.PlayerInfo {
+	if killer.PartyID == 0 {
+		return nil
+	}
+	party := s.deps.World.Parties.GetParty(killer.CharID)
+	if party == nil || party.PartyType != world.PartyTypeAutoShare {
+		return nil
+	}
+
+	candidates := make([]*world.PlayerInfo, 0, len(party.Members))
+	for _, memberID := range party.Members {
+		member := s.deps.World.GetByCharID(memberID)
+		if member == nil || member.Dead || member.MapID != npc.MapID {
 			continue
 		}
-
-		stackable := itemInfo.Stackable || drop.ItemID == world.AdenaItemID
-		existing := killer.Inv.FindByItemID(drop.ItemID)
-		wasExisting := existing != nil && stackable
-
-		item := killer.Inv.AddItem(
-			drop.ItemID,
-			qty,
-			itemInfo.Name,
-			itemInfo.InvGfx,
-			itemInfo.Weight,
-			stackable,
-			byte(itemInfo.Bless),
-		)
-		item.EnchantLvl = int8(drop.EnchantLevel)
-		item.UseType = itemInfo.UseTypeID
-		// 怪物掉落的裝備預設未鑑定（暗名、無屬性）
-		if itemInfo.Category == data.CategoryWeapon || itemInfo.Category == data.CategoryArmor {
-			item.Identified = false
+		// 檢查與 NPC 的距離（Java: DropShare 用 LOOTING_RANGE）
+		dx := member.X - npc.X
+		if dx < 0 {
+			dx = -dx
 		}
-
-		if wasExisting {
-			handler.SendItemCountUpdate(killer.Session, item)
-		} else {
-			handler.SendAddItem(killer.Session, item)
+		dy := member.Y - npc.Y
+		if dy < 0 {
+			dy = -dy
 		}
-		handler.SendWeightUpdate(killer.Session, killer)
+		dist := dx
+		if dy > dist {
+			dist = dy
+		}
+		if dist <= lootingRange {
+			candidates = append(candidates, member)
+		}
+	}
+	return candidates
+}
 
-		// 通知玩家掉落
-		if drop.ItemID == world.AdenaItemID {
-			msg := fmt.Sprintf("獲得 %d 金幣", qty)
-			handler.SendGlobalChat(killer.Session, 9, msg)
+// weightedRandomByHate 按仇恨值加權隨機選擇一個玩家。
+// Java: DropShare — 仇恨越高的成員獲得掉落物的機率越大。
+func weightedRandomByHate(candidates []*world.PlayerInfo, hateList map[uint64]int32) *world.PlayerInfo {
+	if len(candidates) == 0 {
+		return nil
+	}
+	if len(candidates) == 1 {
+		return candidates[0]
+	}
+
+	// 計算各候選人的仇恨權重
+	weights := make([]int32, len(candidates))
+	totalWeight := int32(0)
+	for i, c := range candidates {
+		hate := hateList[c.SessionID]
+		if hate <= 0 {
+			hate = 1 // 最低權重 1，確保在範圍內的隊員都有機會
+		}
+		weights[i] = hate
+		totalWeight += hate
+	}
+
+	if totalWeight <= 0 {
+		// fallback：均等分配
+		return candidates[world.RandInt(len(candidates))]
+	}
+
+	// 加權隨機選擇
+	roll := int32(world.RandInt(int(totalWeight)))
+	cumulative := int32(0)
+	for i, w := range weights {
+		cumulative += w
+		if roll < cumulative {
+			return candidates[i]
+		}
+	}
+	return candidates[len(candidates)-1]
+}
+
+// giveDropToPlayer 將掉落物品加入指定玩家背包並發送封包通知。
+func (s *ItemUseSystem) giveDropToPlayer(receiver *world.PlayerInfo, drop data.DropItem, qty int32) {
+	itemInfo := s.deps.Items.Get(drop.ItemID)
+	if itemInfo == nil {
+		return
+	}
+
+	stackable := itemInfo.Stackable || drop.ItemID == world.AdenaItemID
+	existing := receiver.Inv.FindByItemID(drop.ItemID)
+	wasExisting := existing != nil && stackable
+
+	item := receiver.Inv.AddItem(
+		drop.ItemID,
+		qty,
+		itemInfo.Name,
+		itemInfo.InvGfx,
+		itemInfo.Weight,
+		stackable,
+		byte(itemInfo.Bless),
+	)
+	item.EnchantLvl = int8(drop.EnchantLevel)
+	item.UseType = itemInfo.UseTypeID
+	// 怪物掉落的裝備預設未鑑定（暗名、無屬性）
+	if itemInfo.Category == data.CategoryWeapon || itemInfo.Category == data.CategoryArmor {
+		item.Identified = false
+	}
+
+	if wasExisting {
+		handler.SendItemCountUpdate(receiver.Session, item)
+	} else {
+		handler.SendAddItem(receiver.Session, item)
+	}
+	handler.SendWeightUpdate(receiver.Session, receiver)
+
+	// 通知玩家掉落
+	if drop.ItemID == world.AdenaItemID {
+		msg := fmt.Sprintf("獲得 %d 金幣", qty)
+		handler.SendGlobalChat(receiver.Session, 9, msg)
+	} else {
+		name := itemInfo.Name
+		if drop.EnchantLevel > 0 {
+			name = fmt.Sprintf("+%d %s", drop.EnchantLevel, name)
+		}
+		if qty > 1 {
+			msg := fmt.Sprintf("獲得 %s (%d)", name, qty)
+			handler.SendGlobalChat(receiver.Session, 9, msg)
 		} else {
-			name := itemInfo.Name
-			if drop.EnchantLevel > 0 {
-				name = fmt.Sprintf("+%d %s", drop.EnchantLevel, name)
-			}
-			if qty > 1 {
-				msg := fmt.Sprintf("獲得 %s (%d)", name, qty)
-				handler.SendGlobalChat(killer.Session, 9, msg)
-			} else {
-				msg := fmt.Sprintf("獲得 %s", name)
-				handler.SendGlobalChat(killer.Session, 9, msg)
-			}
+			msg := fmt.Sprintf("獲得 %s", name)
+			handler.SendGlobalChat(receiver.Session, 9, msg)
 		}
 	}
 }

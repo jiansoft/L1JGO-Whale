@@ -83,6 +83,18 @@ func HandleNpcAction(sess *net.Session, r *packet.Reader, deps *Deps) {
 		return
 	}
 
+	// L1Crown — 王冠點擊 → 城堡主權轉移（Java: L1CrownInstance.onAction）
+	if npc.Impl == "L1Crown" && deps.Castle != nil {
+		deps.Castle.HandleCrownClick(sess, player, npc)
+		return
+	}
+
+	// L1Catapult — 投石車操作（Java: C_NPCAction.java:3625-3727）
+	if npc.Impl == "L1Catapult" && deps.Castle != nil {
+		handleCatapultAction(sess, player, npc, action, deps)
+		return
+	}
+
 	// Java C_NPCAction.java:183-187 — L1AuctionBoard 封包多一個 readS()，
 	// 合併為 "cmd,extra"（如 "select,262145"）。不讀會導致後續封包位移錯誤。
 	if npc.Impl == "L1AuctionBoard" {
@@ -233,6 +245,33 @@ func HandleNpcAction(sess *net.Session, r *packet.Reader, deps *Deps) {
 		default: // NPC 71264 回憶蠟燭嚮導等 → 角色重置
 			StartCharReset(sess, player, deps)
 		}
+
+	// ---------- 城堡管理 NPC 動作 ----------
+
+	case "inex":
+		// 查詢城堡資金（Java: S_ServerMessage 309）
+		handleCastleInex(sess, player, deps)
+	case "tax":
+		// 開啟稅率設定 UI（Java: S_TaxRate）
+		handleCastleTax(sess, player, deps)
+	case "withdrawal":
+		// 開啟寶庫領出視窗（Java: S_Drawal）
+		handleCastleWithdrawal(sess, player, deps)
+	case "cdeposit":
+		// 開啟寶庫存入視窗（Java: S_Deposit）
+		handleCastleDeposit(sess, player, deps)
+	case "castlegate":
+		// 城門修復（非攻城戰時）
+		handleCastleGateRepair(sess, player, deps)
+	case "openigate":
+		// 開啟內城門
+		handleCastleGateOpen(sess, player, deps)
+	case "closeigate":
+		// 關閉內城門
+		handleCastleGateClose(sess, player, deps)
+	case "askwartime":
+		// 查詢攻城戰時間（Java: C_NPCAction.java:742）
+		handleAskWarTime(sess, npc, deps)
 
 	// Close dialog (empty string or explicit close)
 	case "":
@@ -1436,4 +1475,124 @@ func handlePetMatchEntry(sess *net.Session, player *world.PlayerInfo, action str
 	if !deps.PetMatch.EnterPetMatch(sess, player, amuletObjID) {
 		// EnterPetMatch 內部已發送錯誤訊息
 	}
+}
+
+// --- 投石車 NPC 動作 ---
+
+// catapultHTMLMap 投石車 NPC ID → 對話 HTML ID（Java: ckenta/ckentd/cgirana/cgirand/corca/corcd）。
+var catapultHTMLMap = map[int32]string{
+	90327: "ckenta", 90328: "ckenta",
+	90329: "ckentd", 90330: "ckentd",
+	90331: "cgirana", 90332: "cgirana",
+	90333: "cgirand", 90334: "cgirand",
+	90335: "corca", 90336: "corca",
+	90337: "corcd",
+}
+
+// handleCatapultAction 投石車 NPC 動作分派。
+// Java: C_NPCAction.java:3625-3727。
+func handleCatapultAction(sess *net.Session, player *world.PlayerInfo, npc *world.NpcInfo, action string, deps *Deps) {
+	// 檢查攻城戰是否進行中
+	castleID := deps.Castle.GetCastleIDByNpcLocation(npc.X, npc.Y, npc.MapID)
+	if castleID == 0 || !deps.Castle.IsWarNow(castleID) {
+		SendServerMessage(sess, 3683) // 攻城戰未進行
+		return
+	}
+
+	// 必須是君主（ClanRank: 0=盟主, 7=聯盟盟主）
+	if player.ClanRank != 0 && player.ClanRank != 7 {
+		SendServerMessage(sess, 2498) // 只有血盟君主才可
+		return
+	}
+
+	// 檢查操作權限：攻擊方投石車只有宣戰方可用，防守方只有守城方可用
+	ci := deps.Castle.GetCastle(castleID)
+	if ci == nil {
+		return
+	}
+	isAttacker := deps.Castle.IsCatapultAttacker(npc.NpcID)
+	if isAttacker {
+		// 攻擊方投石車 → 玩家必須是宣戰方（非城盟）
+		if ci.OwnerClanID != 0 && player.ClanID == ci.OwnerClanID {
+			SendServerMessage(sess, 3681) // 守城方不可用攻擊投石車
+			return
+		}
+	} else {
+		// 防守方投石車 → 玩家必須是城盟
+		if ci.OwnerClanID == 0 || player.ClanID != ci.OwnerClanID {
+			SendServerMessage(sess, 3682) // 攻擊方不可用防守投石車
+			return
+		}
+	}
+
+	// 初次點擊（action 為空或 "0"）→ 開啟對話 HTML
+	if action == "" || action == "0" {
+		htmlID, ok := catapultHTMLMap[npc.NpcID]
+		if !ok {
+			return
+		}
+		sendHypertext(sess, npc.ID, htmlID)
+		return
+	}
+
+	// 砲彈發射指令（"0-N" 或 "1-N"）
+	deps.Castle.HandleCatapultAction(sess, player, npc, action)
+}
+
+// --- 攻城戰時間查詢 ---
+
+// guardCastleMap 近衛兵 NPC ID → 城堡 ID + HTML ID 映射。
+// Java: C_NPCAction.java:742-772。
+var guardCastleMap = map[int32]struct {
+	castleID int32
+	htmlID   string
+}{
+	60514: {1, "ktguard7"},               // 肯特
+	60560: {2, "orcguard7"},              // 妖魔
+	60552: {3, "wdguard7"},               // 風木
+	60524: {4, "grguard7"},               // 奇巖
+	60525: {4, "grguard7"},               // 奇巖
+	60529: {4, "grguard7"},               // 奇巖
+	70857: {5, "heguard7"},               // 海音
+	60530: {6, "dcguard7"},               // 侏儒
+	60531: {6, "dcguard7"},               // 侏儒
+	60533: {7, "adguard7"},               // 亞丁
+	60534: {7, "adguard7"},               // 亞丁
+	81156: {8, "dfguard3"},               // 狄亞得
+}
+
+// handleAskWarTime 處理 askwartime NPC 動作（查詢攻城戰時間）。
+// Java: C_NPCAction.java:742 — 依 NPC ID 查城堡 → makeWarTimeStrings → 發送 HTML。
+func handleAskWarTime(sess *net.Session, npc *world.NpcInfo, deps *Deps) {
+	entry, ok := guardCastleMap[npc.NpcID]
+	if !ok {
+		return
+	}
+
+	if deps.Castle == nil {
+		return
+	}
+	ci := deps.Castle.GetCastle(entry.castleID)
+	if ci == nil {
+		return
+	}
+
+	// Java makeWarTimeStrings: 格式化攻城時間為字串陣列
+	warTime := ci.WarTime
+	year := strconv.Itoa(warTime.Year())
+	month := strconv.Itoa(int(warTime.Month()))
+	day := strconv.Itoa(warTime.Day())
+	hour := strconv.Itoa(warTime.Hour())
+	minute := strconv.Itoa(warTime.Minute())
+
+	var htmldata []string
+	if entry.castleID == 2 {
+		// 妖魔城：5 個元素（無空前綴）
+		htmldata = []string{year, month, day, hour, minute}
+	} else {
+		// 其他城堡：6 個元素（首元素為空）
+		htmldata = []string{"", year, month, day, hour, minute}
+	}
+
+	sendHypertextWithData(sess, npc.ID, entry.htmlID, htmldata)
 }
