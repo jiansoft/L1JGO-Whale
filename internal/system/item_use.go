@@ -1329,6 +1329,13 @@ var wandMonsterIDs = [...]int32{
 // targetObjID/targetX/targetY 僅在 spell_long 類魔杖（烏木、楓木）時有值。
 func (s *ItemUseSystem) UseWand(sess *net.Session, player *world.PlayerInfo, invItem *world.InvItem,
 	targetObjID int32, targetX, targetY int16) {
+
+	s.deps.Log.Info("UseWand",
+		zap.Int32("item_id", invItem.ItemID),
+		zap.Int16("charge", invItem.ChargeCount),
+		zap.Int32("target", targetObjID),
+	)
+
 	// 充能次數檢查
 	if invItem.ChargeCount <= 0 {
 		handler.SendServerMessage(sess, 79) // 沒有任何事情發生
@@ -1437,13 +1444,11 @@ func (s *ItemUseSystem) useCreateMonsterWand(sess *net.Session, player *world.Pl
 	invItem.ChargeCount--
 
 	if invItem.ChargeCount <= 0 {
-		// 次數用盡 → 刪除物品
+		// 次數用盡 → 刪除物品（Java: Create_Monster_Magic_Wand deleteItem）
 		player.Inv.RemoveItem(invItem.ObjectID, 1)
 		handler.SendRemoveInventoryItem(sess, invItem.ObjectID)
-	} else {
-		// 更新客戶端顯示的充能次數
-		handler.SendAddItem(sess, invItem)
 	}
+	// 注意：不發送 S_AddItem 更新充能 — S_AddItem 會在客戶端新增重複物品
 
 	handler.SendWeightUpdate(sess, player)
 	player.Dirty = true
@@ -1502,20 +1507,38 @@ func (s *ItemUseSystem) useLightningWand(sess *net.Session, player *world.Player
 			s.deps.Combat.HandleNpcDeath(npc, player, nearby)
 		}
 	} else {
-		// 目標不存在或不是 NPC — 在指定座標播放閃電特效
-		// Java: S_EffectLocation — 使用 S_EFFECT 對座標播放（簡化：跳過）
-		// 3.80C 客戶端會自行播放投射物動畫
+		// 嘗試查找玩家目標（Java: findObject 通用查找 → L1PcInstance 分支）
+		targetPlayer := s.deps.World.GetByCharID(targetObjID)
+		if targetPlayer != nil && targetPlayer.CharID != player.CharID && !targetPlayer.Dead {
+			// 安全區檢查
+			if s.deps.MapData != nil && s.deps.MapData.IsSafetyZone(targetPlayer.MapID, targetPlayer.X, targetPlayer.Y) {
+				// 安全區內不可攻擊
+			} else {
+				// 閃電效果
+				effectData := handler.BuildSkillEffect(targetPlayer.CharID, lightningGfx)
+				handler.BroadcastToPlayers(nearby, effectData)
+
+				// 扣 HP
+				newHP := targetPlayer.HP - dmg
+				if newHP < 1 {
+					newHP = 1 // 魔杖不致死（簡化處理）
+				}
+				targetPlayer.HP = newHP
+				handler.SendHpUpdate(targetPlayer.Session, targetPlayer)
+
+				// 受傷動畫
+				dmgData := handler.BuildActionGfx(targetPlayer.CharID, 2)
+				handler.BroadcastToPlayers(nearby, dmgData)
+
+				targetPlayer.Dirty = true
+			}
+		}
+		// else: 目標不存在 → 3.80C 客戶端自行播放投射物動畫（無需伺服器處理）
 	}
 
-	// 扣減充能次數
+	// 扣減充能次數（Java: 只更新 chargeCount，不刪除物品）
+	// 注意：不發送 S_AddItem — 會在客戶端新增重複物品。充能數僅伺服器端追蹤。
 	invItem.ChargeCount--
-	if invItem.ChargeCount <= 0 {
-		player.Inv.RemoveItem(invItem.ObjectID, 1)
-		handler.SendRemoveInventoryItem(sess, invItem.ObjectID)
-	} else {
-		handler.SendAddItem(sess, invItem)
-	}
-	handler.SendWeightUpdate(sess, player)
 	player.Dirty = true
 }
 
@@ -1524,10 +1547,11 @@ func (s *ItemUseSystem) useLightningWand(sess *net.Session, player *world.Player
 // 變身魔杖隨機怪物 GFX 列表（Java: Poly_Magic_Wand.java polyId[]）
 var wandPolyGfxIDs = [...]int32{
 	29, 945, 947, 979, 1037, 1039,
-	3860, 3862, 3864, 3866, 3868, 3870, 3872, 3874, 3876,
+	3860, 3861, 3862, 3863, 3864, 3865,
 	3904, 3906,
 	95, 146, 2374, 2376, 2377, 2378,
-	3866, 3868, 3870, 3872, 3874, 3876, 3879,
+	3866, 3867, 3868, 3869, 3870, 3871,
+	3872, 3873, 3874, 3875, 3876,
 }
 
 // 禁止變身的 Boss NPC ID（Java: Poly_Magic_Wand.polyAction）
@@ -1604,14 +1628,8 @@ func (s *ItemUseSystem) usePolyMorphWand(sess *net.Session, player *world.Player
 		}
 	}
 
-	// 扣減充能次數
+	// 扣減充能次數（Java: 只更新 chargeCount，不刪除物品）
+	// 注意：不發送 S_AddItem — 會在客戶端新增重複物品。充能數僅伺服器端追蹤。
 	invItem.ChargeCount--
-	if invItem.ChargeCount <= 0 {
-		player.Inv.RemoveItem(invItem.ObjectID, 1)
-		handler.SendRemoveInventoryItem(sess, invItem.ObjectID)
-	} else {
-		handler.SendAddItem(sess, invItem)
-	}
-	handler.SendWeightUpdate(sess, player)
 	player.Dirty = true
 }

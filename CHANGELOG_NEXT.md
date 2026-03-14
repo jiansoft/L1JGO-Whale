@@ -17,3 +17,9 @@
 - feat: 實現烏木魔杖（40007，閃電傷害）— dmg = rand(-5..5) + INT，對 NPC/玩家造成傷害
 - feat: 實現楓木魔杖（40008/140008，變身）— 成功率 = 3*(攻LV-防LV) + 100 - 防MR，隨機怪物外觀
 - fix: wand handler 讀取 spell_long 目標欄位 [D targetObjID][H x][H y]（Java C_ItemUSe use_type=5）
+- fix: 松木魔杖 use_type 錯誤 — normal(51) 改為 spell_1(3)（客戶端不發 C_USE_ITEM）
+- fix: 魔杖使用後 SendAddItem 造成客戶端背包重複物品 — 移除充能扣減後的 S_AddItem 發送
+- fix: 登入載入自動修復 ChargeCount=0 的舊魔杖（migration 028 前物品自動恢復滿充能）
+- fix: 閃電/楓木魔杖充能歸零不刪除物品（匹配 Java 行為，僅松木魔杖歸零刪除）
+- fix: 閃電魔杖新增玩家目標處理（Java: World.findObject 通用查找 + 安全區檢查）
+- fix: 變身魔杖 GFX 列表對齊 Java 31 個（修正重複值 + 補齊缺漏的奇數 GFX）
