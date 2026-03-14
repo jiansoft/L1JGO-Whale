@@ -50,8 +50,9 @@ type InvItem struct {
 	Bless      byte   // 0=normal, 1=blessed, 2=cursed, >=128=sealed
 	Stackable  bool
 	Weight     int32  // per-unit weight
-	UseType    byte
-	Equipped   bool   // true if currently worn/wielded
+	UseType     byte
+	ChargeCount int16 // 魔杖充能次數（0=無限制或不適用；>0=剩餘使用次數）
+	Equipped    bool  // true if currently worn/wielded
 
 	// Weapon durability: 0 = perfect, higher = more damaged (range 0-127).
 	// Effective enchant = EnchantLvl - Durability (Java: L1Attack line 328).

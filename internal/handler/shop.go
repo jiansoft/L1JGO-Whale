@@ -107,7 +107,7 @@ func sendAddItem(sess *net.Session, item *world.InvItem, optInfo ...*data.ItemIn
 	w.WriteD(item.ObjectID)                     // item object ID
 	w.WriteH(world.ItemDescID(item.ItemID))     // descId — Java: switch(itemId) for material items
 	w.WriteC(item.UseType)                 // use type
-	w.WriteC(0)                            // charge count
+	w.WriteC(byte(item.ChargeCount))       // charge count
 	w.WriteH(uint16(item.InvGfx))         // inventory graphic ID
 	w.WriteC(world.EffectiveBless(item))   // bless: 3=unidentified, else actual
 	w.WriteD(item.Count)                   // stack count
@@ -192,7 +192,7 @@ func sendInvList(sess *net.Session, inv *world.Inventory, items *data.ItemTable)
 		w.WriteD(item.ObjectID)
 		w.WriteH(world.ItemDescID(item.ItemID))  // descId — Java: switch(itemId) for material items
 		w.WriteC(item.UseType)                    // use type
-		w.WriteC(0)                               // charge count
+		w.WriteC(byte(item.ChargeCount))          // charge count
 		w.WriteH(uint16(item.InvGfx))            // inv gfx
 		w.WriteC(world.EffectiveBless(item))      // bless: 3=unidentified
 		w.WriteD(item.Count)                      // count

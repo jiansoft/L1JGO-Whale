@@ -7,3 +7,7 @@
 - fix: 沙哈之弓（item_id=190）無箭時可發射魔法箭（GfxID=2349），不消耗箭矢（匹配 Java C_AttackBow "$1821" 特殊處理）
 - fix: 盾牌↔腰帶互斥修正為盾牌↔臂甲互斥（Java: type 7 ↔ type 13，腰帶不參與互斥）
 - fix: 魂體轉換（技能 146）邏輯修正為增加 MP +12（Java: BLOODY_SOUL），原錯誤邏輯為 MP 轉 HP
+- fix: 藍色藥水（40015）和慎重藥水（40016）從 item_vip.yaml 移除 — 錯誤的 VIP 配置攔截了正常藥水邏輯
+- feat: 新增 ChargeCount 基礎設施（DB migration + InvItem 欄位 + 持久化 + 封包傳送）
+- feat: 實現創造怪物魔杖（item_id 40006/140006）— 使用後隨機召喚 25 種怪物之一，扣減充能次數，用完自動刪除
+- fix: spawn_list.yaml 重新轉換 — 修復所有怪物 randomx/randomy=0 導致地下城怪物聚堆問題

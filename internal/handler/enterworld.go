@@ -357,6 +357,7 @@ func loadInventoryFromDB(player *world.PlayerInfo, deps *Deps) {
 				invItem.InnNpcID = row.InnNpcID
 				invItem.InnHall = row.InnHall
 				invItem.InnDueTime = row.InnDueTime
+				invItem.ChargeCount = row.ChargeCount
 				if row.Equipped && row.EquipSlot > 0 {
 					invItem.Equipped = true
 					slot := world.EquipSlot(row.EquipSlot)

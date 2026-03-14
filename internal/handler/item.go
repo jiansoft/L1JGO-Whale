@@ -437,6 +437,12 @@ func handleUseEtcItem(sess *net.Session, r *packet.Reader, player *world.PlayerI
 		}
 	}
 
+	// 魔杖 — Java: ItemClass/ItemExecutor 反射分派
+	if itemInfo.ItemType == "wand" && deps.ItemUse != nil {
+		deps.ItemUse.UseWand(sess, player, invItem)
+		return
+	}
+
 	// All other consumables (potions, food) → ItemUseSystem
 	if deps.ItemUse != nil {
 		consumed := deps.ItemUse.UseConsumable(sess, player, invItem, itemInfo)

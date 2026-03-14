@@ -110,6 +110,9 @@ func (s *GMCommandSystem) GiveItem(sess *net.Session, player *world.PlayerInfo, 
 	)
 	invItem.EnchantLvl = enchant
 	invItem.UseType = itemInfo.UseTypeID
+	if itemInfo.MaxChargeCount > 0 {
+		invItem.ChargeCount = int16(itemInfo.MaxChargeCount)
+	}
 
 	if wasExisting {
 		handler.SendItemCountUpdate(sess, invItem)

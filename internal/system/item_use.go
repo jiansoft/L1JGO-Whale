@@ -1313,3 +1313,132 @@ func (s *ItemUseSystem) sendVIPStatusUpdates(sess *net.Session, p *world.PlayerI
 		handler.SendMpUpdate(sess, p)
 	}
 }
+
+// ---------- 魔杖使用 ----------
+
+// 創造怪物魔杖隨機召喚怪物列表（Java: Create_Monster_Magic_Wand.java）
+var wandMonsterIDs = [...]int32{
+	45008, 45140, 45016, 45021, 45025,
+	45033, 45099, 45147, 45123, 45130,
+	45046, 45092, 45138, 45098, 45127,
+	45143, 45149, 45171, 45040, 45155,
+	45192, 45173, 45213, 45079, 45144,
+}
+
+// UseWand 處理魔杖使用邏輯。根據 itemID 分派到對應的魔杖效果。
+func (s *ItemUseSystem) UseWand(sess *net.Session, player *world.PlayerInfo, invItem *world.InvItem) {
+	// 充能次數檢查
+	if invItem.ChargeCount <= 0 {
+		handler.SendServerMessage(sess, 79) // 沒有任何事情發生
+		return
+	}
+
+	switch invItem.ItemID {
+	case 40006, 140006: // 創造怪物魔杖（Java: Create_Monster_Magic_Wand）
+		s.useCreateMonsterWand(sess, player, invItem)
+	default:
+		handler.SendServerMessage(sess, 79)
+	}
+}
+
+// useCreateMonsterWand 創造怪物魔杖 — 在玩家位置隨機召喚一隻怪物。
+func (s *ItemUseSystem) useCreateMonsterWand(sess *net.Session, player *world.PlayerInfo, invItem *world.InvItem) {
+	// 廣播魔杖使用動作（Java: ACTION_Wand = 17）
+	nearby := s.deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
+	actionData := handler.BuildActionGfx(player.CharID, 17)
+	handler.BroadcastToPlayers(nearby, actionData)
+
+	// 隨機選擇怪物
+	npcID := wandMonsterIDs[rand.Intn(len(wandMonsterIDs))]
+	tmpl := s.deps.Npcs.Get(npcID)
+	if tmpl == nil {
+		s.deps.Log.Warn("創造怪物魔杖：未知 NPC", zap.Int32("npc_id", npcID))
+		handler.SendServerMessage(sess, 79)
+		return
+	}
+
+	// 在玩家位置附近生成怪物
+	spawnX := player.X + int32(rand.Intn(3)) - 1
+	spawnY := player.Y + int32(rand.Intn(3)) - 1
+
+	// 取得動作速度
+	atkSpeed := tmpl.AtkSpeed
+	moveSpeed := tmpl.PassiveSpeed
+	if s.deps.SprTable != nil {
+		gfx := int(tmpl.GfxID)
+		if tmpl.AtkSpeed != 0 {
+			if v := s.deps.SprTable.GetAttackSpeed(gfx, data.ActAttack); v > 0 {
+				atkSpeed = int16(v)
+			}
+		}
+		if tmpl.PassiveSpeed != 0 {
+			if v := s.deps.SprTable.GetMoveSpeed(gfx, data.ActWalk); v > 0 {
+				moveSpeed = int16(v)
+			}
+		}
+	}
+
+	mob := &world.NpcInfo{
+		ID:         world.NextNpcID(),
+		NpcID:      tmpl.NpcID,
+		Impl:       tmpl.Impl,
+		GfxID:      tmpl.GfxID,
+		Name:       tmpl.Name,
+		NameID:     tmpl.NameID,
+		Level:      tmpl.Level,
+		X:          spawnX,
+		Y:          spawnY,
+		MapID:      player.MapID,
+		Heading:    int16(rand.Intn(8)),
+		HP:         tmpl.HP,
+		MaxHP:      tmpl.HP,
+		MP:         tmpl.MP,
+		MaxMP:      tmpl.MP,
+		AC:         tmpl.AC,
+		STR:        tmpl.STR,
+		DEX:        tmpl.DEX,
+		Exp:        tmpl.Exp,
+		Lawful:     tmpl.Lawful,
+		Size:       tmpl.Size,
+		MR:         tmpl.MR,
+		Undead:     tmpl.Undead,
+		Agro:       tmpl.Agro,
+		AtkDmg:     int32(tmpl.Level) + int32(tmpl.STR)/3,
+		Ranged:     tmpl.Ranged,
+		AtkSpeed:   atkSpeed,
+		MoveSpeed:  moveSpeed,
+		PoisonAtk:  tmpl.PoisonAtk,
+		FireRes:    tmpl.FireRes,
+		WaterRes:   tmpl.WaterRes,
+		WindRes:    tmpl.WindRes,
+		EarthRes:   tmpl.EarthRes,
+		SpawnX:     spawnX,
+		SpawnY:     spawnY,
+		SpawnMapID: player.MapID,
+	}
+
+	s.deps.World.AddNpc(mob)
+	if s.deps.MapData != nil {
+		s.deps.MapData.SetImpassable(mob.MapID, mob.X, mob.Y, true)
+	}
+
+	// 通知附近玩家顯示新 NPC
+	for _, viewer := range nearby {
+		sendNpcPack(viewer.Session, mob)
+	}
+
+	// 扣減充能次數
+	invItem.ChargeCount--
+
+	if invItem.ChargeCount <= 0 {
+		// 次數用盡 → 刪除物品
+		player.Inv.RemoveItem(invItem.ObjectID, 1)
+		handler.SendRemoveInventoryItem(sess, invItem.ObjectID)
+	} else {
+		// 更新客戶端顯示的充能次數
+		handler.SendAddItem(sess, invItem)
+	}
+
+	handler.SendWeightUpdate(sess, player)
+	player.Dirty = true
+}
