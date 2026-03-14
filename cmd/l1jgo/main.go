@@ -834,10 +834,13 @@ func spawnNpcs(ws *world.State, npcTable *data.NpcTable, spawns []data.SpawnEntr
 			y := spawn.Y
 			rx := spawn.RandomX
 			ry := spawn.RandomY
-			// 多隻怪物同座標時，自動套用預設隨機範圍避免聚堆
+			// 多隻怪物同座標時，按數量比例自動套用隨機範圍避免聚堆
 			if rx == 0 && ry == 0 && spawn.Count > 1 {
-				rx = 3
-				ry = 3
+				rx = int32(spawn.Count)
+				if rx > 25 {
+					rx = 25
+				}
+				ry = rx
 			}
 			if rx > 0 {
 				x += int32(rand.Intn(int(rx*2+1))) - rx
