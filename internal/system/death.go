@@ -32,6 +32,13 @@ func (s *DeathSystem) KillPlayer(player *world.PlayerInfo) {
 	player.Dead = true
 	player.HP = 0
 
+	// 清除限時地圖計時器（Java: MapTimerThread.TIMINGMAP.remove）
+	if player.MapTimerGroupIdx > 0 {
+		player.MapTimerGroupIdx = -1
+		player.MapTimerRemaining = 0
+		handler.SendMapTimer(player.Session, 0) // 告知客戶端清除倒計時
+	}
+
 	// 死亡玩家不再佔用格子
 	s.deps.World.VacateEntity(player.MapID, player.X, player.Y, player.CharID)
 
@@ -124,6 +131,11 @@ func (s *DeathSystem) ProcessRestart(sess *net.Session, player *world.PlayerInfo
 
 	// 發送地圖 ID
 	handler.SendMapID(sess, uint16(rmap), false)
+
+	// 重生後重設限時地圖計時器（Java: Teleportation 中的 isTimingMap 檢查）
+	if s.deps.MapTimer != nil {
+		s.deps.MapTimer.OnEnterTimedMap(player, rmap)
+	}
 
 	// 發送自身角色封包
 	handler.SendPutObject(sess, player)

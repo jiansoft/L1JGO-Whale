@@ -832,21 +832,24 @@ func spawnNpcs(ws *world.State, npcTable *data.NpcTable, spawns []data.SpawnEntr
 		for i := 0; i < spawn.Count; i++ {
 			x := spawn.X
 			y := spawn.Y
-			rx := spawn.RandomX
-			ry := spawn.RandomY
-			// 多隻怪物同座標時，按數量比例自動套用隨機範圍避免聚堆
-			if rx == 0 && ry == 0 && spawn.Count > 1 {
-				rx = int32(spawn.Count)
-				if rx > 25 {
-					rx = 25
+			// spread: "point" → 精確座標，無隨機偏移（NPC、Boss）
+			if spawn.Spread != "point" {
+				rx := spawn.RandomX
+				ry := spawn.RandomY
+				// 多隻怪物同座標時，按數量比例自動套用隨機範圍避免聚堆
+				if rx == 0 && ry == 0 && spawn.Count > 1 {
+					rx = int32(spawn.Count)
+					if rx > 25 {
+						rx = 25
+					}
+					ry = rx
 				}
-				ry = rx
-			}
-			if rx > 0 {
-				x += int32(rand.Intn(int(rx*2+1))) - rx
-			}
-			if ry > 0 {
-				y += int32(rand.Intn(int(ry*2+1))) - ry
+				if rx > 0 {
+					x += int32(rand.Intn(int(rx*2+1))) - rx
+				}
+				if ry > 0 {
+					y += int32(rand.Intn(int(ry*2+1))) - ry
+				}
 			}
 
 			leader := createNpcFromTemplate(tmpl, x, y, spawn.MapID, spawn.Heading, spawn.RespawnDelay, sprTable)

@@ -360,7 +360,9 @@ type ItemUseManager interface {
 	// UseHomeScroll 處理回家卷軸使用。
 	UseHomeScroll(sess *net.Session, player *world.PlayerInfo, item *world.InvItem)
 	// UseWand 處理魔杖使用（充能扣減、效果觸發）。
-	UseWand(sess *net.Session, player *world.PlayerInfo, invItem *world.InvItem)
+	// targetObjID/targetX/targetY 僅在 spell_long 類魔杖（烏木、楓木）時有值。
+	UseWand(sess *net.Session, player *world.PlayerInfo, invItem *world.InvItem,
+		targetObjID int32, targetX, targetY int16)
 	// UseFixedTeleportScroll 處理指定傳送卷軸使用。
 	UseFixedTeleportScroll(sess *net.Session, player *world.PlayerInfo, item *world.InvItem, itemInfo *data.ItemInfo)
 	// GiveDrops 為擊殺的 NPC 擲骰掉落物品（支援自動分配隊伍）。

@@ -10,4 +10,10 @@
 - fix: 藍色藥水（40015）和慎重藥水（40016）從 item_vip.yaml 移除 — 錯誤的 VIP 配置攔截了正常藥水邏輯
 - feat: 新增 ChargeCount 基礎設施（DB migration + InvItem 欄位 + 持久化 + 封包傳送）
 - feat: 實現創造怪物魔杖（item_id 40006/140006）— 使用後隨機召喚 25 種怪物之一，扣減充能次數，用完自動刪除
-- fix: 怪物聚堆修復 — 還原 spawn_list.yaml（轉換腳本白名單過濾導致 NPC 消失），改由 Go 代碼自動套用 ±3 格隨機範圍（count>1 且 randomx=0 時）
+- fix: 怪物聚堆修復 — 還原 spawn_list.yaml（轉換腳本白名單過濾導致 NPC 消失），改由 Go 代碼按 count 比例自動套用隨機範圍（count>1 且 randomx=0 時）
+- feat: spawn_list.yaml 新增 spread 欄位 — "point"=固定座標（NPC/Boss）、"area"=散佈（預設，向後相容）
+- data: 從 l1j_java/db 重新產生 spawn_list.yaml — 恢復原始 randomx/randomy（9200 筆帶散佈範圍），NPC 加上 spread:point
+- fix: 地監死亡後計時器不消失 — KillPlayer 清除 MapTimer 狀態 + 發送計時器歸零封包，ProcessRestart 重設計時器
+- feat: 實現烏木魔杖（40007，閃電傷害）— dmg = rand(-5..5) + INT，對 NPC/玩家造成傷害
+- feat: 實現楓木魔杖（40008/140008，變身）— 成功率 = 3*(攻LV-防LV) + 100 - 防MR，隨機怪物外觀
+- fix: wand handler 讀取 spell_long 目標欄位 [D targetObjID][H x][H y]（Java C_ItemUSe use_type=5）

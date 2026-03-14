@@ -438,8 +438,16 @@ func handleUseEtcItem(sess *net.Session, r *packet.Reader, player *world.PlayerI
 	}
 
 	// 魔杖 — Java: ItemClass/ItemExecutor 反射分派
+	// use_type=spell_long(5) 的魔杖客戶端額外發送 [D targetObjID][H x][H y]
 	if itemInfo.ItemType == "wand" && deps.ItemUse != nil {
-		deps.ItemUse.UseWand(sess, player, invItem)
+		var targetObjID int32
+		var targetX, targetY int16
+		if itemInfo.UseType == "spell_long" {
+			targetObjID = r.ReadD()
+			targetX = int16(r.ReadH())
+			targetY = int16(r.ReadH())
+		}
+		deps.ItemUse.UseWand(sess, player, invItem, targetObjID, targetX, targetY)
 		return
 	}
 

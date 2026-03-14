@@ -1326,7 +1326,9 @@ var wandMonsterIDs = [...]int32{
 }
 
 // UseWand 處理魔杖使用邏輯。根據 itemID 分派到對應的魔杖效果。
-func (s *ItemUseSystem) UseWand(sess *net.Session, player *world.PlayerInfo, invItem *world.InvItem) {
+// targetObjID/targetX/targetY 僅在 spell_long 類魔杖（烏木、楓木）時有值。
+func (s *ItemUseSystem) UseWand(sess *net.Session, player *world.PlayerInfo, invItem *world.InvItem,
+	targetObjID int32, targetX, targetY int16) {
 	// 充能次數檢查
 	if invItem.ChargeCount <= 0 {
 		handler.SendServerMessage(sess, 79) // 沒有任何事情發生
@@ -1336,6 +1338,10 @@ func (s *ItemUseSystem) UseWand(sess *net.Session, player *world.PlayerInfo, inv
 	switch invItem.ItemID {
 	case 40006, 140006: // 創造怪物魔杖（Java: Create_Monster_Magic_Wand）
 		s.useCreateMonsterWand(sess, player, invItem)
+	case 40007: // 烏木魔杖 — 閃電（Java: Lightning_Magic_Wand）
+		s.useLightningWand(sess, player, invItem, targetObjID, targetX, targetY)
+	case 40008, 140008: // 楓木魔杖 — 變身（Java: Poly_Magic_Wand）
+		s.usePolyMorphWand(sess, player, invItem, targetObjID)
 	default:
 		handler.SendServerMessage(sess, 79)
 	}
@@ -1439,6 +1445,173 @@ func (s *ItemUseSystem) useCreateMonsterWand(sess *net.Session, player *world.Pl
 		handler.SendAddItem(sess, invItem)
 	}
 
+	handler.SendWeightUpdate(sess, player)
+	player.Dirty = true
+}
+
+// ==================== 烏木魔杖（閃電）====================
+
+// useLightningWand 烏木魔杖 — 對目標施放閃電傷害。
+// Java: Lightning_Magic_Wand.java — dmg = rand(-5..5) + INT，最低 1。
+func (s *ItemUseSystem) useLightningWand(sess *net.Session, player *world.PlayerInfo,
+	invItem *world.InvItem, targetObjID int32, targetX, targetY int16) {
+
+	const lightningGfx = 6598 // 閃電動畫 GFX ID
+
+	// 廣播魔杖使用動作（Java: ACTION_Wand = 17）
+	nearby := s.deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
+	actionData := handler.BuildActionGfx(player.CharID, 17)
+	handler.BroadcastToPlayers(nearby, actionData)
+
+	// 傷害公式（Java: random.nextInt(11) - 5 + INT）
+	dmg := int32(rand.Intn(11)-5) + int32(player.Intel)
+	if dmg < 1 {
+		dmg = 1
+	}
+
+	// 查找目標 — NPC 或玩家
+	npc := s.deps.World.GetNpc(targetObjID)
+	if npc != nil && !npc.Dead {
+		// 對 NPC 施放閃電
+		effectData := handler.BuildSkillEffect(npc.ID, lightningGfx)
+		handler.BroadcastToPlayers(nearby, effectData)
+
+		npc.HP -= dmg
+		if npc.HP < 0 {
+			npc.HP = 0
+		}
+
+		// 累加仇恨
+		AddHate(npc, player.SessionID, dmg)
+
+		// 受傷動畫
+		dmgData := handler.BuildActionGfx(npc.ID, 2) // ACTION_Damage = 2
+		handler.BroadcastToPlayers(nearby, dmgData)
+
+		// 血量更新
+		hpRatio := int16(0)
+		if npc.MaxHP > 0 {
+			hpRatio = int16((npc.HP * 100) / npc.MaxHP)
+		}
+		for _, viewer := range nearby {
+			handler.SendHpMeter(viewer.Session, npc.ID, hpRatio)
+		}
+
+		// 死亡檢查
+		if npc.HP <= 0 {
+			s.deps.Combat.HandleNpcDeath(npc, player, nearby)
+		}
+	} else {
+		// 目標不存在或不是 NPC — 在指定座標播放閃電特效
+		// Java: S_EffectLocation — 使用 S_EFFECT 對座標播放（簡化：跳過）
+		// 3.80C 客戶端會自行播放投射物動畫
+	}
+
+	// 扣減充能次數
+	invItem.ChargeCount--
+	if invItem.ChargeCount <= 0 {
+		player.Inv.RemoveItem(invItem.ObjectID, 1)
+		handler.SendRemoveInventoryItem(sess, invItem.ObjectID)
+	} else {
+		handler.SendAddItem(sess, invItem)
+	}
+	handler.SendWeightUpdate(sess, player)
+	player.Dirty = true
+}
+
+// ==================== 楓木魔杖（變身）====================
+
+// 變身魔杖隨機怪物 GFX 列表（Java: Poly_Magic_Wand.java polyId[]）
+var wandPolyGfxIDs = [...]int32{
+	29, 945, 947, 979, 1037, 1039,
+	3860, 3862, 3864, 3866, 3868, 3870, 3872, 3874, 3876,
+	3904, 3906,
+	95, 146, 2374, 2376, 2377, 2378,
+	3866, 3868, 3870, 3872, 3874, 3876, 3879,
+}
+
+// 禁止變身的 Boss NPC ID（Java: Poly_Magic_Wand.polyAction）
+var polyBannedNpcIDs = map[int32]bool{
+	45464: true, 45473: true, 45488: true, 45497: true, // 四色龍
+	45458: true, // 德雷克
+	45752: true, // 炎魔
+	45492: true, // 庫曼
+	46035: true, // 殭屍王
+	99006: true, // 牛鬼
+}
+
+// 禁止使用變身魔杖的水域地圖（Java: Poly_Magic_Wand.execute）
+var polyBannedMaps = map[int16]bool{
+	63: true, 552: true, 555: true, 557: true, 558: true, 779: true,
+}
+
+// usePolyMorphWand 楓木魔杖 — 對目標施放變身。
+// Java: Poly_Magic_Wand.java — 成功率 = 3*(攻方LV-目標LV) + 100 - 目標MR。
+func (s *ItemUseSystem) usePolyMorphWand(sess *net.Session, player *world.PlayerInfo,
+	invItem *world.InvItem, targetObjID int32) {
+
+	// 地圖限制（水域地圖不可使用）
+	if polyBannedMaps[player.MapID] {
+		handler.SendServerMessage(sess, 563) // 這裡無法使用。
+		return
+	}
+
+	// 廣播魔杖使用動作（Java: ACTION_Wand = 17）
+	nearby := s.deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
+	actionData := handler.BuildActionGfx(player.CharID, 17)
+	handler.BroadcastToPlayers(nearby, actionData)
+
+	// 隨機選擇變身 GFX
+	polyGfx := wandPolyGfxIDs[rand.Intn(len(wandPolyGfxIDs))]
+
+	// 查找目標
+	npc := s.deps.World.GetNpc(targetObjID)
+	if npc != nil && !npc.Dead {
+		// 對 NPC 施放變身
+		if npc.Level >= 50 {
+			handler.SendServerMessage(sess, 79)
+			return
+		}
+		if polyBannedNpcIDs[npc.NpcID] {
+			handler.SendServerMessage(sess, 79)
+			return
+		}
+
+		// 成功率（Java: probability = 3*(攻LV-防LV) + 100 - 防MR）
+		prob := 3*int(player.Level-npc.Level) + 100 - int(npc.MR)
+		if rand.Intn(100)+1 > prob {
+			handler.SendServerMessage(sess, 79) // 失敗
+		} else {
+			// 變身成功 — NPC 改變外觀
+			npc.GfxID = polyGfx
+
+			// 廣播外觀變化
+			for _, viewer := range nearby {
+				handler.SendNpcPack(viewer.Session, npc)
+			}
+		}
+	} else {
+		// 對玩家施放變身（只能對自己）
+		targetPlayer := s.deps.World.GetByCharID(targetObjID)
+		if targetPlayer == nil || targetPlayer.CharID != player.CharID {
+			handler.SendServerMessage(sess, 79)
+			return
+		}
+
+		// 使用變身系統
+		if s.deps.Polymorph != nil {
+			s.deps.Polymorph.DoPoly(player, polyGfx, 1800, data.PolyCauseMagic) // 30 分鐘
+		}
+	}
+
+	// 扣減充能次數
+	invItem.ChargeCount--
+	if invItem.ChargeCount <= 0 {
+		player.Inv.RemoveItem(invItem.ObjectID, 1)
+		handler.SendRemoveInventoryItem(sess, invItem.ObjectID)
+	} else {
+		handler.SendAddItem(sess, invItem)
+	}
 	handler.SendWeightUpdate(sess, player)
 	player.Dirty = true
 }

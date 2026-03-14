@@ -51,8 +51,9 @@ type SpawnEntry struct {
 	RandomX      int32 `yaml:"randomx"`
 	RandomY      int32 `yaml:"randomy"`
 	Heading      int16 `yaml:"heading"`
-	RespawnDelay int   `yaml:"respawn_delay"`  // seconds
-	MobGroupID   int32 `yaml:"mob_group_id"`   // 怪物群體 ID（0=無群體）
+	RespawnDelay int    `yaml:"respawn_delay"`  // seconds
+	MobGroupID   int32  `yaml:"mob_group_id"`   // 怪物群體 ID（0=無群體）
+	Spread       string `yaml:"spread"`         // "point"=固定座標 "area"=散佈（預設 area）
 }
 
 type npcListFile struct {
