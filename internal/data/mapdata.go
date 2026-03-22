@@ -338,6 +338,86 @@ func (t *MapDataTable) SetImpassable(mapID int16, x, y int32, blocked bool) {
 	}
 }
 
+// IsArrowPassable 檢查箭矢/魔法是否可從 (x,y) 朝 heading 方向通過。
+// 使用 tile bit 2-3（0x0C），與步行可通行性（bit 0-1）不同。
+// Java 參考：L1V1Map.isArrowPassable(x, y, heading)
+func (t *MapDataTable) IsArrowPassable(mapID int16, x, y int32, heading int) bool {
+	if heading < 0 || heading > 7 {
+		return false
+	}
+	nx := x + headingDX[heading]
+	ny := y + headingDY[heading]
+	tile2 := t.accessOriginalTile(mapID, nx, ny)
+	if tile2 == 0x00 || tile2 == 0x03 {
+		return false // 不可通行 / 關閉門
+	}
+	return tile2&0x0C != 0 // bit 2（箭矢東）或 bit 3（箭矢北）
+}
+
+// HasLineOfSight 檢查 (x1,y1) 到 (x2,y2) 之間的視線是否暢通。
+// 精確移植 Java L1Character.glanceCheck：
+//   - heading 固定為從 (x1,y1) 到 (x2,y2) 的方向（不隨步進改變）
+//   - 步進使用 sign-based（dx>0 → +1, dx<0 → -1）
+//   - 最多 15 步
+func (t *MapDataTable) HasLineOfSight(mapID int16, x1, y1, x2, y2 int32) bool {
+	heading := losHeading(x1, y1, x2, y2)
+	cx, cy := x1, y1
+	for i := 0; i < 15; i++ {
+		dx := x2 - cx
+		dy := y2 - cy
+		// 相鄰或重疊 → 視線暢通
+		if abs32(dx) <= 1 && abs32(dy) <= 1 {
+			return true
+		}
+		if !t.IsArrowPassable(mapID, cx, cy, heading) {
+			return false
+		}
+		// sign-based 步進
+		if dx > 0 {
+			cx++
+		} else if dx < 0 {
+			cx--
+		}
+		if dy > 0 {
+			cy++
+		} else if dy < 0 {
+			cy--
+		}
+	}
+	return true
+}
+
+// losHeading 計算從 (sx,sy) 到 (tx,ty) 的 8 方向 heading（sign-based）。
+func losHeading(sx, sy, tx, ty int32) int {
+	dx := tx - sx
+	dy := ty - sy
+	// 正規化為 -1/0/+1
+	var sdx, sdy int32
+	if dx > 0 {
+		sdx = 1
+	} else if dx < 0 {
+		sdx = -1
+	}
+	if dy > 0 {
+		sdy = 1
+	} else if dy < 0 {
+		sdy = -1
+	}
+	for i := 0; i < 8; i++ {
+		if headingDX[i] == sdx && headingDY[i] == sdy {
+			return i
+		}
+	}
+	return 0
+}
+
+func abs32(v int32) int32 {
+	if v < 0 {
+		return -v
+	}
+	return v
+}
+
 // heading direction deltas: 0=N, 1=NE, 2=E, 3=SE, 4=S, 5=SW, 6=W, 7=NW
 var headingDX = [8]int32{0, 1, 1, 1, 0, -1, -1, -1}
 var headingDY = [8]int32{-1, -1, 0, 1, 1, 1, 0, -1}

@@ -488,6 +488,13 @@ func (s *SkillSystem) executeAttackSkill(sess *net.Session, player *world.Player
 		return
 	}
 
+	// LOS 檢查（Java: L1SkillUse — glanceCheck）
+	// 攻擊型技能需要視線，buff/heal 技能豁免
+	if s.deps.MapData != nil && !s.deps.MapData.HasLineOfSight(player.MapID, player.X, player.Y, npc.X, npc.Y) {
+		handler.SendServerMessage(sess, skillMsgCastFail)
+		return
+	}
+
 	player.Heading = CalcHeading(player.X, player.Y, npc.X, npc.Y)
 
 	// 起死回生術 (18)：對不死族 NPC 機率即死
@@ -849,6 +856,28 @@ func (s *SkillSystem) executeBuffSkill(sess *net.Session, player *world.PlayerIn
 		}
 	}
 
+	// 檢查目標是否為自己的寵物/召喚物
+	// Java: TARGET_TO_PET — 治療/復活技能可對自己的寵物/召喚物生效
+	if targetID != 0 && targetID != player.CharID {
+		isResurrect := skill.SkillID == 61 || skill.SkillID == 75 // 返生術 / 終極返生術
+		if pet := ws.GetPet(targetID); pet != nil && pet.OwnerCharID == player.CharID {
+			if isResurrect && pet.Dead {
+				s.resurrectPet(sess, player, skill, pet)
+				return
+			}
+			if !isResurrect && !pet.Dead {
+				s.healCompanion(sess, player, skill, pet.ID, &pet.HP, pet.MaxHP, pet.X, pet.Y, pet.MapID)
+				return
+			}
+		}
+		if sum := ws.GetSummon(targetID); sum != nil && sum.OwnerCharID == player.CharID {
+			if !sum.Dead {
+				s.healCompanion(sess, player, skill, sum.ID, &sum.HP, sum.MaxHP, sum.X, sum.Y, sum.MapID)
+			}
+			return
+		}
+	}
+
 	target := player
 	if targetID != 0 && targetID != player.CharID {
 		if other := ws.GetByCharID(targetID); other != nil {
@@ -1116,6 +1145,94 @@ func (s *SkillSystem) executeBuffSkill(sess *net.Session, player *world.PlayerIn
 
 	if skill.SysMsgHappen > 0 {
 		handler.SendServerMessage(target.Session, uint16(skill.SysMsgHappen))
+	}
+}
+
+// ========================================================================
+//  寵物/召喚物治療
+// ========================================================================
+
+// healCompanion 對自己的寵物或召喚物施放治療技能。
+// Java: L1SkillUse.java — TYPE_HEAL + TARGET_TO_PET，只對自己的寵物/召喚物有效。
+func (s *SkillSystem) healCompanion(sess *net.Session, player *world.PlayerInfo, skill *data.SkillInfo,
+	companionID int32, hp *int32, maxHP int32, cx, cy int32, cMapID int16) {
+
+	// 距離檢查
+	if player.MapID != cMapID || chebyshevDist(player.X, player.Y, cx, cy) > 20 {
+		return
+	}
+
+	nearby := s.deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
+
+	// 廣播施法動畫
+	handler.BroadcastToPlayers(nearby, handler.BuildActionGfx(player.CharID, byte(skill.ActionID)))
+
+	// 計算治療量
+	if skill.DamageValue > 0 || skill.DamageDice > 0 {
+		heal := int32(s.deps.Scripting.CalcHeal(skill.DamageValue, skill.DamageDice, skill.DamageDiceCount, int(player.Intel), int(player.SP)))
+		if heal > 0 && *hp < maxHP {
+			*hp += heal
+			if *hp > maxHP {
+				*hp = maxHP
+			}
+			// 發送 HP 條更新給主人
+			handler.SendPetHpMeter(sess, companionID, *hp, maxHP)
+		}
+	}
+
+	// 效果 GFX
+	if skill.CastGfx > 0 {
+		handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(companionID, skill.CastGfx))
+	}
+}
+
+// resurrectPet 復活死亡寵物。
+// Java: L1Character.resurrect() + L1PetInstance 特殊處理。
+// 返生術(61)恢復 25% HP，終極返生術(75)恢復 100% HP。
+func (s *SkillSystem) resurrectPet(sess *net.Session, player *world.PlayerInfo, skill *data.SkillInfo, pet *world.PetInfo) {
+	if player.MapID != pet.MapID || chebyshevDist(player.X, player.Y, pet.X, pet.Y) > 20 {
+		return
+	}
+
+	nearby := s.deps.World.GetNearbyPlayersAt(player.X, player.Y, player.MapID)
+
+	// 廣播施法動畫
+	handler.BroadcastToPlayers(nearby, handler.BuildActionGfx(player.CharID, byte(skill.ActionID)))
+
+	// 恢復 HP（返生術 25%，終極返生術 100%）
+	hp := pet.MaxHP / 4
+	if skill.SkillID == 75 {
+		hp = pet.MaxHP
+	}
+	if hp <= 0 {
+		hp = 1
+	}
+
+	// 復活寵物
+	pet.Dead = false
+	pet.HP = hp
+	pet.Status = world.PetStatusRest
+	pet.AggroTarget = 0
+	pet.AggroPlayerID = 0
+	pet.Dirty = true
+
+	// 重新佔用格子
+	s.deps.World.PetRevive(pet)
+
+	// 讓附近玩家重新認識寵物（Java: removeKnownObject → updateObject）
+	nearbyPet := s.deps.World.GetNearbyPlayersAt(pet.X, pet.Y, pet.MapID)
+	for _, viewer := range nearbyPet {
+		// 先移除再重新發送，確保客戶端正確更新
+		handler.SendRemoveObject(viewer.Session, pet.ID)
+		delete(viewer.Known.Pets, pet.ID)
+	}
+
+	// 發送 HP 條更新給主人
+	handler.SendPetHpMeter(sess, pet.ID, pet.HP, pet.MaxHP)
+
+	// 效果 GFX
+	if skill.CastGfx > 0 {
+		handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(pet.ID, skill.CastGfx))
 	}
 }
 

@@ -78,6 +78,12 @@ type PlayerInfo struct {
 	MarriageRingID int32 // 結婚時使用的戒指物品 ID（Java: QUEST_MARRY step）
 	TempID         int32 // 暫存目標 ID（Java: pc.setTempID）— 寵物改名等用途
 
+	// 武器吸血/吸魔累計值（Java: L1PcInstance dice_hp/sucking_hp/dice_mp/sucking_mp）
+	DrainDiceHP    int // 所有裝備累計的 HP 吸取機率
+	DrainSuckingHP int // 所有裝備累計的 HP 吸取量
+	DrainDiceMP    int // 所有裝備累計的 MP 吸取機率
+	DrainSuckingMP int // 所有裝備累計的 MP 吸取量
+
 	// 釣魚系統
 	Fishing       bool  // 是否正在釣魚
 	FishX         int32 // 釣點 X 座標

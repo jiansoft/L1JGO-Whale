@@ -171,9 +171,15 @@ type ItemInfo struct {
 	RegistBlind   int
 
 	// Special combat (weapon + armor)
-	DmgReduction   int // 傷害減免
+	DmgReduction    int // 傷害減免
 	DoubleDmgChance int // 雙擊率
-	Greater        int // 飾品加成類型 (0=耐性, 1=熱情, 2=意志)
+	Greater         int // 飾品加成類型 (0=耐性, 1=熱情, 2=意志)
+
+	// 武器吸血/吸魔（Java: ItemPowerTable — dice_hp/sucking_hp/dice_mp/sucking_mp）
+	DiceHP    int // HP 吸取觸發機率 (0-100%)
+	SuckingHP int // 每次觸發吸取的 HP 量
+	DiceMP    int // MP 吸取觸發機率 (0-100%)
+	SuckingMP int // 每次觸發吸取的 MP 量
 
 	// Meta
 	SafeEnchant int
@@ -293,11 +299,15 @@ type weaponEntry struct {
 	RegistFreeze    int    `yaml:"regist_freeze"`
 	RegistSustain   int    `yaml:"regist_sustain"`
 	RegistBlind     int    `yaml:"regist_blind"`
-	DoubleDmgChance int    `yaml:"double_dmg_chance"`
-	Bless           int    `yaml:"bless"`
-	Tradeable       bool   `yaml:"tradeable"`
-	MinLevel        int    `yaml:"min_level"`
-	MaxLevel        int    `yaml:"max_level"`
+	DoubleDmgChance int `yaml:"double_dmg_chance"`
+	DiceHP          int `yaml:"dice_hp"`
+	SuckingHP       int `yaml:"sucking_hp"`
+	DiceMP          int `yaml:"dice_mp"`
+	SuckingMP       int `yaml:"sucking_mp"`
+	Bless           int  `yaml:"bless"`
+	Tradeable       bool `yaml:"tradeable"`
+	MinLevel        int  `yaml:"min_level"`
+	MaxLevel        int  `yaml:"max_level"`
 }
 
 type weaponListFile struct {
@@ -366,6 +376,10 @@ func loadWeapons(t *ItemTable, path string) error {
 			RegistSustain:   w.RegistSustain,
 			RegistBlind:     w.RegistBlind,
 			DoubleDmgChance: w.DoubleDmgChance,
+			DiceHP:          w.DiceHP,
+			SuckingHP:       w.SuckingHP,
+			DiceMP:          w.DiceMP,
+			SuckingMP:       w.SuckingMP,
 		}
 	}
 	return nil

@@ -184,6 +184,12 @@ type EquipStats struct {
 
 	// 傷害減免
 	DmgReduction int
+
+	// 武器吸血/吸魔（Java: ItemPowerTable）
+	DiceHP    int // HP 吸取機率 (0-100%)
+	SuckingHP int // HP 吸取量
+	DiceMP    int // MP 吸取機率 (0-100%)
+	SuckingMP int // MP 吸取量
 }
 
 // IsAccessorySlot returns true for slots where enchant level does NOT affect AC.

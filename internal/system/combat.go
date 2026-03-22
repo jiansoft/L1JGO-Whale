@@ -227,6 +227,9 @@ func (s *CombatSystem) processMeleeAttack(sessID uint64, targetID int32) *handle
 		// 武器耐久損耗（Java: L1Attack.damageNpcWeaponDurability）
 		damageWeaponDurability(player, s.deps)
 
+		// 武器吸血/吸魔（Java: L1AttackPc.commit — dice_hp/sucking_hp/dice_mp/sucking_mp）
+		applyWeaponDrain(player, npc)
+
 		// 受傷累加仇恨（Java: L1HateList.add）
 		AddHate(npc, sessID, damage)
 
@@ -449,6 +452,9 @@ func (s *CombatSystem) processRangedAttack(sessID uint64, targetID int32) *handl
 
 		// 武器耐久損耗（遠程也會磨損武器）
 		damageWeaponDurability(player, s.deps)
+
+		// 武器吸血/吸魔（Java: L1AttackPc.commit）
+		applyWeaponDrain(player, npc)
 
 		// 受傷累加仇恨
 		AddHate(npc, sessID, damage)
@@ -862,4 +868,39 @@ func damageWeaponDurability(player *world.PlayerInfo, deps *handler.Deps) {
 	}
 
 	handler.SendItemCountUpdate(player.Session, wpn)
+}
+
+// applyWeaponDrain 武器吸血/吸魔判定（Java: L1AttackPc.commit — dice_hp/sucking_hp/dice_mp/sucking_mp）。
+// 每次命中後機率觸發，從 NPC 吸取 HP/MP 加到玩家。
+func applyWeaponDrain(player *world.PlayerInfo, npc *world.NpcInfo) {
+	// HP 吸取
+	if player.DrainDiceHP > 0 && world.RandInt(100)+1 <= player.DrainDiceHP {
+		drain := int32(player.DrainSuckingHP)
+		if drain > npc.HP {
+			drain = npc.HP
+		}
+		if drain > 0 {
+			npc.HP -= drain
+			player.HP += drain
+			if player.HP > player.MaxHP {
+				player.HP = player.MaxHP
+			}
+			handler.SendHpUpdate(player.Session, player)
+		}
+	}
+	// MP 吸取
+	if player.DrainDiceMP > 0 && world.RandInt(100)+1 <= player.DrainDiceMP {
+		drain := int32(player.DrainSuckingMP)
+		if drain > npc.MP {
+			drain = npc.MP
+		}
+		if drain > 0 {
+			npc.MP -= drain
+			player.MP += drain
+			if player.MP > player.MaxMP {
+				player.MP = player.MaxMP
+			}
+			handler.SendMpUpdate(player.Session, player)
+		}
+	}
 }

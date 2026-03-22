@@ -4657,6 +4657,8 @@ weapons:
     add_mpr: 0
     add_sp: 0
     m_def: 0
+    dice_mp: 15
+    sucking_mp: 3
     bless: 1
     tradeable: true
     min_level: 0
@@ -4694,6 +4696,8 @@ weapons:
     add_mpr: 0
     add_sp: 0
     m_def: 0
+    dice_mp: 15
+    sucking_mp: 5
     bless: 1
     tradeable: true
     min_level: 0

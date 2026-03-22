@@ -260,6 +260,10 @@ func (s *VisibilitySystem) updatePetVisibility(p *world.PlayerInfo) {
 				masterName = m.Name
 			}
 			handler.SendPetPack(p.Session, pet, isOwner, masterName)
+			// Java: onPerceive — 死亡寵物需額外發送死亡動作讓客戶端顯示屍體
+			if pet.Dead {
+				handler.SendActionGfx(p.Session, pet.ID, 8)
+			}
 			p.Known.Pets[pet.ID] = world.KnownPos{X: pet.X, Y: pet.Y}
 		} else {
 			p.Known.Pets[pet.ID] = world.KnownPos{X: pet.X, Y: pet.Y}

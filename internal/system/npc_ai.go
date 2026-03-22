@@ -357,11 +357,21 @@ func (s *NpcAISystem) tickGuardAI(npc *world.NpcInfo) {
 		if dist <= atkRange {
 			if npc.AttackTimer <= 0 {
 				if npc.Ranged > 1 {
-					s.npcRangedAttack(npc, target)
+					// 遠程攻擊需要視線
+					if s.deps.MapData != nil && !s.deps.MapData.HasLineOfSight(npc.MapID, npc.X, npc.Y, target.X, target.Y) {
+						// LOS 失敗 → 嘗試靠近目標
+						if npc.MoveTimer <= 0 {
+							npcMoveToward(s.world, npc, target.X, target.Y, s.deps.MapData)
+							npc.MoveTimer = calcNpcMoveTicks(npc)
+						}
+					} else {
+						s.npcRangedAttack(npc, target)
+						setNpcAtkCooldown(npc)
+					}
 				} else {
 					s.npcMeleeAttack(npc, target)
+					setNpcAtkCooldown(npc)
 				}
-				setNpcAtkCooldown(npc)
 			}
 		} else {
 			if npc.MoveTimer <= 0 {
@@ -545,6 +555,11 @@ func (s *NpcAISystem) npcMeleeAttack(npc *world.NpcInfo, target *world.PlayerInf
 }
 
 func (s *NpcAISystem) npcRangedAttack(npc *world.NpcInfo, target *world.PlayerInfo) {
+	// LOS 檢查（Java: L1AttackPc — glanceCheck）
+	if s.deps.MapData != nil && !s.deps.MapData.HasLineOfSight(npc.MapID, npc.X, npc.Y, target.X, target.Y) {
+		return // 視線被牆阻擋
+	}
+
 	// 目標絕對屏障：免疫所有傷害
 	if target.AbsoluteBarrier {
 		npc.AggroTarget = 0
@@ -649,6 +664,10 @@ func (s *NpcAISystem) executeNpcSkill(npc *world.NpcInfo, target *world.PlayerIn
 	isMagicProjectile := skill.DamageValue > 0 || skill.DamageDice > 0
 
 	if isMagicProjectile {
+		// LOS 檢查（Java: L1SkillUse — glanceCheck）
+		if s.deps.MapData != nil && !s.deps.MapData.HasLineOfSight(npc.MapID, npc.X, npc.Y, target.X, target.Y) {
+			return // 視線被牆阻擋
+		}
 		if skill.Area > 0 {
 			// AoE 技能：傷害範圍內所有玩家
 			useType := byte(8)

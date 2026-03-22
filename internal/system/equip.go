@@ -483,6 +483,12 @@ func applyEquipStats(player *world.PlayerInfo, items *data.ItemTable, armorSets 
 	player.RegistSustain += int16(neo.RegistSustain - old.RegistSustain)
 	player.RegistBlind += int16(neo.RegistBlind - old.RegistBlind)
 
+	// 武器吸血/吸魔
+	player.DrainDiceHP += neo.DiceHP - old.DiceHP
+	player.DrainSuckingHP += neo.SuckingHP - old.SuckingHP
+	player.DrainDiceMP += neo.DiceMP - old.DiceMP
+	player.DrainSuckingMP += neo.SuckingMP - old.SuckingMP
+
 	if player.HP > player.MaxHP {
 		player.HP = player.MaxHP
 	}
@@ -556,6 +562,12 @@ func calcEquipStats(player *world.PlayerInfo, items *data.ItemTable, armorSets *
 
 		// 傷害減免
 		stats.DmgReduction += info.DmgReduction
+
+		// 武器吸血/吸魔
+		stats.DiceHP += info.DiceHP
+		stats.SuckingHP += info.SuckingHP
+		stats.DiceMP += info.DiceMP
+		stats.SuckingMP += info.SuckingMP
 	}
 	// 套裝加成
 	if player.ActiveSetID > 0 && armorSets != nil {

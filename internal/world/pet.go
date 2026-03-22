@@ -190,6 +190,11 @@ func (s *State) PetDied(pet *PetInfo) {
 	s.entity.Vacate(pet.MapID, pet.X, pet.Y, pet.ID)
 }
 
+// PetRevive re-occupies the tile for a revived pet.
+func (s *State) PetRevive(pet *PetInfo) {
+	s.entity.Occupy(pet.MapID, pet.X, pet.Y, pet.ID)
+}
+
 // PetCount returns total pet count in-world.
 func (s *State) PetCount() int {
 	return len(s.pets)
